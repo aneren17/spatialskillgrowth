@@ -45,7 +45,7 @@ def groundingdino(
     category: 世界模型/检索类
 
     Args:
-        query: 英文物体类别、英文指代表达，或类别组成的 JSON 字符串列表。
+        query: 英文物体类别、英文指代表达，或类别组成的 JSON 字符串列表，不能为空。
         file: 输入图像 URL、本地路径、文件标识或 Base64 编码图像。
         filename: 输入图像文件名。
         box_threshold: 检测框置信度阈值，默认 0.35。
