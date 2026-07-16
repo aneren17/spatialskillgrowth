@@ -1,0 +1,8 @@
+{
+  "name": "depth_filtered_counting",
+  "title": "Depth-filtered Counting",
+  "problem_class": "depth_filtered_counting",
+  "description": "Count targets that are in front of, behind, closer than, or farther than a reference.",
+  "workflow_count": 0,
+  "workflows": []
+}

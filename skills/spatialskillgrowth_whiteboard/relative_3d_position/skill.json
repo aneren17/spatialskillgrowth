@@ -1,0 +1,8 @@
+{
+  "name": "relative_3d_position",
+  "title": "Relative 3D Position",
+  "problem_class": "relative_3d_position",
+  "description": "Resolve above, below, left, right, inside, on, under, adjacency, or elevation relations.",
+  "workflow_count": 0,
+  "workflows": []
+}

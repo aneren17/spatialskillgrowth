@@ -1,0 +1,8 @@
+{
+  "name": "volume_capacity",
+  "title": "Volume Capacity",
+  "problem_class": "volume_capacity",
+  "description": "Reason about 3D volume ratios and capacity rather than visible instance counts.",
+  "workflow_count": 0,
+  "workflows": []
+}

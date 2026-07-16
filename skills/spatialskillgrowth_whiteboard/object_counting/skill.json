@@ -1,0 +1,8 @@
+{
+  "name": "object_counting",
+  "title": "Object Counting",
+  "problem_class": "object_counting",
+  "description": "Count visible objects, parts, or instances with any inclusion and exclusion constraints.",
+  "workflow_count": 0,
+  "workflows": []
+}

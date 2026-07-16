@@ -1,0 +1,132 @@
+{
+  "skills": [
+    {
+      "name": "metric_dimension_scaling",
+      "title": "Metric Dimension Scaling",
+      "problem_class": "metric_dimension_scaling",
+      "description": "Transfer a known length, width, height, radius, or size to another target using image geometry.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "metric_distance_scaling",
+      "title": "Metric Distance Scaling",
+      "problem_class": "metric_distance_scaling",
+      "description": "Calibrate target depth or inter-object distance from a supplied metric reference and unit.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "dimension_ratio",
+      "title": "Dimension Ratio",
+      "problem_class": "dimension_ratio",
+      "description": "Compare lengths, widths, heights, areas, or dimension expressions as a numeric ratio or difference.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "volume_capacity",
+      "title": "Volume Capacity",
+      "problem_class": "volume_capacity",
+      "description": "Reason about 3D volume ratios and capacity rather than visible instance counts.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "linear_fit_stacking",
+      "title": "Linear Fit and Stacking",
+      "problem_class": "linear_fit_stacking",
+      "description": "Compute how many repeated dimensions are needed to match a requested length, width, height, or area.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "object_counting",
+      "title": "Object Counting",
+      "problem_class": "object_counting",
+      "description": "Count visible objects, parts, or instances with any inclusion and exclusion constraints.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "count_arithmetic",
+      "title": "Count Arithmetic",
+      "problem_class": "count_arithmetic",
+      "description": "Count multiple groups and apply deterministic arithmetic to their counts.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "count_comparison",
+      "title": "Count Comparison",
+      "problem_class": "count_comparison",
+      "description": "Determine which group has more, fewer, the same number, or enough instances.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "depth_ordering",
+      "title": "Depth Ordering",
+      "problem_class": "depth_ordering",
+      "description": "Determine which target is closer, farther, nearest, or furthest in 3D.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "depth_filtered_counting",
+      "title": "Depth-filtered Counting",
+      "problem_class": "depth_filtered_counting",
+      "description": "Count targets that are in front of, behind, closer than, or farther than a reference.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "compass_direction",
+      "title": "Egocentric Compass Direction",
+      "problem_class": "compass_direction",
+      "description": "Resolve N, NE, E, SE, S, SW, W, or NW from the supplied observer position and facing direction.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "occlusion_visibility",
+      "title": "Occlusion and Visibility",
+      "problem_class": "occlusion_visibility",
+      "description": "Determine whether a target remains visible or becomes covered after a hypothetical placement.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "physical_interaction",
+      "title": "Physical Interaction",
+      "problem_class": "physical_interaction",
+      "description": "Reason about falling, hitting, pushing, tipping, hanging over an edge, or collision order.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "size_fit_comparison",
+      "title": "Size and Fit Comparison",
+      "problem_class": "size_fit_comparison",
+      "description": "Compare dimensions or decide whether one object fits on, under, inside, or across another.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "relative_3d_position",
+      "title": "Relative 3D Position",
+      "problem_class": "relative_3d_position",
+      "description": "Resolve above, below, left, right, inside, on, under, adjacency, or elevation relations.",
+      "workflow_count": 0,
+      "workflows": []
+    },
+    {
+      "name": "visual_attribute_recognition",
+      "title": "Visual Attribute Recognition",
+      "problem_class": "visual_attribute_recognition",
+      "description": "Answer residual Omni3D visual attribute and object-identification questions that are not geometric operations.",
+      "workflow_count": 0,
+      "workflows": []
+    }
+  ]
+}

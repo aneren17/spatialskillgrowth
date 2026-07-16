@@ -1,0 +1,8 @@
+{
+  "name": "visual_attribute_recognition",
+  "title": "Visual Attribute Recognition",
+  "problem_class": "visual_attribute_recognition",
+  "description": "Answer residual Omni3D visual attribute and object-identification questions that are not geometric operations.",
+  "workflow_count": 0,
+  "workflows": []
+}

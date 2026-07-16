@@ -1,0 +1,8 @@
+{
+  "name": "dimension_ratio",
+  "title": "Dimension Ratio",
+  "problem_class": "dimension_ratio",
+  "description": "Compare lengths, widths, heights, areas, or dimension expressions as a numeric ratio or difference.",
+  "workflow_count": 0,
+  "workflows": []
+}

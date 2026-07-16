@@ -1,0 +1,8 @@
+{
+  "name": "count_comparison",
+  "title": "Count Comparison",
+  "problem_class": "count_comparison",
+  "description": "Determine which group has more, fewer, the same number, or enough instances.",
+  "workflow_count": 0,
+  "workflows": []
+}

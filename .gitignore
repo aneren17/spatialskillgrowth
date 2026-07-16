@@ -1,0 +1,8 @@
+.env
+.venv/
+__pycache__/
+.ruff_cache/
+*.py[cod]
+benchmark_result/
+tools/basicTools/sandbox_output/
+test/

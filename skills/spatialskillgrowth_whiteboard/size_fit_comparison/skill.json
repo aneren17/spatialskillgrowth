@@ -1,0 +1,8 @@
+{
+  "name": "size_fit_comparison",
+  "title": "Size and Fit Comparison",
+  "problem_class": "size_fit_comparison",
+  "description": "Compare dimensions or decide whether one object fits on, under, inside, or across another.",
+  "workflow_count": 0,
+  "workflows": []
+}

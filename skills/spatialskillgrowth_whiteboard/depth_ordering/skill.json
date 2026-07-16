@@ -1,0 +1,8 @@
+{
+  "name": "depth_ordering",
+  "title": "Depth Ordering",
+  "problem_class": "depth_ordering",
+  "description": "Determine which target is closer, farther, nearest, or furthest in 3D.",
+  "workflow_count": 0,
+  "workflows": []
+}
