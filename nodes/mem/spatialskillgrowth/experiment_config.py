@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from nodes.mem.spatialskillgrowth.benchmark_profiles import (
-    OMNI3D_PROBLEM_CLASSES,
+    ANOMALY_BENCHMARK,
     class_metadata_for,
     normalize_benchmark,
     problem_classes_for,
@@ -19,7 +19,7 @@ from nodes.mem.spatialskillgrowth.benchmark_profiles import (
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_RESULT_ROOT = "benchmark_result/spatialskillgrowth_omni3d"
+DEFAULT_RESULT_ROOT = "benchmark_result/spatialskillgrowth_anomaly_detection"
 DEFAULT_SKILL_WHITEBOARD_ROOT = PROJECT_ROOT / "skills" / "spatialskillgrowth_whiteboard"
 SKILL_WHITEBOARD_FILE = "WHITEBOARD.json"
 DEFAULT_SEED = 3407
@@ -97,7 +97,7 @@ class ExperimentPaths:
         experiment: str,
         run_id: str,
         result_root: str = DEFAULT_RESULT_ROOT,
-        benchmark: str = "omni3d",
+        benchmark: str = ANOMALY_BENCHMARK,
         problem_classes: Optional[List[str]] = None,
         class_metadata: Optional[Dict[str, Dict[str, str]]] = None,
     ):
@@ -181,17 +181,19 @@ class ExperimentPaths:
 
     def _initialize_skill_workspace(self) -> None:
         """从只读白板初始化新 run；恢复运行时绝不覆盖已有技能。"""
-        if (
-            self.benchmark != "omni3d"
-            or tuple(self.problem_classes) != tuple(OMNI3D_PROBLEM_CLASSES)
-        ):
-            self._initialize_dynamic_skill_workspace()
-            return
         whiteboard_path = DEFAULT_SKILL_WHITEBOARD_ROOT / SKILL_WHITEBOARD_FILE
         if not whiteboard_path.is_file():
             raise FileNotFoundError(f"Skill whiteboard does not exist: {whiteboard_path}")
         whiteboard = json.loads(whiteboard_path.read_text(encoding="utf-8"))
         problem_classes = _whiteboard_problem_classes(whiteboard)
+        whiteboard_benchmark = normalize_benchmark(whiteboard.get("benchmark") or "")
+        whiteboard_classes = tuple(item["name"] for item in problem_classes)
+        if (
+            self.benchmark != whiteboard_benchmark
+            or tuple(self.problem_classes) != whiteboard_classes
+        ):
+            self._initialize_dynamic_skill_workspace()
+            return
         self.skill_root.mkdir(parents=True, exist_ok=True)
         shutil.copy2(whiteboard_path, self.skill_root / SKILL_WHITEBOARD_FILE)
         for item in problem_classes:

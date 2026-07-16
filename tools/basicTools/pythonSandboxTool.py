@@ -12,9 +12,8 @@ LIST_SAFE_MODULES = ["math", "collections", "itertools", "re", "typing", "random
 # 你的自定义模块白名单
 # 警告：强烈建议移除 "os" 和 "pickle"！为了演示我这里暂且保留你的原始设计。
 SAFE_MODULES = set(LIST_SAFE_MODULES + [
-    "requests", "zipfile", "os", "pandas", "numpy", "sympy", "json",
-    "bs4", "pubchempy", "xml", "yahoo_finance", "Bio", "sklearn",
-    "scipy", "pydub", "io", "PIL", "chess", "PyPDF2", "pptx", "datetime", "csv", "fractions", "matplotlib", "pickle", "cv2"
+    "os", "pandas", "numpy", "sympy", "json", "sklearn", "scipy", "io",
+    "PIL", "datetime", "csv", "fractions", "matplotlib", "pickle", "cv2",
 ])
 
 # 沙箱输出根目录：所有代码生成的文件（图片、数据等）都会落在这里，不污染项目根目录
@@ -22,7 +21,7 @@ SANDBOX_OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "s
 
 class PythonSandboxInput(BaseModel):
     code: str = Field(
-        description="The Python code to execute. You must use print() to output results. You can ONLY import libraries from the approved list."
+        description="要执行的 Python 代码。必须使用 print() 输出结果，并且只能导入白名单中的库。"
     )
 
 def check_imports_in_code(code: str) -> str | None:
@@ -54,21 +53,19 @@ def check_imports_in_code(code: str) -> str | None:
 
 @tool("python_code_sandbox", args_schema=PythonSandboxInput)
 def python_code_sandbox(code: str) -> str:
-    """Executes Python code in a sandbox environment.
+    """在受限沙箱环境中执行 Python 代码。
 
-    Allowed modules:
+    允许导入的模块：
       math, collections, itertools, re, typing, random, hashlib,
-      requests, zipfile, os, pandas, numpy, sympy, json,
-      bs4, pubchempy, xml, yahoo_finance, Bio, sklearn,
-      scipy, pydub, io, PIL, chess, PyPDF2, pptx, datetime,
+      os, pandas, numpy, sympy, json, sklearn, scipy, io, PIL, datetime,
       csv, fractions, matplotlib, pickle, cv2
 
-    Forbidden (will be rejected):
+    禁止导入的模块（将直接拒绝）：
       glob, base64, subprocess, urllib, socket, shutil, sys, imp, importlib
 
-    Read files: cwd is project root, use relative paths. e.g. Image.open("benchmark/MMVet/images/v1_0.png")
-    Save files: MUST use SANDBOX_DIR variable. e.g. plt.savefig(os.path.join(SANDBOX_DIR, "result.png"))
-    Use print() for text output.
+    读取文件：当前目录是项目根目录，请使用相对路径，例如 Image.open("benchmark/images/a.png")。
+    保存文件：必须使用 SANDBOX_DIR 变量，例如 plt.savefig(os.path.join(SANDBOX_DIR, "result.png"))。
+    文本结果必须通过 print() 输出。
 
     category: 数值参数类
 
@@ -78,7 +75,10 @@ def python_code_sandbox(code: str) -> str:
     security_error = check_imports_in_code(code)
     if security_error:
         # 直接把错误信息返回给 Agent，让它知道哪些库不能用并重试
-        return f"{security_error}\nPlease modify your code to only use the allowed libraries: {', '.join(list(SAFE_MODULES)[:10])}..."
+        return (
+            f"{security_error}\n请修改代码，只导入允许的库："
+            f"{', '.join(sorted(SAFE_MODULES)[:10])}..."
+        )
 
     # 2. 创建独立的工作目录（避免并行执行时文件互相覆盖）
     os.makedirs(SANDBOX_OUTPUT_DIR, exist_ok=True)

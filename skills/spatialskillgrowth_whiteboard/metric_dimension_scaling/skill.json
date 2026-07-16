@@ -1,8 +1,0 @@
-{
-  "name": "metric_dimension_scaling",
-  "title": "Metric Dimension Scaling",
-  "problem_class": "metric_dimension_scaling",
-  "description": "Transfer a known length, width, height, radius, or size to another target using image geometry.",
-  "workflow_count": 0,
-  "workflows": []
-}

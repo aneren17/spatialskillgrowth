@@ -13,6 +13,7 @@ from nodes.mem.spatialskillgrowth.models import WorkflowSpec
 from nodes.mem.spatialskillgrowth.tool_runtime import (
     ToolRuntime,
     build_evidence_text,
+    extract_anomaly_result,
     extract_final_answer,
     resolve_workflow_args,
 )
@@ -189,7 +190,7 @@ class SkillExecutionContext:
             for item in self._observations
             if (item.get("result") or {}).get("status") != "success"
         ]
-        return {
+        output = {
             "success": bool(answer) and not error,
             "final_answer": str(answer or ""),
             "evidence": self._observations,
@@ -207,6 +208,8 @@ class SkillExecutionContext:
             "workflow_id": self._workflow.workflow_id,
             "execution_backend": "python_skill",
         }
+        output.update(extract_anomaly_result(output))
+        return output
 
 
 class PythonSkillExecutor:

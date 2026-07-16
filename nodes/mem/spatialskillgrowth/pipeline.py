@@ -10,6 +10,7 @@ from typing import Dict, List, Optional
 
 from nodes.mem.spatialskillgrowth.answer_evaluator import answer_matches_typed
 from nodes.mem.spatialskillgrowth.benchmark_profiles import class_metadata_for
+from nodes.mem.spatialskillgrowth.benchmark_profiles import ANOMALY_BENCHMARK
 from nodes.mem.spatialskillgrowth.experiment_config import ExperimentConfig, ExperimentPaths
 from nodes.mem.spatialskillgrowth.models import TaskRecord
 from nodes.mem.spatialskillgrowth.tool_runtime import ToolRuntime
@@ -243,6 +244,7 @@ class ExplorationPipeline:
         )
         final_answer = parent_answer if parent_correct or not correct_mutant else correct_mutant["answer"]
         final_correct = answer_matches_typed(final_answer, task.groundtruth, task.answer_type)
+        final_detection = execution if parent_correct or not correct_mutant else correct_mutant
         summary = {
             "task_id": task.task_id,
             "state_task_id": state_task_id,
@@ -254,6 +256,13 @@ class ExplorationPipeline:
             "answer_type": task.answer_type,
             "groundtruth": task.groundtruth,
             "answer": final_answer,
+            "event_type": final_detection.get("event_type", problem_class),
+            "event_name": self.paths.class_metadata.get(problem_class, {}).get(
+                "title", problem_class
+            ),
+            "media_type": task.media_type,
+            "is_anomaly": final_detection.get("is_anomaly"),
+            "threshold": final_detection.get("threshold"),
             "correct": final_correct,
             "parent_correct": parent_correct,
             "base_workflow_id": parent_workflow.workflow_id,
@@ -429,6 +438,9 @@ class ExplorationPipeline:
             "workflow_id": mutant.workflow_id,
             "mutation_mode": mutant.mutation_mode,
             "answer": answer,
+            "event_type": result.get("event_type", plan["problem_class"]),
+            "is_anomaly": result.get("is_anomaly"),
+            "threshold": result.get("threshold"),
             "correct": correct,
             "evidence": evidence.to_dict(),
             "selected_atom_ids": selected_atoms,
@@ -649,7 +661,9 @@ class InferencePipeline:
         )
         for index, attempt in enumerate(execution["attempts"]):
             answer = str(attempt.get("answer") or "")
-            correct = answer_matches_typed(answer, task.groundtruth, task.answer_type)
+            correct = bool(task.groundtruth) and answer_matches_typed(
+                answer, task.groundtruth, task.answer_type
+            )
             self.store.save_trial(
                 state_task_id,
                 f"inference_{index}",
@@ -661,7 +675,11 @@ class InferencePipeline:
                 attempt["result"],
             )
         answer = str(execution.get("answer") or "")
-        correct = answer_matches_typed(answer, task.groundtruth, task.answer_type)
+        correct = (
+            answer_matches_typed(answer, task.groundtruth, task.answer_type)
+            if task.groundtruth
+            else None
+        )
         summary = {
             "task_id": task.task_id,
             "state_task_id": state_task_id,
@@ -673,6 +691,13 @@ class InferencePipeline:
             "answer_type": task.answer_type,
             "groundtruth": task.groundtruth,
             "answer": answer,
+            "event_type": execution.get("event_type", plan["problem_class"]),
+            "event_name": self.paths.class_metadata.get(
+                plan["problem_class"], {}
+            ).get("title", plan["problem_class"]),
+            "media_type": task.media_type,
+            "is_anomaly": execution.get("is_anomaly"),
+            "threshold": execution.get("threshold"),
             "correct": correct,
             "selected_workflow_id": execution["selected_workflow_id"],
             "fallback_react": execution["fallback_react"],
@@ -683,7 +708,7 @@ class InferencePipeline:
             "error": execution["error"],
             "cached": False,
         }
-        self.store.complete_task(state_task_id, answer, correct, summary)
+        self.store.complete_task(state_task_id, answer, bool(correct), summary)
         return summary
 
 
@@ -696,7 +721,7 @@ class ExperimentFactory:
         runtime: Optional[ToolRuntime] = None,
         source_repository: Optional[WorkflowRepository] = None,
         max_react_steps: int = 8,
-        benchmark: str = "omni3d",
+        benchmark: str = ANOMALY_BENCHMARK,
         problem_classes: Optional[List[str]] = None,
         class_metadata: Optional[Dict[str, Dict[str, str]]] = None,
         exploration_split_name: str = "explore",
@@ -835,7 +860,8 @@ def write_evaluation_summary(paths: ExperimentPaths) -> Dict:
     csv_path = paths.results_root / "per_task.csv"
     columns = [
         "task_id", "split", "problem_class", "answer_type", "groundtruth",
-        "answer", "correct", "selected_workflow_id", "fallback_react", "error",
+        "event_type", "event_name", "media_type", "answer", "is_anomaly",
+        "threshold", "correct", "selected_workflow_id", "fallback_react", "error",
     ]
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns)
@@ -845,10 +871,15 @@ def write_evaluation_summary(paths: ExperimentPaths) -> Dict:
     markdown = [f"# {paths.benchmark} evaluation summary", ""]
     for label in [overall_label] + split_names:
         metrics = summary[label]
-        markdown.append(
-            f"- {label}: {metrics['correct']}/{metrics['total']} "
-            f"({metrics['accuracy']:.4f})"
-        )
+        if metrics["total"]:
+            markdown.append(
+                f"- {label}: {metrics['correct']}/{metrics['total']} "
+                f"({metrics['accuracy']:.4f})"
+            )
+        else:
+            markdown.append(
+                f"- {label}: {metrics['predictions']} 条无标签检测结果"
+            )
     markdown.append("")
     (paths.root / "summary.md").write_text("\n".join(markdown), encoding="utf-8")
     return summary
@@ -897,21 +928,27 @@ def _structural_coverage(workflow: WorkflowSpec) -> float:
 
 
 def _serializable_attempt(attempt: Dict) -> Dict:
+    result = attempt.get("result") or {}
     return {
         "kind": attempt.get("kind", ""),
         "workflow_id": attempt.get("workflow_id", ""),
         "answer": attempt.get("answer", ""),
+        "event_type": result.get("event_type", ""),
+        "is_anomaly": result.get("is_anomaly"),
+        "threshold": result.get("threshold"),
         "accepted": bool(attempt.get("accepted")),
         "evidence": attempt["evidence"].to_dict(),
-        "error": str((attempt.get("result") or {}).get("error") or ""),
+        "error": str(result.get("error") or ""),
     }
 
 
 def _metrics(rows: List[Dict]) -> Dict:
-    total = len(rows)
-    correct = sum(bool(item.get("correct")) for item in rows)
+    labeled = [item for item in rows if str(item.get("groundtruth") or "").strip()]
+    total = len(labeled)
+    correct = sum(bool(item.get("correct")) for item in labeled)
     return {
         "correct": correct,
         "total": total,
+        "predictions": len(rows),
         "accuracy": correct / total if total else 0.0,
     }

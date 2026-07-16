@@ -6,15 +6,16 @@ from langchain_core.tools import tool
 @tool
 def MLLM(file: str, filename: str, query: str, tool: str) -> str:
     """
-    MLLM model for visual language processing. The API accepts an image URL, local image path, or Base64 string; image's name, and a text query, and returns the text response.
+    多模态视觉语言理解工具。输入图像 URL、本地路径或 Base64 字符串、图像文件名和
+    文本问题，返回模型生成的文本回答。
 
     category: 世界模型/检索类
 
     Args:
-        file: Image path, URL, or Base64 encoded string
-        filename: Image filename can be get from the file
-        query: Text query for the model
-        tool: choose one of the running mllm [qwen36Tool]
+        file: 图像路径、URL 或 Base64 编码字符串。
+        filename: 图像文件名，可从 file 中获取。
+        query: 提交给模型的文本问题或任务要求。
+        tool: 要调用的多模态模型标识，当前使用 qwen36Tool。
 
     """
     processed_file = file

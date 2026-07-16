@@ -6,17 +6,17 @@ from langchain_core.tools import tool
 @tool
 def paddlePedriderDetTool(file: str, filename: str, tool: str) -> str:
     """
-    Submit a Paddle-based object detection task. The API detects class_name including car, bus, truck, bicycle, tricycle and pedestrian.
-    The API accepts an image URL, local image path, or Base64 string; image's name and paddle model name; the API returns detected bounding boxes and a result image URL.
+    基于 Paddle 的交通主体检测工具，可检测汽车、公交车、卡车、自行车、三轮车和行人。
+    输入图像 URL、本地路径或 Base64 字符串、图像文件名及模型标识，返回边界框和结果图 URL。
 
     ⚠️ 仅检测行人/骑行者/车辆。不要用于找文字、公式、室内物体、动物或其他非交通目标。
 
     category: 固定检测类
 
     Args:
-        file: Image path, URL, or Base64 encoded string
-        filename: Image filename
-        tool: Tool identifier for OCR processing: one of [paddlePedriderDetTool]
+        file: 图像路径、URL 或 Base64 编码字符串。
+        filename: 图像文件名。
+        tool: 检测工具标识，必须为 paddlePedriderDetTool。
 
     """
     # ================= 修改逻辑开始 =================

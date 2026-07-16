@@ -1,8 +1,0 @@
-{
-  "name": "physical_interaction",
-  "title": "Physical Interaction",
-  "problem_class": "physical_interaction",
-  "description": "Reason about falling, hitting, pushing, tipping, hanging over an edge, or collision order.",
-  "workflow_count": 0,
-  "workflows": []
-}

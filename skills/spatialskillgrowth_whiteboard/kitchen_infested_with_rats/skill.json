@@ -1,0 +1,32 @@
+{
+  "name": "kitchen_infested_with_rats",
+  "title": "厨房出现老鼠",
+  "problem_class": "kitchen_infested_with_rats",
+  "event_type": "kitchen_infested_with_rats",
+  "description": "检测输入视频或图像中是否发生“厨房出现老鼠”异常事件（相关显示名称：厨房出现老鼠）；调用异常检测工具时，必须使用精确类别 ID `kitchen_infested_with_rats`。",
+  "aliases": [
+    "厨房出现老鼠"
+  ],
+  "display_names": {
+    "rag": "厨房出现老鼠"
+  },
+  "primary_tool": "embeddingTool",
+  "answer_type": "bool",
+  "required_slots": [
+    "event_type"
+  ],
+  "tool_template": {
+    "tool_name": "embeddingTool",
+    "args": {
+      "file_path": "$image",
+      "event_type": "kitchen_infested_with_rats"
+    }
+  },
+  "evidence_requirements": [
+    "embeddingTool 必须使用精确 event_type `kitchen_infested_with_rats`。",
+    "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
+    "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+  ],
+  "workflow_count": 0,
+  "workflows": []
+}

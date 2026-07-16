@@ -6,18 +6,17 @@ from langchain_core.tools import tool
 @tool
 def paddleHeadDetTool(file: str, filename: str, tool: str) -> str:
     """
-    Submit a paddle-based object detection task. The API detects class_name including head.
-    The API accepts an image URL, local image path, or Base64 string; image's name and paddle model name;
-    the API returns detected bounding boxes and a result image URL.
+    基于 Paddle 的人头检测工具。输入图像 URL、本地路径或 Base64 字符串、图像文件名
+    和模型标识，返回人头边界框及结果图 URL。
 
     ⚠️ 仅检测人类头部。不要用于找文字区域、数学公式、动物、车辆或其他非人目标。
 
     category: 固定检测类
 
     Args:
-        file: Image path, URL, or Base64 encoded string
-        filename: Image filename
-        tool: Tool identifier for OCR processing: one of [paddleHeadDetTool]
+        file: 图像路径、URL 或 Base64 编码字符串。
+        filename: 图像文件名。
+        tool: 检测工具标识，必须为 paddleHeadDetTool。
 
     """
     processed_file = file

@@ -18,7 +18,12 @@ from nodes.mem.spatialskillgrowth.tool_runtime import (
     SLOT_REFERENCE_PATTERN,
     STEP_REFERENCE_PATTERN,
     ToolRuntime,
+    extract_anomaly_result,
     normalize_workflow_steps,
+)
+from nodes.mem.spatialskillgrowth.benchmark_profiles import ANOMALY_EVENT_TYPES
+from nodes.mem.spatialskillgrowth.workflow_mutator import (
+    build_anomaly_baseline_workflow,
 )
 from nodes.mem.spatialskillgrowth.evidence_validator import (
     EvidenceValidator,
@@ -30,6 +35,8 @@ from prompt.spatialskillgrowth_prompts import (
     FINAL_ANSWER_NORMALIZATION_PROMPT,
     FREE_REACT_SYSTEM_PROMPT,
     REACT_FINALIZATION_PROMPT,
+    REACT_ATTACHMENT_PROMPT,
+    WORKFLOW_REJECTION_CONTEXT_PROMPT,
 )
 
 
@@ -130,7 +137,7 @@ class ReactSolver:
         started = time.perf_counter()
         task_text = question
         if image_paths:
-            task_text += "\nAttachment:\n" + "\n".join(image_paths)
+            task_text += REACT_ATTACHMENT_PROMPT.format(paths="\n".join(image_paths))
         messages = [
             SystemMessage(content=FREE_REACT_SYSTEM_PROMPT),
             HumanMessage(content=task_text),
@@ -194,12 +201,13 @@ class ReactSolver:
             except Exception as exc:
                 if not error:
                     error = f"Finalization failed: {type(exc).__name__}: {exc}"
-        return {
+        output = {
             "success": bool(answer) and not error,
             "final_answer": answer,
             "raw_final_answer": raw_answer if answer else "",
             "react_answer": True,
             "observations": observations,
+            "used_tools": [item["tool"] for item in observations],
             "trajectory": _serialize_messages(messages),
             "failed_step_ids": [
                 item["step_id"]
@@ -209,6 +217,8 @@ class ReactSolver:
             "error": error or ("" if answer else "ReAct produced no final answer"),
             "latency_ms": (time.perf_counter() - started) * 1000.0,
         }
+        output.update(extract_anomaly_result(output))
+        return output
 
 
 class CandidateExecutionCoordinator:
@@ -272,12 +282,72 @@ class CandidateExecutionCoordinator:
                     "accepted": True,
                     "attempts": attempts,
                     "error": "",
+                    **extract_anomaly_result(result),
                 }
             repair_contexts.append(
-                f"Workflow {workflow.workflow_id} was rejected: {evidence.reason}. "
-                f"Candidate answer: {answer or 'empty'}."
+                WORKFLOW_REJECTION_CONTEXT_PROMPT.format(
+                    workflow_id=workflow.workflow_id,
+                    reason=evidence.reason,
+                    answer=answer or "空",
+                )
             )
+        if problem_class in ANOMALY_EVENT_TYPES:
+            if "embeddingTool" not in set(allowed_tool_names):
+                return {
+                    "answer": "",
+                    "selected_workflow_id": "",
+                    "fallback_react": False,
+                    "accepted": False,
+                    "attempts": attempts,
+                    "error": "异常检测任务缺少必需的 embeddingTool。",
+                    "event_type": problem_class,
+                    "is_anomaly": None,
+                    "decision": "",
+                    "threshold": None,
+                }
+            baseline = build_anomaly_baseline_workflow(problem_class)
+            attempted_ids = {item.get("workflow_id") for item in attempts}
+            if baseline.workflow_id not in attempted_ids:
+                result = self.workflow_executor.execute(
+                    baseline, question, image_paths, slot_bindings
+                )
+                answer = str(result.get("final_answer") or "").strip()
+                evidence = self.evidence_validator.validate(
+                    problem_class,
+                    question,
+                    answer,
+                    answer_type,
+                    result,
+                    image_paths,
+                )
+                attempts.append({
+                    "kind": "embedding_baseline",
+                    "workflow": baseline,
+                    "workflow_id": baseline.workflow_id,
+                    "answer": answer,
+                    "accepted": evidence.accepted,
+                    "evidence": evidence,
+                    "result": result,
+                })
+                if evidence.accepted:
+                    return {
+                        "answer": answer,
+                        "selected_workflow_id": baseline.workflow_id,
+                        "fallback_react": False,
+                        "accepted": True,
+                        "attempts": attempts,
+                        "error": "",
+                        **extract_anomaly_result(result),
+                    }
+                repair_contexts.append(
+                    WORKFLOW_REJECTION_CONTEXT_PROMPT.format(
+                        workflow_id=baseline.workflow_id,
+                        reason=evidence.reason,
+                        answer=answer or "空",
+                    )
+                )
         if not self.use_react:
+            last_result = attempts[-1]["result"] if attempts else {}
             return {
                 "answer": attempts[-1]["answer"] if attempts else "",
                 "selected_workflow_id": "",
@@ -285,6 +355,7 @@ class CandidateExecutionCoordinator:
                 "accepted": False,
                 "attempts": attempts,
                 "error": "No workflow passed evidence validation and ReAct is disabled.",
+                **extract_anomaly_result(last_result),
             }
         result = self.react_solver.solve(
             task_id,
@@ -318,6 +389,7 @@ class CandidateExecutionCoordinator:
             "accepted": evidence.accepted,
             "attempts": attempts,
             "error": "" if evidence.accepted else evidence.reason or result.get("error", ""),
+            **extract_anomaly_result(result),
         }
 
 

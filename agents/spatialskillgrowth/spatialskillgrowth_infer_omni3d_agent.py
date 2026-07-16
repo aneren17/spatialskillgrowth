@@ -13,7 +13,11 @@ from dotenv import load_dotenv
 from model.QwenFactory.pureQwenFactory import DEFAULT_API_KEY, MultimodalChatOpenAI
 from tqdm import tqdm
 
-from agents.spatialskillgrowth.online_data import infer_online_benchmark, load_online_tasks
+from agents.spatialskillgrowth.online_data import (
+    build_anomaly_task,
+    infer_online_benchmark,
+    load_online_tasks,
+)
 from config.spatialskillgrowth_config import (
     SPATIAL_SKILL_GROWTH_BASE_URL,
     SPATIAL_SKILL_GROWTH_DEFAULT_ENGINE,
@@ -28,6 +32,8 @@ from nodes.mem.spatialskillgrowth.experiment_config import (
     result_root_for_benchmark,
 )
 from nodes.mem.spatialskillgrowth.benchmark_profiles import (
+    ANOMALY_BENCHMARK,
+    ANOMALY_EVENT_TYPES,
     class_metadata_for,
     has_benchmark_profile,
     normalize_benchmark,
@@ -49,6 +55,8 @@ OMNI3D_DEFAULT_DATASET_DIR = "benchmark/Omni-3d"
 OMNI3D_DEFAULT_ANNOTATIONS_FILE = "annotations.json"
 OMNI3D_DEFAULT_EXPLORE_FILE = "annotations_explore256.json"
 OMNI3D_DEFAULT_IMAGES_DIR = "images"
+ANOMALY_DEFAULT_DATASET = "benchmark/anomaly/test.json"
+ANOMALY_DEFAULT_FILE_ROOT = "benchmark/anomaly/files"
 DEFAULT_BASE_URLS = [
     "http://127.0.0.1:8861/v1",
     "http://127.0.0.1:8862/v1",
@@ -57,14 +65,28 @@ DEFAULT_BASE_URLS = [
 load_dotenv()
 
 
-class SpatialSkillGrowthOmni3DInferenceAgent:
-    """保留清晰的 Agent 外壳，内部职责由各模块类组合完成。"""
+class SpatialSkillGrowthAnomalyDetectionAgent:
+    """接收单个视频/图像和确定类别的异常检测 Agent 外壳。"""
 
     def __init__(self, pipeline):
         self.pipeline = pipeline
 
     def ask(self, task: TaskRecord, split_name: str, resume: bool = False) -> Dict:
         return self.pipeline.ask(task, split_name, resume)
+
+    def detect(
+        self,
+        file_path: str,
+        event_type: str,
+        task_id: str = "",
+        resume: bool = False,
+    ) -> Dict:
+        task = build_anomaly_task(file_path, event_type, task_id=task_id)
+        return self.pipeline.ask(task, "online", resume)
+
+
+# 兼容旧导入路径；新代码应使用 SpatialSkillGrowthAnomalyDetectionAgent。
+SpatialSkillGrowthOmni3DInferenceAgent = SpatialSkillGrowthAnomalyDetectionAgent
 
 
 def load_omni3d_tasks(
@@ -113,11 +135,11 @@ def load_omni3d_tasks(
 
 def format_omni3d_question(question: str, answer_type: str) -> str:
     instruction = {
-        "float": "Answer format: output only a number, without unit or explanation.",
-        "int": "Answer format: output only an integer, without unit or explanation.",
-        "bool": "Answer format: output only yes or no.",
-        "str": "Answer format: output only the target name or short phrase.",
-    }.get(answer_type, "Answer format: output only the final answer.")
+        "float": "回答格式：只输出数字，不要输出单位或解释。",
+        "int": "回答格式：只输出整数，不要输出解释。",
+        "bool": "回答格式：只输出“是”或“否”。",
+        "str": "回答格式：只输出目标名称或简短短语。",
+    }.get(answer_type, "回答格式：只输出最终答案。")
     return f"{question}\n{instruction}"
 
 
@@ -126,7 +148,7 @@ def answer_matches_type(answer: str, answer_type: str) -> bool:
     if answer_type in {"float", "int"}:
         return extract_number(value) is not None
     if answer_type == "bool":
-        return value.lower() in {"yes", "no"}
+        return value.lower() in {"yes", "no", "是", "否"}
     return bool(value)
 
 
@@ -145,7 +167,9 @@ def extract_number(text: str) -> Optional[float]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="SpatialSkillGrowth frozen benchmark inference")
+    parser = argparse.ArgumentParser(
+        description="SpatialSkillGrowth 单视频/图片异常检测与冻结 Skill 推理"
+    )
     parser.add_argument("--engine", "-e", default=SPATIAL_SKILL_GROWTH_DEFAULT_ENGINE)
     parser.add_argument("--base-url", default="")
     parser.add_argument("--base-urls", default=",".join(DEFAULT_BASE_URLS))
@@ -153,10 +177,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--dataset",
         default="",
-        help="Normalized JSON dataset for a non-Omni3D or custom benchmark.",
+        help="批量异常检测或兼容 benchmark 使用的标准化 JSON 数据集。",
     )
-    parser.add_argument("--img-root", default="")
-    parser.add_argument("--benchmark", default="auto")
+    parser.add_argument("--img-root", default=ANOMALY_DEFAULT_FILE_ROOT)
+    parser.add_argument(
+        "--input-file",
+        default="",
+        help="直接检测的单个本地视频或图像文件。需与 --event-type 一起使用。",
+    )
+    parser.add_argument(
+        "--event-type",
+        default="",
+        help="已确定的异常事件英文 ID 或唯一中文显示名称。",
+    )
+    parser.add_argument("--task-id", default="", help="直接检测任务的可选 ID。")
+    parser.add_argument("--benchmark", default=ANOMALY_BENCHMARK)
     parser.add_argument("--problem-classes", default="")
     parser.add_argument("--annotations-file", default=OMNI3D_DEFAULT_ANNOTATIONS_FILE)
     parser.add_argument("--explore-file", default=OMNI3D_DEFAULT_EXPLORE_FILE)
@@ -185,19 +220,42 @@ def parse_base_urls(args) -> List[str]:
 def main() -> None:
     args = build_parser().parse_args()
     config = build_experiment_config(args.experiment, args.seed)
-    if args.dataset:
-        normalized_tasks = load_online_tasks(args.dataset, args.img_root, args.limit)
+    dataset = str(args.dataset or "").strip()
+    input_file = str(args.input_file or "").strip()
+    if input_file:
+        if not str(args.event_type or "").strip():
+            raise ValueError("使用 --input-file 时必须同时提供 --event-type。")
+        direct_task = build_anomaly_task(
+            input_file,
+            args.event_type,
+            task_id=args.task_id,
+        )
+        tasks = [{"task": direct_task, "answer_type": "bool"}]
+        benchmark = ANOMALY_BENCHMARK
+        seen_ids: Set[str] = set()
+        default_split = "online"
+    elif not dataset and normalize_benchmark(args.benchmark) == ANOMALY_BENCHMARK:
+        dataset = ANOMALY_DEFAULT_DATASET
+    if not input_file and dataset:
+        normalized_tasks = load_online_tasks(
+            dataset,
+            args.img_root,
+            args.limit,
+            require_groundtruth=False,
+        )
         for task in normalized_tasks:
-            task.answer_type = task.answer_type or "str"
+            task.answer_type = task.answer_type or (
+                "bool" if task.capability in ANOMALY_EVENT_TYPES else "str"
+            )
             task.question = format_omni3d_question(task.question, task.answer_type)
         tasks = [
             {"task": task, "answer_type": task.answer_type}
             for task in normalized_tasks
         ]
-        benchmark = _resolve_benchmark(args.benchmark, args.dataset)
+        benchmark = _resolve_benchmark(args.benchmark, dataset)
         seen_ids: Set[str] = set()
         default_split = "zeroshot"
-    else:
+    elif not input_file:
         tasks = load_omni3d_tasks(
             args.dataset_dir, args.annotations_file, args.images_dir, args.limit
         )
@@ -237,6 +295,8 @@ def main() -> None:
         metadata,
         result_root,
     )
+    if benchmark == ANOMALY_BENCHMARK and planner_benchmark != ANOMALY_BENCHMARK:
+        raise ValueError("异常检测输入必须使用 anomaly_detection 来源 Skill，不能重新映射类别。")
     if args.source_run_id:
         source = source_repository
         local_repository = WorkflowRepository(paths)
@@ -296,7 +356,7 @@ def main() -> None:
             problem_classes=planner_problem_classes,
             class_metadata=planner_metadata,
         ).build_inference()
-        agents.append(SpatialSkillGrowthOmni3DInferenceAgent(pipeline))
+        agents.append(SpatialSkillGrowthAnomalyDetectionAgent(pipeline))
     print(
         f"SpatialSkillGrowth {benchmark} inference: {len(tasks)} tasks, "
         f"{len(agents)} workers, run={paths.root}"
@@ -320,9 +380,16 @@ def main() -> None:
                     task = item["task"]
                     try:
                         result = future.result()
+                        status = (
+                            "UNLABELED"
+                            if result.get("correct") is None
+                            else "OK" if result.get("correct") else "MISS"
+                        )
                         print(
-                            f"[{task.task_id}] {'OK' if result.get('correct') else 'MISS'} "
+                            f"[{task.task_id}] {status} "
                             f"split={result.get('split')} answer={str(result.get('answer'))[:80]} "
+                            f"event_type={result.get('event_type')} "
+                            f"threshold={result.get('threshold')} "
                             f"workflow={result.get('selected_workflow_id')}"
                         )
                     except Exception as exc:

@@ -39,12 +39,16 @@ SEMANTIC_EMPTY_MARKERS = (
 ERROR_PREFIXES = (
     "error ",
     "error:",
+    "network error",
     "error executing",
     "error reading",
     "api returned no result",
     "[tool execution failed]",
     "[tool not found]",
     "traceback ",
+)
+ANOMALY_RESULT_PATTERN = re.compile(
+    r"^\s*(是|否)(?:\s*[（(]\s*判定阈值\s*[:：]\s*([^）)]+)\s*[）)])?\s*$"
 )
 EVIDENCE_IMAGE_PRIORITY = {
     "cropped_images": 3,
@@ -83,7 +87,15 @@ class ToolRuntime:
         try:
             prepared_args = self._prepare_args(tool_name, args)
             result = tool.invoke(prepared_args) if hasattr(tool, "invoke") else tool(**prepared_args)
-            return self._normalize_result(tool_name, result)
+            normalized = self._normalize_result(tool_name, result)
+            if tool_name == "embeddingTool" and normalized.get("ok"):
+                normalized["data"]["event_type"] = str(
+                    prepared_args.get("event_type") or ""
+                )
+                normalized["data"]["file_path"] = str(
+                    prepared_args.get("file_path") or ""
+                )
+            return normalized
         except Exception as exc:
             return self._failure(tool_name, f"{type(exc).__name__}: {exc}")
 
@@ -238,6 +250,15 @@ class ToolRuntime:
                 status="empty",
                 content=text,
             )
+        anomaly_output = parse_anomaly_tool_output(raw)
+        if tool_name == "embeddingTool" and anomaly_output["is_anomaly"] is None:
+            return ToolRuntime._failure(
+                tool_name,
+                "embeddingTool 未返回可识别的异常判断。",
+                raw=raw,
+                status="invalid",
+                content=text,
+            )
         detections = ToolRuntime._extract_detections(parsed)
         image_refs = ToolRuntime._extract_image_refs(parsed, text)
         if tool_name in PIXEL_DETECTION_TOOLS and not detections:
@@ -281,6 +302,8 @@ class ToolRuntime:
             "image": image_refs[0] if image_refs else "",
             "bbox_format": "xyxy_pixel" if detections else "",
         }
+        if tool_name == "embeddingTool":
+            data.update(anomaly_output)
         return {
             "ok": True,
             "status": "success",
@@ -635,16 +658,88 @@ def build_evidence_text(observations: List[Dict[str, Any]], limit: int = 6000) -
     return "\n\n".join(chunks)[-limit:]
 
 
+def parse_anomaly_tool_output(raw: Any) -> Dict[str, Any]:
+    """兼容 embeddingTool 的结构化响应和“是/否（判定阈值）”文本响应。"""
+    parsed = ToolRuntime._parse_json(raw)
+    payload = parsed if isinstance(parsed, dict) else {}
+    nested = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    metrics = nested.get("metrics") if isinstance(nested.get("metrics"), dict) else {}
+    if not metrics and isinstance(payload.get("metrics"), dict):
+        metrics = payload["metrics"]
+    is_anomaly = nested.get("is_anomaly", payload.get("is_anomaly"))
+    answer = str(nested.get("answer") or payload.get("answer") or "").strip()
+    if is_anomaly is None and answer.lower() in {"是", "yes", "true"}:
+        is_anomaly = True
+    elif is_anomaly is None and answer.lower() in {"否", "no", "false"}:
+        is_anomaly = False
+    threshold = nested.get("threshold", payload.get("threshold"))
+    if threshold is None:
+        threshold = metrics.get("threshold")
+    if is_anomaly is None:
+        match = ANOMALY_RESULT_PATTERN.fullmatch(str(raw or ""))
+        if match:
+            is_anomaly = match.group(1) == "是"
+            threshold = match.group(2) if match.group(2) is not None else threshold
+    threshold = _normalize_threshold(threshold)
+    return {
+        "is_anomaly": is_anomaly if isinstance(is_anomaly, bool) else None,
+        "decision": "是" if is_anomaly is True else "否" if is_anomaly is False else "",
+        "threshold": threshold,
+    }
+
+
+def extract_anomaly_result(result: Dict[str, Any]) -> Dict[str, Any]:
+    """从一次工作流/ReAct 结果中提取最后一次成功的 embeddingTool 判断。"""
+    observations = result.get("observations") or result.get("evidence") or []
+    for item in reversed(observations):
+        if str(item.get("tool") or "") != "embeddingTool":
+            continue
+        tool_result = item.get("result") or {}
+        if not tool_result.get("ok"):
+            continue
+        data = tool_result.get("data") or {}
+        return {
+            "event_type": str(data.get("event_type") or ""),
+            "is_anomaly": data.get("is_anomaly"),
+            "decision": str(data.get("decision") or ""),
+            "threshold": data.get("threshold"),
+        }
+    return {
+        "event_type": "",
+        "is_anomaly": None,
+        "decision": "",
+        "threshold": None,
+    }
+
+
+def _normalize_threshold(value: Any) -> Any:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    text = str(value).strip()
+    if not text or text.lower() in {"none", "null", "nan", "n/a", "unknown"}:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return text
+
+
 def extract_final_answer(text: str) -> str:
     raw = str(text or "").strip()
     if not raw:
         return ""
+    anomaly = parse_anomaly_tool_output(raw)
+    if anomaly["decision"]:
+        return anomaly["decision"]
     patterns = (
         r"(?:final answer|answer)\s*[:：]\s*([^\n]+)",
         r"\(([A-Z])\)\s*$",
         r"\b([A-Z])\s*$",
         r"\b(-?\d+(?:\.\d+)?)\s*$",
         r"\b(yes|no)\s*$",
+        r"(是|否)\s*$",
     )
     for pattern in patterns:
         match = re.search(pattern, raw, flags=re.I)

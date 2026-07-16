@@ -25,10 +25,9 @@ def yoloTool(file: str, filename: str, threshold: float = 0.5) -> str:
     category: 固定检测类
 
     Args:
-        file: Image path, URL, or Base64 encoded string
-        filename: Image filename
-        threshold: Detection confidence threshold (0.0~1.0), default 0.5.
-                   Higher = fewer but more confident detections.
+        file: 图像路径、URL 或 Base64 编码字符串。
+        filename: 图像文件名。
+        threshold: 检测置信度阈值（0.0～1.0），默认 0.5；值越高，结果越少但置信度越高。
     """
     processed_file = file
 

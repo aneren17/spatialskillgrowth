@@ -1,8 +1,0 @@
-{
-  "name": "metric_distance_scaling",
-  "title": "Metric Distance Scaling",
-  "problem_class": "metric_distance_scaling",
-  "description": "Calibrate target depth or inter-object distance from a supplied metric reference and unit.",
-  "workflow_count": 0,
-  "workflows": []
-}

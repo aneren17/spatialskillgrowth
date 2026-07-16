@@ -8,6 +8,7 @@ from typing import Dict, Iterable, List
 
 from nodes.mem.spatialskillgrowth.llm_utils import invoke_json
 from nodes.mem.spatialskillgrowth.models import RetrievalDecision, WorkflowSpec
+from nodes.mem.spatialskillgrowth.benchmark_profiles import ANOMALY_EVENT_TYPES
 from nodes.mem.spatialskillgrowth.growth_store import WorkflowRepository
 from prompt.spatialskillgrowth_prompts import WORKFLOW_TREE_RETRIEVAL_PROMPT
 from prompt.spatialskillgrowth_prompts import FLAT_WORKFLOW_RETRIEVAL_PROMPT
@@ -192,6 +193,11 @@ def workflow_structurally_eligible(
         return False
     required_tools = set(applicability.required_tools)
     graph_tools = {step.tool_name for step in workflow.steps}
+    if (
+        applicability.problem_class in ANOMALY_EVENT_TYPES
+        and "embeddingTool" not in graph_tools
+    ):
+        return False
     if not required_tools.issubset(allowed) or not graph_tools.issubset(allowed):
         return False
     return not applicability.answer_types or answer_type in applicability.answer_types

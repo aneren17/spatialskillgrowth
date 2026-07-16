@@ -580,35 +580,82 @@ class WorkflowRepository:
             "",
             f"# {title}",
             "",
-            "## Purpose",
+            "## 用途",
             "",
             description,
             "",
-            "## Resources",
-            "",
-            "- `workflows/*.json` contains executable workflow definitions.",
-            "- `scripts/*.py` contains generated Python functions whose parameters expose runtime slots.",
-            "",
-            "## Validated Workflows",
-            "",
         ]
+        event_type = str(existing_metadata.get("event_type") or "")
+        display_names = existing_metadata.get("display_names") or {}
+        if event_type:
+            lines.extend([
+                "## 事件接口",
+                "",
+                f"- 精确 `event_type`：`{event_type}`",
+                f"- 主检测工具：`{existing_metadata.get('primary_tool') or 'embeddingTool'}`",
+                f"- 答案类型：`{existing_metadata.get('answer_type') or 'bool'}`，输出“是”或“否”",
+                "- 结构化结果：必须包含 `is_anomaly` 和 `threshold`",
+                "",
+            ])
+        if isinstance(display_names, dict) and display_names:
+            source_titles = {
+                "dashboard": "大屏端",
+                "rag": "RAG 检索/检测端",
+                "stream": "实时视频流检测页",
+            }
+            lines.extend([
+                "## 各端显示名称",
+                "",
+                "| 来源 | 中文显示名称 |",
+                "|---|---|",
+            ])
+            lines.extend(
+                f"| {source_titles.get(source, source)} | {label} |"
+                for source, label in display_names.items()
+            )
+            lines.append("")
+        tool_template = existing_metadata.get("tool_template")
+        if isinstance(tool_template, dict) and tool_template:
+            lines.extend([
+                "## 工具调用模板",
+                "",
+                "```json",
+                json.dumps(tool_template, ensure_ascii=False, indent=2),
+                "```",
+                "",
+            ])
+        evidence_requirements = existing_metadata.get("evidence_requirements") or []
+        if isinstance(evidence_requirements, list) and evidence_requirements:
+            lines.extend(["## 证据要求", ""])
+            lines.extend(f"- {item}" for item in evidence_requirements)
+            lines.append("")
+        lines.extend([
+            "## 资源",
+            "",
+            "- `workflows/*.json` 保存可检索的工作流定义。",
+            "- `scripts/*.py` 保存实际执行的 Python Skill。",
+            "",
+            "## 已验证工作流",
+            "",
+        ])
         if not workflows:
-            lines.append("No workflow has passed validation in this run.")
+            lines.append("当前运行尚无通过验证的工作流。")
             lines.append("")
         for workflow in sorted(workflows, key=lambda item: item.workflow_id):
             lines.extend([
                 f"## {workflow.name or workflow.workflow_id}",
                 "",
                 f"- id: `{workflow.workflow_id}`",
-                f"- derived from: `{workflow.derived_from_workflow_id or 'none'}`",
-                f"- mutation mode: `{workflow.mutation_mode}`",
-                f"- tools: `{', '.join(step.tool_name for step in workflow.steps)}`",
-                f"- applicability: {workflow.applicability.description or 'unspecified'}",
-                f"- exclusions: {workflow.applicability.exclusions or 'none stated'}",
+                f"- 来源工作流：`{workflow.derived_from_workflow_id or '无'}`",
+                f"- 变异模式：`{workflow.mutation_mode}`",
+                f"- 工具：`{', '.join(step.tool_name for step in workflow.steps)}`",
+                f"- 适用范围：{workflow.applicability.description or '未说明'}",
+                f"- 排除条件：{workflow.applicability.exclusions or '未说明'}",
                 "",
             ])
         (directory / "SKILL.md").write_text("\n".join(lines), encoding="utf-8")
-        metadata = {
+        metadata = dict(existing_metadata)
+        metadata.update({
             "name": problem_class,
             "title": title,
             "problem_class": problem_class,
@@ -624,7 +671,7 @@ class WorkflowRepository:
                 }
                 for workflow in sorted(workflows, key=lambda item: item.workflow_id)
             ],
-        }
+        })
         _write_json_atomic(metadata_path, metadata)
         self._rebuild_skill_index(root)
 

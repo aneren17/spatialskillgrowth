@@ -6,11 +6,12 @@ import argparse
 import json
 import shutil
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 
 from nodes.mem.spatialskillgrowth.benchmark_profiles import (
-    OMNI3D_CLASS_METADATA,
-    OMNI3D_PROBLEM_CLASSES,
+    ANOMALY_BENCHMARK,
+    ANOMALY_CLASS_METADATA,
+    ANOMALY_EVENT_TYPES,
 )
 
 
@@ -26,14 +27,16 @@ def build_whiteboard(output: Path, force: bool = False) -> None:
     output.mkdir(parents=True)
     skills = []
     problem_classes = []
-    for problem_class in OMNI3D_PROBLEM_CLASSES:
-        metadata = dict(OMNI3D_CLASS_METADATA[problem_class])
+    for problem_class in ANOMALY_EVENT_TYPES:
+        metadata = dict(ANOMALY_CLASS_METADATA[problem_class])
         skill_metadata = _skill_metadata(problem_class, metadata)
         skills.append(skill_metadata)
         problem_classes.append({
             "name": problem_class,
             "title": metadata["title"],
             "description": metadata["description"],
+            "aliases": metadata["aliases"],
+            "display_names": metadata["display_names"],
         })
         directory = output / problem_class
         (directory / "scripts").mkdir(parents=True)
@@ -47,41 +50,76 @@ def build_whiteboard(output: Path, force: bool = False) -> None:
         (directory / "workflows" / ".gitkeep").touch()
     _write_json(output / "SKILLS.json", {"skills": skills})
     _write_json(output / "WHITEBOARD.json", {
-        "benchmark": "omni3d",
-        "description": (
-            "Blank standard-skill workspace copied into every new "
-            "SpatialSkillGrowth run."
-        ),
+        "benchmark": ANOMALY_BENCHMARK,
+        "description": "每个 SpatialSkillGrowth 异常检测运行使用的空白标准 Skill 工作区。",
         "problem_classes": problem_classes,
     })
 
 
-def _skill_metadata(problem_class: str, metadata: Dict[str, str]) -> Dict:
+def _skill_metadata(problem_class: str, metadata: Dict[str, Any]) -> Dict:
     return {
         "name": problem_class,
         "title": metadata["title"],
         "problem_class": problem_class,
+        "event_type": problem_class,
         "description": metadata["description"],
+        "aliases": metadata["aliases"],
+        "display_names": metadata["display_names"],
+        "primary_tool": metadata["primary_tool"],
+        "answer_type": metadata["answer_type"],
+        "required_slots": metadata["required_slots"],
+        "tool_template": metadata["tool_template"],
+        "evidence_requirements": metadata["evidence_requirements"],
         "workflow_count": 0,
         "workflows": [],
     }
 
 
-def _skill_markdown(problem_class: str, metadata: Dict[str, str]) -> str:
+def _skill_markdown(problem_class: str, metadata: Dict[str, Any]) -> str:
     description = metadata["description"]
+    source_titles = {
+        "dashboard": "大屏端",
+        "rag": "RAG 检索/检测端",
+        "stream": "实时视频流检测页",
+    }
+    display_name_rows = "\n".join(
+        f"| {source_titles.get(source, source)} | {label} |"
+        for source, label in metadata["display_names"].items()
+    )
+    evidence_rows = "\n".join(
+        f"- {requirement}" for requirement in metadata["evidence_requirements"]
+    )
+    tool_template = json.dumps(
+        metadata["tool_template"], ensure_ascii=False, indent=2
+    )
     return (
         "---\n"
         f"name: {problem_class}\n"
         f"description: {json.dumps(description, ensure_ascii=False)}\n"
         "---\n\n"
         f"# {metadata['title']}\n\n"
-        "## Purpose\n\n"
+        "## 用途\n\n"
         f"{description}\n\n"
-        "## Resources\n\n"
-        "- `workflows/*.json` contains executable workflow definitions.\n"
-        "- `scripts/*.py` contains generated Python functions whose parameters expose runtime slots.\n\n"
-        "## Validated Workflows\n\n"
-        "No workflow has passed validation in this run.\n"
+        "## 事件接口\n\n"
+        f"- 精确 `event_type`：`{problem_class}`\n"
+        f"- 主检测工具：`{metadata['primary_tool']}`\n"
+        f"- 答案类型：`{metadata['answer_type']}`，输出“是”或“否”\n"
+        "- 结构化结果：必须包含 `is_anomaly` 和 `threshold`\n\n"
+        "## 各端显示名称\n\n"
+        "| 来源 | 中文显示名称 |\n"
+        "|---|---|\n"
+        f"{display_name_rows}\n\n"
+        "## 工具调用模板\n\n"
+        "```json\n"
+        f"{tool_template}\n"
+        "```\n\n"
+        "## 证据要求\n\n"
+        f"{evidence_rows}\n\n"
+        "## 资源\n\n"
+        "- `workflows/*.json` 保存可检索的工作流定义。\n"
+        "- `scripts/*.py` 保存实际执行的 Python Skill，函数参数暴露运行时槽位。\n\n"
+        "## 已验证工作流\n\n"
+        "当前运行尚无通过验证的工作流。\n"
     )
 
 

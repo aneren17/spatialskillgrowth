@@ -6,15 +6,14 @@ from langchain_core.tools import tool
 @tool
 def paddleOcrTool(file: str, filename: str) -> str:
     """
-    Submit a Paddle-based Optical Character Recognition (OCR) task.
-    The API extracts and reads text from an image.
-    The API accepts an image URL, local image path, or Base64 string, along with the image's filename; it returns the recognized text results.
+    基于 Paddle 的光学字符识别（OCR）工具。输入图像 URL、本地路径或 Base64 字符串
+    以及图像文件名，提取并返回图像中的文字。
 
     category: 固定检测类
 
     Args:
-        file: Image path, URL, or Base64 encoded string
-        filename: Image filename
+        file: 图像路径、URL 或 Base64 编码字符串。
+        filename: 图像文件名。
 
     """
     processed_file = file

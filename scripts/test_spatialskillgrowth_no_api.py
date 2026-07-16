@@ -15,8 +15,10 @@ from PIL import Image
 from langchain_core.messages import AIMessage
 
 from agents.spatialskillgrowth.online_data import (
+    build_anomaly_task,
     infer_online_benchmark,
     load_online_tasks,
+    parse_online_item,
 )
 from agents.spatialskillgrowth.spatialskillgrowth_infer_omni3d_agent import (
     _resolve_problem_classes as resolve_inference_problem_classes,
@@ -30,6 +32,8 @@ from scripts.build_multibench_zeroshot_subset import (
     build_subset as build_multibench_subset,
 )
 from nodes.mem.spatialskillgrowth.benchmark_profiles import (
+    ANOMALY_BENCHMARK,
+    ANOMALY_EVENT_TYPES,
     LEGACY_PROBLEM_CLASSES,
     OMNI3D_PROBLEM_CLASSES,
 )
@@ -57,6 +61,7 @@ from nodes.mem.spatialskillgrowth.evidence_validator import (
     HybridEvidenceValidator,
     NoEvidenceValidator,
     StructuralEvidenceValidator,
+    build_evidence_validator,
 )
 from nodes.mem.spatialskillgrowth.workflow_executor import (
     CandidateExecutionCoordinator,
@@ -94,7 +99,19 @@ from nodes.mem.spatialskillgrowth.tool_contracts import (
 )
 from nodes.mem.spatialskillgrowth.tool_runtime import ToolRuntime
 from nodes.mem.spatialskillgrowth.workflow_mutator import WorkflowMutator
-from nodes.mem.spatialskillgrowth.task_router import BenchmarkProblemClassifier
+from nodes.mem.spatialskillgrowth.task_router import (
+    BenchmarkProblemClassifier,
+    ToolAvailabilityPolicy,
+)
+from tools.basicTools.pythonSandboxTool import SAFE_MODULES
+from tools.basicTools.embeddingTool import (
+    DASHBOARD_EVENT_LABELS,
+    EVENT_TYPE_ALIASES,
+    RAG_EVENT_LABELS,
+    STREAM_EVENT_LABELS,
+    VALID_EVENT_TYPES,
+    embeddingTool,
+)
 
 
 class FakeResponse:
@@ -135,11 +152,16 @@ def workflow(
 ):
     steps = []
     for index, tool_name in enumerate(tools):
-        args = {"query": "$question"} if tool_name == "MLLM" else {
-            "file": "$image",
-            "filename": "$filename",
-            "query": "$slot.target_a",
-        }
+        if tool_name == "MLLM":
+            args = {"query": "$question"}
+        elif tool_name == "embeddingTool":
+            args = {"file_path": "$image", "event_type": "$slot.event_type"}
+        else:
+            args = {
+                "file": "$image",
+                "filename": "$filename",
+                "query": "$slot.target_a",
+            }
         steps.append(WorkflowStep(
             tool_name=tool_name,
             args=args,
@@ -151,7 +173,9 @@ def workflow(
         name=workflow_id,
         applicability=ApplicabilitySpec(
             problem_class=problem_class,
-            required_slots=["target_a"],
+            required_slots=(
+                ["event_type"] if "embeddingTool" in tools else ["target_a"]
+            ),
             required_tools=list(tools),
             answer_types=[answer_type],
             description=f"Applicability for {workflow_id}",
@@ -177,6 +201,7 @@ def temporary_run(root, experiment="full", run_id="test"):
 
 
 def test_taxonomy_and_split():
+    assert len(ANOMALY_EVENT_TYPES) == 55
     assert len(OMNI3D_PROBLEM_CLASSES) == 16
     dataset_path = Path("benchmark/Omni-3d/annotations.json")
     explore_path = Path("benchmark/Omni-3d/annotations_explore256.json")
@@ -197,6 +222,155 @@ def test_taxonomy_and_split():
     }
     assert len(explore_ids) == 256
     assert len(all_ids - explore_ids) == 245
+
+
+def test_anomaly_taxonomy_and_embedding_workflow():
+    assert len(ANOMALY_EVENT_TYPES) == 55
+    assert len(DASHBOARD_EVENT_LABELS) == 38
+    assert len(RAG_EVENT_LABELS) == 52
+    assert len(STREAM_EVENT_LABELS) == 9
+    assert set(ANOMALY_EVENT_TYPES) == set(VALID_EVENT_TYPES)
+    assert EVENT_TYPE_ALIASES["tube_falls_and_breaks"] == [
+        "试管掉落破碎",
+        "管道坠落破裂",
+    ]
+    assert EVENT_TYPE_ALIASES["fire_door_unclosed"] == ["消防门未关闭"]
+    assert "charger：充电器未归位" in embeddingTool.description
+    assert (
+        "tube_falls_and_breaks：试管掉落破碎；管道坠落破裂"
+        in embeddingTool.description
+    )
+    spec = WorkflowMutator().extract(
+        "fall",
+        "视频中是否发生人员跌倒事件？",
+        [],
+        "anomaly_task",
+        slot_bindings={"event_type": "fall"},
+    )
+    assert [step.tool_name for step in spec.steps] == ["embeddingTool"]
+    assert spec.steps[0].args == {
+        "file_path": "$image",
+        "event_type": "$slot.event_type",
+    }
+    assert spec.applicability.required_slots == ["event_type"]
+
+    def detect(args):
+        assert args == {"file_path": "/tmp/demo.mp4", "event_type": "fall"}
+        return "是 (判定阈值: 0.73)"
+
+    with tempfile.TemporaryDirectory() as root:
+        result = WorkflowExecutor(
+            ToolRuntime({"embeddingTool": FakeTool("embeddingTool", detect)}),
+            candidate_script_root=Path(root),
+        ).execute(
+            spec,
+            "视频中是否发生人员跌倒事件？",
+            ["/tmp/demo.mp4"],
+            {"event_type": "fall"},
+        )
+    assert result["final_answer"] == "是"
+    assert result["event_type"] == "fall"
+    assert result["is_anomaly"] is True
+    assert result["threshold"] == 0.73
+    assert contract_signature("embeddingTool")["output_fields"] == {
+        "event_type": "string",
+        "is_anomaly": "boolean",
+        "threshold": "number",
+    }
+    assert answer_matches_typed("是", "yes", "bool")
+
+    video_task = build_anomaly_task("test/banner.mp4", "违规横幅检测")
+    assert video_task.capability == "banner"
+    assert video_task.media_type == "video"
+    assert video_task.answer_type == "bool"
+    assert "精确 event_type 为 `banner`" in video_task.question
+    assert "判定阈值" in video_task.question
+    assert not video_task.groundtruth
+
+    image_task = parse_online_item(
+        {"file_path": "banner.jpg", "event_type": "banner"},
+        "test",
+        require_groundtruth=False,
+    )
+    assert image_task.media_type == "image"
+    assert image_task.capability == "banner"
+    assert image_task.task_id.startswith("banner__banner__")
+
+    runtime = ToolRuntime({
+        "embeddingTool": FakeTool(
+            "embeddingTool", "否 (判定阈值: 0.61)"
+        )
+    })
+    with tempfile.TemporaryDirectory() as root:
+        coordinator = CandidateExecutionCoordinator(
+            WorkflowExecutor(runtime, candidate_script_root=Path(root)),
+            ReactSolver(None, runtime, max_steps=1),
+            build_evidence_validator("none", None),
+            use_react=False,
+        )
+        execution = coordinator.run(
+            "banner_direct",
+            "banner",
+            image_task.question,
+            image_task.image_paths,
+            "bool",
+            [],
+            {"event_type": "banner"},
+            ["embeddingTool"],
+        )
+    assert execution["accepted"]
+    assert execution["attempts"][0]["kind"] == "embedding_baseline"
+    assert execution["answer"] == "否"
+    assert execution["is_anomaly"] is False
+    assert execution["threshold"] == 0.61
+
+    with tempfile.TemporaryDirectory() as root:
+        config = build_experiment_config("retrieval_only")
+        paths = ExperimentPaths(
+            config.name,
+            "direct_anomaly",
+            root,
+            benchmark="anomaly_detection",
+            problem_classes=list(ANOMALY_EVENT_TYPES),
+        )
+        paths.ensure(config, "infer", False)
+        pipeline = ExperimentFactory(
+            config,
+            paths,
+            QueueLLM([]),
+            runtime=runtime,
+            benchmark="anomaly_detection",
+            problem_classes=list(ANOMALY_EVENT_TYPES),
+        ).build_inference()
+        summary = pipeline.ask(image_task, "online")
+    assert summary["answer"] == "否"
+    assert summary["event_type"] == "banner"
+    assert summary["event_name"] == "违规横幅检测"
+    assert summary["media_type"] == "image"
+    assert summary["is_anomaly"] is False
+    assert summary["threshold"] == 0.61
+    assert summary["correct"] is None
+
+
+def test_removed_tools_are_not_in_active_runtime():
+    removed_tools = {
+        "asrTool",
+        "webSearchTool",
+        "webVisitTool",
+        "inspect_file_as_text",
+    }
+    registry = ToolRuntime().registry
+    assert removed_tools.isdisjoint(registry)
+    plan = ToolAvailabilityPolicy().select(registry)
+    assert removed_tools.isdisjoint(plan["selected_tools"])
+    assert removed_tools.isdisjoint(plan["excluded_tools"])
+    assert {item["scope"] for item in plan["tool_decisions"]}.issubset({
+        "general",
+        "closed_set_detector",
+    })
+    assert {"requests", "bs4", "pydub", "PyPDF2", "pptx"}.isdisjoint(
+        SAFE_MODULES
+    )
 
 
 def test_llm_temperature_is_fixed():
@@ -324,14 +498,14 @@ def test_skill_whiteboard_initializes_without_overwriting():
         ).read_bytes()
         assert {
             path.name for path in paths.active_skill_root.iterdir() if path.is_dir()
-        } == set(OMNI3D_PROBLEM_CLASSES)
+        } == set(ANOMALY_EVENT_TYPES)
         assert {
             path.name for path in paths.archive_skill_root.iterdir() if path.is_dir()
-        } == set(OMNI3D_PROBLEM_CLASSES)
+        } == set(ANOMALY_EVENT_TYPES)
         assert {
             path.name for path in paths.provisional_skill_root.iterdir() if path.is_dir()
-        } == set(OMNI3D_PROBLEM_CLASSES)
-        for problem_class in OMNI3D_PROBLEM_CLASSES:
+        } == set(ANOMALY_EVENT_TYPES)
+        for problem_class in ANOMALY_EVENT_TYPES:
             for root_path in (
                 paths.active_skill_root,
                 paths.provisional_skill_root,
@@ -342,26 +516,45 @@ def test_skill_whiteboard_initializes_without_overwriting():
                 assert (skill_path / "skill.json").is_file()
                 assert (skill_path / "scripts").is_dir()
                 assert (skill_path / "workflows").is_dir()
+                skill_metadata = json.loads(
+                    (skill_path / "skill.json").read_text()
+                )
+                assert skill_metadata["event_type"] == problem_class
+                assert skill_metadata["primary_tool"] == "embeddingTool"
+                assert skill_metadata["answer_type"] == "bool"
+                assert skill_metadata["tool_template"]["args"]["event_type"] == (
+                    problem_class
+                )
+                assert skill_metadata["display_names"]
+                assert skill_metadata["aliases"]
 
         repository = WorkflowRepository(paths)
-        repository.save(workflow("whiteboard_generated"))
+        repository.save(workflow(
+            "whiteboard_generated",
+            problem_class="fall",
+            tools=("embeddingTool",),
+            answer_type="bool",
+        ))
         generated_path = (
             paths.active_skill_root
-            / "object_counting"
+            / "fall"
             / "workflows"
             / "whiteboard_generated.json"
         )
         assert generated_path.is_file()
         assert (
             paths.active_skill_root
-            / "object_counting"
+            / "fall"
             / "scripts"
             / "whiteboard_generated.py"
         ).is_file()
-        skill_path = paths.active_skill_root / "object_counting"
+        skill_path = paths.active_skill_root / "fall"
         assert "whiteboard_generated" in (skill_path / "SKILL.md").read_text()
         skill_metadata = json.loads((skill_path / "skill.json").read_text())
         assert skill_metadata["workflow_count"] == 1
+        assert skill_metadata["event_type"] == "fall"
+        assert skill_metadata["display_names"]["dashboard"] == "人员摔倒"
+        assert skill_metadata["tool_template"]["args"]["event_type"] == "fall"
         assert skill_metadata["workflows"][0]["path"] == (
             "workflows/whiteboard_generated.json"
         )
@@ -370,7 +563,7 @@ def test_skill_whiteboard_initializes_without_overwriting():
         )
         indexed_skill = next(
             item for item in active_index["skills"]
-            if item["problem_class"] == "object_counting"
+            if item["problem_class"] == "fall"
         )
         assert indexed_skill["workflow_count"] == 1
         paths.ensure(config, "infer", False)
@@ -378,12 +571,17 @@ def test_skill_whiteboard_initializes_without_overwriting():
         repository.archive(repository.get("whiteboard_generated"), "test_archive")
         archived_path = (
             paths.archive_skill_root
-            / "object_counting"
+            / "fall"
             / "workflows"
             / "whiteboard_generated.json"
         )
         assert archived_path.is_file() and not generated_path.exists()
-        assert (paths.archive_skill_root / "object_counting" / "SKILL.md").is_file()
+        assert (paths.archive_skill_root / "fall" / "SKILL.md").is_file()
+        archived_skill_metadata = json.loads(
+            (paths.archive_skill_root / "fall" / "skill.json").read_text()
+        )
+        assert archived_skill_metadata["event_type"] == "fall"
+        assert archived_skill_metadata["display_names"]["rag"] == "跌倒"
         assert not list(DEFAULT_SKILL_WHITEBOARD_ROOT.rglob("whiteboard_generated.json"))
 
 
@@ -987,7 +1185,7 @@ def test_exploration_pipeline_activation():
         def invoke(self, messages):
             first = messages[0].content
             text = first[0]["text"] if isinstance(first, list) else str(first)
-            if "Extract reusable runtime bindings" in text:
+            if "抽取可复用的运行时槽位" in text:
                 return FakeResponse(json.dumps({
                     "target_a": "cups",
                     "target_b": "",
@@ -998,7 +1196,7 @@ def test_exploration_pipeline_activation():
                     "measurement_dimension": "count",
                     "operation": "count",
                 }))
-            if "Write reusable natural-language applicability" in text:
+            if "编写可复用" in text and "适用范围" in text:
                 return FakeResponse(json.dumps({
                     "name": "direct_visible_count",
                     "description": "Use direct visual reasoning for visible instance counting.",
@@ -1010,7 +1208,13 @@ def test_exploration_pipeline_activation():
 
     with tempfile.TemporaryDirectory() as root:
         config = build_experiment_config("no_success_enhancement")
-        paths = ExperimentPaths(config.name, "integration", root)
+        paths = ExperimentPaths(
+            config.name,
+            "integration",
+            root,
+            benchmark="omni3d",
+            problem_classes=list(OMNI3D_PROBLEM_CLASSES),
+        )
         paths.ensure(config, "explore", False)
         pipeline = ExperimentFactory(
             config,
@@ -1018,6 +1222,8 @@ def test_exploration_pipeline_activation():
             PipelineLLM(),
             runtime=ToolRuntime({"MLLM": FakeTool("MLLM", "Answer: 2")}),
             max_react_steps=2,
+            benchmark="omni3d",
+            problem_classes=list(OMNI3D_PROBLEM_CLASSES),
         ).build_exploration()
         result = pipeline.ask(TaskRecord(
             task_id="integration_task",
@@ -1046,6 +1252,8 @@ def test_exploration_pipeline_activation():
 def main():
     tests = [
         test_taxonomy_and_split,
+        test_anomaly_taxonomy_and_embedding_workflow,
+        test_removed_tools_are_not_in_active_runtime,
         test_llm_temperature_is_fixed,
         test_manifest_isolation,
         test_benchmark_aware_problem_classes_and_skills,

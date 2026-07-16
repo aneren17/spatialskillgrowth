@@ -1,8 +1,0 @@
-{
-  "name": "occlusion_visibility",
-  "title": "Occlusion and Visibility",
-  "problem_class": "occlusion_visibility",
-  "description": "Determine whether a target remains visible or becomes covered after a hypothetical placement.",
-  "workflow_count": 0,
-  "workflows": []
-}

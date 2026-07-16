@@ -7,27 +7,28 @@ from langchain_core.tools import tool
 @tool
 def sam3(query: str, file: str, filename: str, threshold: float = 0.6, tool: str = "sam3Tool") -> str:
     """
-    Perform image segmentation using SAM. You can provide concise query, the image URL, local image path, or Base64 string and its name, threshold to guide segmentation;
-    the API returns an image URL with drawn masks, AND the bounding box coordinates of the detected objects in [xmin, ymin, xmax, ymax] format.
+    使用 SAM 对图像进行分割。输入简短查询词、图像 URL/本地路径/Base64 字符串、文件名
+    和分割阈值，返回绘制掩码的结果图 URL，以及 [xmin, ymin, xmax, ymax] 格式的目标边界框。
 
-    query MUST be 1-3 English words only. Sentences, long phrases, or Chinese will cause error.(If the object you want to segment needs to be described using sentences, please modify it into a series of phrases that are called multiple times as input.)
+    受模型接口限制，query 必须是 1～3 个英文单词，不能使用句子、长短语或中文。需要长句描述
+    的目标应拆成多个英文短语并分别调用。
        ✅ "equation", "red car", "person"
        ❌ "Find the mathematical equation in this image"
        ❌ "找出图中的数学公式"
 
-    threshold: 0.6-0.8 for concrete objects (car, person), 0.5 for abstract (text, equation).
+    threshold：具体物体（如 car、person）建议 0.6～0.8，抽象目标（如 text）建议 0.5。
 
     category: 世界模型/检索类
 
     Args:
-        tool: SAM model identifier, one of[sam3Tool]
-        query: 1-3 English words ONLY — NOT a sentence, NOT Chinese(If the object you want to segment needs to be described using sentences, please modify it into a series of phrases that are called multiple times as input.)
-        file: Input image URL, local image path, or Base64 encoded string
-        filename: Input image filename
-        threshold: Segmentation threshold. Higher for concrete objects, lower for abstract concepts.
+        tool: SAM 模型标识，必须为 sam3Tool。
+        query: 仅限 1～3 个英文单词，不能使用句子或中文。
+        file: 输入图像 URL、本地路径或 Base64 编码字符串。
+        filename: 输入图像文件名。
+        threshold: 分割阈值；具体目标使用较高值，抽象目标使用较低值。
 
     Returns:
-        A string containing the result image URL and a list of detected bounding boxes with confidence scores.
+        包含结果图 URL、检测边界框和置信度的字符串。
     """
     processed_file = file
     

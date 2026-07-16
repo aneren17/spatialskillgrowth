@@ -39,6 +39,10 @@ def answer_matches_typed(
     answer_type: str,
 ) -> bool:
     normalized_type = str(answer_type or "").strip().lower()
+    if normalized_type == "bool":
+        pred_bool = _normalize_bool(prediction)
+        truth_bool = _normalize_bool(groundtruth)
+        return pred_bool is not None and pred_bool == truth_bool
     if normalized_type not in {"float", "int"}:
         return answer_matches(prediction, groundtruth)
     pred_number = _extract_number(prediction)
@@ -67,3 +71,12 @@ def _extract_number(value: str):
         return float(match.group())
     except ValueError:
         return None
+
+
+def _normalize_bool(value: str):
+    normalized = normalize_answer(value)
+    if normalized in {"yes", "true", "1", "是", "有", "发生", "异常"}:
+        return True
+    if normalized in {"no", "false", "0", "否", "无", "未发生", "正常"}:
+        return False
+    return None

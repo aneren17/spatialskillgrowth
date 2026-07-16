@@ -30,6 +30,8 @@ from nodes.mem.spatialskillgrowth.experiment_config import (
     result_root_for_benchmark,
 )
 from nodes.mem.spatialskillgrowth.benchmark_profiles import (
+    ANOMALY_BENCHMARK,
+    ANOMALY_EVENT_TYPES,
     class_metadata_for,
     has_benchmark_profile,
     normalize_benchmark,
@@ -40,11 +42,10 @@ from nodes.mem.spatialskillgrowth.workflow_executor import WorkflowPythonExporte
 from nodes.mem.spatialskillgrowth.growth_store import WorkflowRepository
 
 
-DEFAULT_DATASET = "benchmark/Omni-3d/annotations_explore256.json"
-# DEFAULT_DATASET = "benchmark/Omni-3d/annotations_explore10.json"
-DEFAULT_IMAGE_ROOT = "benchmark/Omni-3d/images"
+DEFAULT_DATASET = "benchmark/anomaly/explore.json"
+DEFAULT_IMAGE_ROOT = "benchmark/anomaly/files"
 
-DEFAULT_RUNID = "explore_omni3d_256"
+DEFAULT_RUNID = "explore_anomaly"
 
 # DEFAULT_DATASET = "benchmark/STVQA-7K/spatial_debug_10/toolbatch_spatial_debug_10.json"
 # DEFAULT_IMAGE_ROOT = "benchmark/STVQA-7K/images"
@@ -63,7 +64,9 @@ load_dotenv()
 def load_exploration_tasks(dataset: str, image_root: str, limit: int = 0):
     tasks = load_online_tasks(dataset, image_root, limit)
     for task in tasks:
-        task.answer_type = task.answer_type or "str"
+        task.answer_type = task.answer_type or (
+            "bool" if task.capability in ANOMALY_EVENT_TYPES else "str"
+        )
         task.question = format_omni3d_question(task.question, task.answer_type)
     queues = {problem_class: deque() for problem_class in sorted({
         task.capability for task in tasks
@@ -92,7 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base-urls", default=",".join(DEFAULT_BASE_URLS))
     parser.add_argument("--dataset", default=DEFAULT_DATASET)
     parser.add_argument("--img-root", default=DEFAULT_IMAGE_ROOT)
-    parser.add_argument("--benchmark", default="auto")
+    parser.add_argument("--benchmark", default=ANOMALY_BENCHMARK)
     parser.add_argument(
         "--problem-classes",
         default="",

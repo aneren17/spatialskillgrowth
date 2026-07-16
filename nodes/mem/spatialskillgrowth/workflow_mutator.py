@@ -15,6 +15,7 @@ from nodes.mem.spatialskillgrowth.models import (
     WorkflowSpec,
     WorkflowStep,
 )
+from nodes.mem.spatialskillgrowth.benchmark_profiles import ANOMALY_EVENT_TYPES
 from nodes.mem.spatialskillgrowth.tool_contracts import (
     DEPENDENT_TOOLS,
     PIXEL_DETECTION_TOOLS,
@@ -253,6 +254,16 @@ class WorkflowMutator:
         tool_hints: Dict[str, str],
         slot_bindings: Dict[str, str],
     ) -> List[WorkflowStep]:
+        if atom.tool_name == "embeddingTool":
+            return [WorkflowStep(
+                tool_name="embeddingTool",
+                args={
+                    "file_path": "$image",
+                    "event_type": "$slot.event_type",
+                },
+                param_atoms=[atom],
+                purpose=atom.description,
+            )]
         if atom.tool_name == "MLLM":
             args = {
                 "file": "$evidence_image",
@@ -288,9 +299,9 @@ class WorkflowMutator:
                     },
                     param_atoms=[atom],
                     purpose=(
-                        f"Localize ${slot_name} and collect its mask and xyxy boxes."
+                        f"定位 ${slot_name}，并收集掩码和 xyxy 边界框。"
                         if "box" in atom.value else
-                        f"Localize ${slot_name}."
+                        f"定位 ${slot_name}。"
                     ),
                 )
                 for slot_name in slot_names
@@ -364,7 +375,7 @@ class WorkflowMutator:
     ) -> Dict[str, Any]:
         normalized = copy.deepcopy(args)
         for key in list(normalized):
-            if key in {"file", "image", "image_path"}:
+            if key in {"file", "file_path", "image", "image_path"}:
                 normalized[key] = "$image"
             elif key == "filename":
                 normalized[key] = "$filename"
@@ -379,6 +390,8 @@ class WorkflowMutator:
                 else:
                     slot = "target_a" if occurrence == 0 else "target_b"
                     normalized[key] = f"$slot.{slot}"
+            elif key == "event_type" and tool_name == "embeddingTool":
+                normalized[key] = "$slot.event_type"
             elif key == "detections":
                 normalized[key] = ""
             elif key == "folder" and tool_name in {"crop_detections", "picRelativeCut"}:
@@ -394,12 +407,17 @@ class WorkflowMutator:
             return []
         reasoning_steps = [step for step in steps if step.tool_name == "MLLM"]
         evidence_steps = [step for step in steps if step.tool_name != "MLLM"]
+        if not reasoning_steps and problem_class in ANOMALY_EVENT_TYPES:
+            embedding_steps = [
+                step for step in evidence_steps if step.tool_name == "embeddingTool"
+            ]
+            return embedding_steps[:1] or [WorkflowMutator._default_step(problem_class)]
         final_step = (
             copy.deepcopy(reasoning_steps[-1])
             if reasoning_steps else WorkflowMutator._default_step(problem_class)
         )
         final_step.args["query"] = WORKFLOW_FINAL_ANSWER_PROMPT
-        final_step.purpose = "Synthesize collected visual evidence into the final answer."
+        final_step.purpose = "汇总已收集的视觉证据并生成最终答案。"
         return evidence_steps[:4] + [final_step]
 
     @staticmethod
@@ -461,12 +479,21 @@ class WorkflowMutator:
 
     @staticmethod
     def _default_step(problem_class: str) -> WorkflowStep:
+        if problem_class in ANOMALY_EVENT_TYPES:
+            return WorkflowStep(
+                tool_name="embeddingTool",
+                args={
+                    "file_path": "$image",
+                    "event_type": "$slot.event_type",
+                },
+                purpose=f"检测 {problem_class} 异常事件。",
+            )
         role = {
-            "counting": "counting",
-            "size": "size comparison",
-            "distance_depth": "depth ordering",
-            "orientation": "orientation",
-        }.get(problem_class, "spatial relationship")
+            "counting": "目标计数",
+            "size": "尺寸比较",
+            "distance_depth": "深度排序",
+            "orientation": "方向判断",
+        }.get(problem_class, "视觉关系判断")
         return WorkflowStep(
             tool_name="MLLM",
             args={
@@ -514,15 +541,15 @@ class WorkflowMutator:
     ) -> str:
         scope_atom = next((atom for atom in atoms if atom.axis == "scope"), None)
         scope = (
-            "localized regions"
+            "局部区域"
             if scope_atom and scope_atom.value == "local_regions"
-            else "the full image"
+            else "完整图像"
         )
         requirements = "; ".join(
             atom.description.rstrip(".")
             for atom in atoms
             if atom.kind == "world_model" and atom.description
-        ) or "Use explicit visual evidence"
+        ) or "使用明确的视觉证据"
         return WORKFLOW_COMBINED_SEMANTIC_ANSWER_PROMPT.format(
             scope=scope,
             problem_class=applicability.problem_class,
@@ -532,20 +559,22 @@ class WorkflowMutator:
     @staticmethod
     def _step_purpose(tool_name: str, problem_class: str) -> str:
         if tool_name == "MLLM":
-            return f"Reason over the image and collected evidence for {problem_class}."
+            return f"依据图像和已收集证据判断 {problem_class}。"
+        if tool_name == "embeddingTool":
+            return f"使用精确 event_type 检测 {problem_class} 异常事件。"
         if tool_name == "sam3":
-            return "Segment a runtime-selected target and collect its bounding boxes."
+            return "分割运行时指定目标并收集边界框。"
         if tool_name == "groundingdino":
-            return "Open-vocabulary localize runtime-selected targets and collect boxes."
+            return "用开放词汇检测定位运行时指定目标并收集边界框。"
         if tool_name == "unidepth":
-            return "Estimate metric depth in prior detection boxes."
+            return "估计已有检测框内目标的度量深度。"
         if tool_name in PIXEL_DETECTION_TOOLS:
-            return "Locate visible objects and obtain bounding-box evidence."
+            return "定位可见目标并获取边界框证据。"
         if tool_name in {"crop_detections", "picRelativeCut"}:
-            return "Create a focused region from compatible detection boxes."
+            return "根据兼容检测框生成重点观察区域。"
         if tool_name == "python_code_sandbox":
-            return "Compute a structured summary of prior detection evidence."
-        return f"Collect supporting evidence with {tool_name}."
+            return "计算已有检测证据的结构化摘要。"
+        return f"使用 {tool_name} 收集支持证据。"
 
     @staticmethod
     def _workflow_id(problem_class: str, steps: List[WorkflowStep]) -> str:
@@ -565,3 +594,27 @@ class WorkflowMutator:
         )
         slots = re.findall(r"\$slot\.([A-Za-z0-9_]+)", serialized)
         return list(dict.fromkeys(slots))
+
+
+def build_anomaly_baseline_workflow(event_type: str) -> WorkflowSpec:
+    """构造未命中已验证 Skill 时使用的确定性 embeddingTool 基线。"""
+    if event_type not in ANOMALY_EVENT_TYPES:
+        raise ValueError(f"不支持的异常事件类别：{event_type}")
+    step = WorkflowMutator._default_step(event_type)
+    workflow_id = WorkflowMutator._workflow_id(event_type, [step])
+    return WorkflowSpec(
+        workflow_id=workflow_id,
+        name=f"{event_type}_embedding_baseline",
+        applicability=ApplicabilitySpec(
+            problem_class=event_type,
+            required_slots=["event_type"],
+            required_tools=["embeddingTool"],
+            answer_types=["bool"],
+            description=f"使用 embeddingTool 检测 {event_type} 异常事件。",
+            exclusions="只适用于输入中已明确给出该 event_type 的视频或图像。",
+            capability_boundary="必须取得 embeddingTool 的异常判断和判定阈值。",
+        ),
+        steps=[step],
+        status="provisional",
+        mutation_mode="extracted",
+    )

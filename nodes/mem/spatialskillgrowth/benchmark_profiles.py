@@ -1,4 +1,4 @@
-"""Benchmark-specific problem-class taxonomies and skill namespaces."""
+"""按 benchmark 隔离的任务类别、异常事件 taxonomy 与 Skill 命名空间。"""
 
 from __future__ import annotations
 
@@ -6,8 +6,47 @@ import re
 from pathlib import Path
 from typing import Dict, Tuple
 
+from tools.basicTools.embeddingTool import (
+    EVENT_TYPE_ALIASES,
+    EVENT_TYPE_LABELS,
+    EVENT_TYPE_SOURCE_LABELS,
+    VALID_EVENT_TYPES,
+)
+
 
 DEFAULT_BENCHMARK = "generic"
+ANOMALY_BENCHMARK = "anomaly_detection"
+ANOMALY_EVENT_TYPES = tuple(sorted(VALID_EVENT_TYPES))
+ANOMALY_CLASS_METADATA = {
+    event_type: {
+        "title": label,
+        "goal": f"判断输入视频或图像中是否发生“{label}”异常事件",
+        "description": (
+            f"检测输入视频或图像中是否发生“{label}”异常事件"
+            f"（相关显示名称：{'、'.join(EVENT_TYPE_ALIASES[event_type])}）；"
+            f"调用异常检测工具时，"
+            f"必须使用精确类别 ID `{event_type}`。"
+        ),
+        "aliases": list(EVENT_TYPE_ALIASES[event_type]),
+        "display_names": dict(EVENT_TYPE_SOURCE_LABELS[event_type]),
+        "primary_tool": "embeddingTool",
+        "answer_type": "bool",
+        "required_slots": ["event_type"],
+        "tool_template": {
+            "tool_name": "embeddingTool",
+            "args": {
+                "file_path": "$image",
+                "event_type": event_type,
+            },
+        },
+        "evidence_requirements": [
+            f"embeddingTool 必须使用精确 event_type `{event_type}`。",
+            "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
+            "工具失败、event_type 不一致或缺少检测结果时不得接受答案。",
+        ],
+    }
+    for event_type, label in EVENT_TYPE_LABELS.items()
+}
 LEGACY_PROBLEM_CLASSES = (
     "counting",
     "spatial_relation",
@@ -63,11 +102,16 @@ BENCHMARK_ALIASES = {
     "st_vqa": "stvqa",
     "omni-3d": "omni3d",
     "omni_3d": "omni3d",
+    "anomaly": ANOMALY_BENCHMARK,
+    "anomaly-detection": ANOMALY_BENCHMARK,
+    "anomaly_detection": ANOMALY_BENCHMARK,
+    "异常检测": ANOMALY_BENCHMARK,
 }
 BENCHMARK_PROBLEM_CLASSES = {
     DEFAULT_BENCHMARK: LEGACY_PROBLEM_CLASSES,
     "stvqa": LEGACY_PROBLEM_CLASSES,
     "omni3d": OMNI3D_PROBLEM_CLASSES,
+    ANOMALY_BENCHMARK: ANOMALY_EVENT_TYPES,
 }
 OMNI3D_CLASS_METADATA = {
     "metric_dimension_scaling": {
@@ -154,7 +198,10 @@ OMNI3D_CLASS_METADATA = {
 
 
 def normalize_benchmark(benchmark: str) -> str:
-    value = re.sub(r"[^a-z0-9_-]+", "", str(benchmark or "").strip().lower())
+    raw = str(benchmark or "").strip().lower()
+    if raw in BENCHMARK_ALIASES:
+        return BENCHMARK_ALIASES[raw]
+    value = re.sub(r"[^a-z0-9_-]+", "", raw)
     return BENCHMARK_ALIASES.get(value, value or DEFAULT_BENCHMARK)
 
 
@@ -164,9 +211,12 @@ def problem_classes_for(benchmark: str) -> Tuple[str, ...]:
 
 
 def class_metadata_for(benchmark: str) -> Dict[str, Dict[str, str]]:
-    if normalize_benchmark(benchmark) == "omni3d":
+    normalized = normalize_benchmark(benchmark)
+    if normalized == ANOMALY_BENCHMARK:
+        return {name: dict(metadata) for name, metadata in ANOMALY_CLASS_METADATA.items()}
+    if normalized == "omni3d":
         return {name: dict(metadata) for name, metadata in OMNI3D_CLASS_METADATA.items()}
-    if normalize_benchmark(benchmark) in {DEFAULT_BENCHMARK, "stvqa"}:
+    if normalized in {DEFAULT_BENCHMARK, "stvqa"}:
         return {name: dict(metadata) for name, metadata in LEGACY_CLASS_METADATA.items()}
     return {}
 

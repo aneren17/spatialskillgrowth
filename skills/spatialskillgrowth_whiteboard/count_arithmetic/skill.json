@@ -1,8 +1,0 @@
-{
-  "name": "count_arithmetic",
-  "title": "Count Arithmetic",
-  "problem_class": "count_arithmetic",
-  "description": "Count multiple groups and apply deterministic arithmetic to their counts.",
-  "workflow_count": 0,
-  "workflows": []
-}

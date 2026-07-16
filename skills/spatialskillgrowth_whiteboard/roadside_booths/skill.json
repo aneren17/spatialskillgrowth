@@ -1,0 +1,32 @@
+{
+  "name": "roadside_booths",
+  "title": "占道经营",
+  "problem_class": "roadside_booths",
+  "event_type": "roadside_booths",
+  "description": "检测输入视频或图像中是否发生“占道经营”异常事件（相关显示名称：占道经营）；调用异常检测工具时，必须使用精确类别 ID `roadside_booths`。",
+  "aliases": [
+    "占道经营"
+  ],
+  "display_names": {
+    "rag": "占道经营"
+  },
+  "primary_tool": "embeddingTool",
+  "answer_type": "bool",
+  "required_slots": [
+    "event_type"
+  ],
+  "tool_template": {
+    "tool_name": "embeddingTool",
+    "args": {
+      "file_path": "$image",
+      "event_type": "roadside_booths"
+    }
+  },
+  "evidence_requirements": [
+    "embeddingTool 必须使用精确 event_type `roadside_booths`。",
+    "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
+    "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+  ],
+  "workflow_count": 0,
+  "workflows": []
+}

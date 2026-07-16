@@ -1,15 +1,21 @@
 # SpatialSkillGrowth
 
-这是从主仓库复制出的独立 SpatialSkillGrowth 子项目。框架以 Omni3D 为主实验：先在覆盖 16 个
-problem class 的 256 条分层样本上探索，再冻结技能并在完整 501 条数据上推理；评测按实际数据量
-动态报告 `overall501`、`seen256` 和 `heldout245`。
+这是一个以异常事件检测为核心的 SpatialSkillGrowth 子项目。标准 Skill 白板包含
+`embeddingTool.py` 声明的全部 55 个异常事件类别；类别 ID 保持后端要求的英文 `event_type`，
+类别标题、说明、框架提示词和工具描述均使用中文。框架先在有真实答案的样本上探索并生长工作流，
+再冻结 active Skill 做推理。
 
-入口同时对其他 benchmark 开放。`--benchmark auto` 会优先读取数据 metadata/source 和路径；
+55 个类别来自大屏端、RAG 检索/检测端和实时视频流检测页事件表的英文 ID 并集。相同英文 ID
+只建立一个 Skill；不同前端对同一 ID 使用的不同中文名称会按来源保存在 `display_names`，完全
+相同的中文名称只在 `aliases` 中保留一次。每个白板 Skill 都声明精确 `event_type`、中文别名、
+`embeddingTool` 调用模板、布尔答案格式和证据要求，但 `workflows/` 仍只接收经过探索验证的工作流。
+
+默认 benchmark 是 `anomaly_detection`。入口仍兼容其他 benchmark；`--benchmark auto` 会优先读取数据 metadata/source 和路径；
 已知 benchmark 使用专属 taxonomy，未知 benchmark 使用数据中的 `problem_class`，也可通过
 `--problem-classes` 显式传入。不同 benchmark 默认写入不同结果根目录。
 
 该目录可以整体移动或建立为单独仓库。源码、提示词、标准 Skill 白板、模型客户端、工具客户端、
-数据构建脚本和 Omni3D 评测适配器均已包含；大体积 benchmark、历史 `benchmark_result/`、模型
+数据构建脚本和兼容的 Omni3D 评测适配器均已包含；大体积 benchmark、历史 `benchmark_result/`、模型
 服务和视觉工具服务不复制。移动后应先进入项目根目录再执行所有 `python -m ...` 命令。
 
 ## 核心设计
@@ -21,7 +27,7 @@ problem class 的 256 条分层样本上探索，再冻结技能并在完整 501
   `if`、`for` 和中间计算。指标更新和状态迁移不会覆盖人工修改的脚本。
 - Python Skill 在 AST 校验、受限 builtins 和 JSON 声明工具白名单中执行；报错保留真实脚本路径、
   行号和 traceback。这是进程内受限执行环境，不是操作系统级容器隔离，不应执行不可信第三方脚本。
-- Omni3D 使用 16 个专用 problem class，不再复用 STVQA 的五类分类。
+- 异常检测使用 55 个专用 problem class，每类与 `embeddingTool` 的一个精确 `event_type` 一一对应。
 - 检索先按 problem class、槽位、工具契约和答案类型做结构硬过滤，再由多模态 LLM 查看问题、
   图片、槽位、applicability、工具图和历史指标，返回 top-3 或 reject-all。
 - top-3 工作流按排名顺序执行；全部未通过证据门控后才进入 ReAct 修复。ReAct 的工具预算
@@ -41,9 +47,9 @@ problem class 的 256 条分层样本上探索，再冻结技能并在完整 501
   provisional，避免候选只因探索顺序而永远无法晋升。探索可检索 provisional，全量推理只检索 active。
 - 每个 problem class 默认保留最多 12 条 active 工作流，并按正确率、证据接受率、工具成本/失败
   和结构覆盖做质量降级及 Pareto 软裁剪；低质量路线会降级或归档。
-- `skills/spatialskillgrowth_whiteboard/` 是 Omni3D 的标准技能白板。其他 benchmark 会按照自身
+- `skills/spatialskillgrowth_whiteboard/` 是异常检测的标准技能白板。其他 benchmark 会按照自身
   taxonomy 在新 run 中动态生成相同格式的 `SKILL.md`、`skill.json`、`scripts/` 和
-  `workflows/`，不会混入 Omni3D 的 16 类。`--resume` 不会覆盖已有技能。
+  `workflows/`，不会混入异常事件类别。`--resume` 不会覆盖已有技能。
 
 ## 主要类
 
@@ -86,27 +92,57 @@ python -m pip install -r requirements.txt
 工具源码默认连接项目既有服务地址。真实运行前需要检查 `tools/basicTools/` 中 MLLM、SAM、
 GroundingDINO、UniDepth、OCR 等服务配置。不要把真实 API key 提交到仓库。
 
-## Omni3D 数据
+异常检测运行时只会动态加载 `tools/basicTools/`。当前活动工具为 `embeddingTool`、MLLM、
+GroundingDINO、SAM3、UniDepth、YOLO、Paddle OCR/检测、图像裁剪和 Python 数值沙箱。
+网页搜索、网页访问、ASR 和文档/PDF 解析工具不在活动目录，也不在核心依赖和工具策略中；
+`tools/addedTools/` 仅作为非运行代码留存，框架不会扫描该目录。
 
-独立子项目不复制大体积 benchmark。运行前请准备：
+## 异常检测数据
 
-```text
-benchmark/Omni-3d/
-├── annotations.json
-├── annotations_explore256.json
-├── annotations_explore10.json
-└── images/
+数据可以是 JSON 数组，也可以放在 `data/items/tasks/questions` 任一字段中。图像或视频字段支持
+`image`、`image_path`、`video`、`video_path`、`file`、`file_path`。探索数据必须包含真实答案：
+
+```json
+[
+  {
+    "task_id": "fall_001",
+    "video_path": "fall/demo_001.mp4",
+    "event_type": "fall",
+    "question": "该视频中是否发生人员跌倒事件？",
+    "answer": "是",
+    "answer_type": "bool"
+  }
+]
 ```
 
-探索集可从完整标注重新生成：
+异常检测的最小输入只有一个本地视频/图片和一个已确定类别；`task_id`、`question`、`answer_type`
+均可省略。类别可以使用精确英文 `event_type`，也可以使用能唯一映射的中文显示名称。加载器会验证
+文件类型和文件数量，自动生成中文检测描述，并固定使用 `bool` 答案。探索数据仍必须额外提供真实答案。
+
+单文件可以直接检测，不需要先创建数据集 JSON：
 
 ```bash
-python -m scripts.build_omni3d_explore_subset \
-  --source benchmark/Omni-3d/annotations.json \
-  --output benchmark/Omni-3d/annotations_explore256.json \
-  --size 256 \
-  --seed 3407
+python -m agents.spatialskillgrowth.anomaly_detection_agent \
+  --input-file test/banner.mp4 \
+  --event-type banner \
+  --experiment retrieval_only \
+  --run-id banner_direct_test
 ```
+
+异常检测结果使用结构化字段：
+
+```json
+{
+  "event_type": "banner",
+  "event_name": "违规横幅检测",
+  "media_type": "video",
+  "answer": "是",
+  "is_anomaly": true,
+  "threshold": 0.73
+}
+```
+
+`embeddingTool` 调用失败、类别不一致或后端没有返回 threshold 时，证据门会拒绝该结果。
 
 ## 主实验
 
@@ -114,27 +150,27 @@ python -m scripts.build_omni3d_explore_subset \
 
 ```bash
 python -m agents.spatialskillgrowth.spatialskillgrowth_explore_omni3d_agent \
+  --benchmark anomaly_detection \
   --experiment full \
-  --run-id explore_omni3d_256 \
+  --run-id explore_anomaly \
   --seed 3407 \
-  --dataset benchmark/Omni-3d/annotations_explore256.json \
-  --img-root benchmark/Omni-3d/images \
+  --dataset benchmark/anomaly/explore.json \
+  --img-root benchmark/anomaly/files \
   --base-urls http://127.0.0.1:8861/v1,http://127.0.0.1:8862/v1,http://127.0.0.1:8863/v1
 ```
 
 随后建立独立推理 run。程序会把来源 run 的 active Skill 完整复制到推理 run，并只读取本地快照：
 
 ```bash
-python -m agents.spatialskillgrowth.spatialskillgrowth_infer_omni3d_agent \
+python -m agents.spatialskillgrowth.anomaly_detection_agent \
+  --benchmark anomaly_detection \
   --experiment full \
-  --run-id infer_omni3d_501_from_256 \
+  --run-id infer_anomaly \
   --source-experiment full \
-  --source-run-id explore_omni3d_256 \
-  --source-benchmark omni3d \
-  --dataset-dir benchmark/Omni-3d \
-  --annotations-file annotations.json \
-  --explore-file annotations_explore256.json \
-  --images-dir images \
+  --source-run-id explore_anomaly \
+  --source-benchmark anomaly_detection \
+  --dataset benchmark/anomaly/test.json \
+  --img-root benchmark/anomaly/files \
   --base-urls http://127.0.0.1:8861/v1,http://127.0.0.1:8862/v1,http://127.0.0.1:8863/v1
 ```
 
@@ -145,10 +181,13 @@ python -m agents.spatialskillgrowth.spatialskillgrowth_infer_omni3d_agent \
 推理结束后会生成：
 
 ```text
-<run>/results/omni3d_predictions.json
+<run>/results/per_task.jsonl
+<run>/results/per_task.csv
+<run>/metrics/summary.json
 ```
 
-程序同时打印手动评测命令。也可以直接运行：
+旧的 Omni3D 数据和评测适配器仍保留用于兼容实验；只有 `--benchmark omni3d` 时才会生成
+`omni3d_predictions.json` 并使用下面的专用评测命令：
 
 ```bash
 python evaluate/omni-3d/eval_spatialskillgrowth.py \

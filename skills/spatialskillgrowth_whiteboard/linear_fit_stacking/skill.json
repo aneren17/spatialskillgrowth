@@ -1,8 +1,0 @@
-{
-  "name": "linear_fit_stacking",
-  "title": "Linear Fit and Stacking",
-  "problem_class": "linear_fit_stacking",
-  "description": "Compute how many repeated dimensions are needed to match a requested length, width, height, or area.",
-  "workflow_count": 0,
-  "workflows": []
-}

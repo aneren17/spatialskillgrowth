@@ -1,225 +1,220 @@
-"""SpatialSkillGrowth 的全部 LLM 提示词。业务模块不得内嵌提示词正文。"""
+"""SpatialSkillGrowth 的全部中文 LLM 提示词。业务模块不得内嵌提示词正文。"""
 
-FREE_REACT_SYSTEM_PROMPT = """You are a multimodal visual reasoning agent. Solve the current
-question with the available tools. Use the smallest evidence chain that can answer the question,
-do not repeat an uninformative call, and stop as soon as the answer is supported. If a tool fails,
-switch to a relevant alternative. When ready, return JSON only as {"answer": "the requested final
-answer"}. Do not put reasoning or units outside the answer field."""
+ANOMALY_INPUT_QUESTION_PROMPT = """请检测输入{media_name}中是否发生“{event_name}”异常事件。
+该类别已经由调用方确定，精确 event_type 为 `{event_type}`，不要重新分类或改写类别。
+相关中文名称：{aliases}。必须调用 embeddingTool 获取异常判断和判定阈值。
+最终判断只使用“是”或“否”，同时在结构化结果中保留 event_type、is_anomaly 和 threshold。"""
 
-REACT_FINALIZATION_PROMPT = """The tool-use budget is exhausted. Do not request another tool.
-Using only the question and observations already present in this conversation, return the best
-supported final answer now. Return JSON only as {"answer": "the requested final answer"}."""
+FREE_REACT_SYSTEM_PROMPT = """你是一个多模态异常事件检测智能体。请使用可用工具判断当前视频或
+图像中是否发生问题指定的异常事件。优先调用 embeddingTool，并使用当前任务类别对应的精确英文
+event_type；不得翻译、改写或编造 event_type。仅构造足以回答问题的最短证据链，不要重复无信息量
+的调用；工具失败时才改用相关工具补充证据。证据充分后，只返回 JSON：
+{"answer": "用户要求的最终答案"}。不要在 answer 字段之外输出推理过程或单位。"""
 
-FINAL_ANSWER_NORMALIZATION_PROMPT = """Normalize a visual agent's raw response into the exact
-answer requested by the question. This is formatting only: preserve the response's intended answer,
-do not solve the problem again, do not add a value that the response did not assert, and do not use
-the image. Return JSON only as {{"answer": "normalized answer"}}.
+REACT_FINALIZATION_PROMPT = """工具调用预算已经耗尽，不要再请求工具。请只依据当前对话中的
+问题和已有观察，立即给出证据支持度最高的最终答案。只返回 JSON：
+{"answer": "用户要求的最终答案"}。"""
 
-Expected answer type: {answer_type}
-Question: {question}
-Raw response: {raw_answer}
+WORKFLOW_REJECTION_CONTEXT_PROMPT = (
+    "工作流 {workflow_id} 未通过证据验收：{reason}。候选答案：{answer}。"
+)
+REACT_ATTACHMENT_PROMPT = "\n附件路径：\n{paths}"
+
+FINAL_ANSWER_NORMALIZATION_PROMPT = """请把视觉智能体的原始回答规范成问题要求的精确格式。
+这一步只做格式整理：保留原回答表达的结论，不要重新解题，不要添加原回答未断言的信息，也不要
+使用图像。只返回 JSON：{{"answer": "规范化后的答案"}}。
+
+期望答案类型：{answer_type}
+问题：{question}
+原始回答：{raw_answer}
 """
 
 WORKFLOW_NORMALIZED_QUERY_PROMPT = (
-    "Answer using explicit visual evidence. Return only the final answer: $question"
+    "请依据明确的异常检测证据回答，只输出最终答案：$question"
 )
 WORKFLOW_DEFAULT_ANSWER_PROMPT = (
-    "Use explicit {role} evidence to answer the question. "
-    "Return only the final answer: $question"
+    "请使用明确的{role}证据回答问题，只输出最终答案：$question"
 )
 WORKFLOW_COMBINED_SEMANTIC_ANSWER_PROMPT = (
-    "Analyze {scope} for {problem_class}. Apply these reasoning and evidence requirements together: "
-    "{requirements}. Use the collected evidence below when available. Return only the final answer. "
-    "Evidence: $evidence\nQuestion: $question"
+    "请针对 {problem_class} 分析{scope}，并同时遵守以下推理和证据要求：{requirements}。"
+    "如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question"
 )
 WORKFLOW_FINAL_ANSWER_PROMPT = (
-    "Use the collected tool evidence below together with the image to answer the question. "
-    "Do not guess from unsupported assumptions. Return only the final answer. "
-    "Evidence:\n$evidence\nQuestion: $question"
+    "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。"
+    "\n证据：\n$evidence\n问题：$question"
 )
 
-PROBLEM_CLASSIFIER_PROMPT = """Classify the multimodal Omni3D question into exactly one supplied
-problem class. Judge the operation required to answer, not shared words, objects, answer choices,
-or dataset frequency. Return JSON only: {{\"problem_class\": \"exact supplied name\", \"reason\":
-\"brief reason\"}}.
+PROBLEM_CLASSIFIER_PROMPT = """请把当前多模态异常检测问题严格分类到给定的一个异常事件类别。
+类别名是 embeddingTool 接口使用的精确英文 event_type。判断问题要求检测的异常事件，不要根据
+无关物体、答案选项、措辞重叠或类别频率分类。只能返回 JSON：
+{{"problem_class": "给定列表中的精确类别名", "reason": "简短中文理由"}}。
 
-Problem classes:
+异常事件类别：
 {class_definitions}
 
-Question:
+问题：
 {question}
 """
 
-SLOT_EXTRACTION_PROMPT = """Extract reusable runtime bindings from the multimodal question and
-image. target_a and target_b must be short English referring expressions. sam_query_a and
-sam_query_b must each be a concise 1-3 word English object label suitable for SAM3; never use a
-sentence or Chinese. Do not solve the question. Return JSON only with target_a, target_b,
-sam_query_a, sam_query_b, reference_frame, reference_entity, reference_value, reference_unit,
-measurement_dimension, operation.
+SLOT_EXTRACTION_PROMPT = """请从多模态异常检测问题和输入图像中抽取可复用的运行时槽位，
+不要回答问题。event_type 必须等于当前 problem_class，保持精确英文 ID，不能翻译或改写。
+target_a、target_b 是简短指代表达；由于 SAM3 和 GroundingDINO 的接口限制，sam_query_a、
+sam_query_b 必须分别是 1～3 个英文单词的物体标签，不能使用句子。只返回包含以下键的 JSON：
+event_type、target_a、target_b、sam_query_a、sam_query_b、reference_frame、reference_entity、
+reference_value、reference_unit、measurement_dimension、operation。
 
-Problem class: {problem_class}
-Question: {question}
+当前异常事件类别：{problem_class}
+问题：{question}
 """
 
-FLAT_WORKFLOW_RETRIEVAL_PROMPT = """Rank reusable workflows for the current multimodal problem.
-All candidates already passed structured compatibility checks and belong to the same problem class.
-Judge natural-language applicability, exclusions, capability boundary, current image evidence needs,
-runtime slots, and the workflow tool graph. Do not select by workflow ID, wording overlap, object-name
-overlap, or answer options. Prefer relevance, evidence suitability, and validated history. Use
-complexity and tool cost only to break a tie; neither short nor complex workflows receive a prior.
-Return at most {top_k} exact workflow IDs, or reject all when none is likely to help.
+FLAT_WORKFLOW_RETRIEVAL_PROMPT = """请为当前多模态异常检测任务排序可复用工作流。所有候选都已
+通过结构兼容性检查，并属于同一个异常事件类别。请综合判断自然语言适用范围、排除条件、能力边界、
+当前图像所需证据、运行时槽位、工具图和已验证历史。不要根据工作流 ID、措辞重叠、物体名称重叠
+或答案选项选择。优先考虑事件类别匹配度、证据适用性和验证历史；复杂度和工具成本只能用于同等
+候选之间的决胜。最多返回 {top_k} 个精确工作流 ID；如果没有候选可能有效，必须拒绝全部。
 
-Return JSON only:
+只返回 JSON：
 {{
   "action": "select|reject_all",
-  "ranked_workflow_ids": ["exact workflow id"],
-  "reason": "brief semantic and evidence-based reason"
+  "ranked_workflow_ids": ["精确工作流 ID"],
+  "reason": "简短的中文语义与证据理由"
 }}
 
-Problem class: {problem_class}
-Answer type: {answer_type}
-Runtime slots: {slot_bindings}
-Question: {question}
-Candidates: {candidates}
+异常事件类别：{problem_class}
+答案类型：{answer_type}
+运行时槽位：{slot_bindings}
+问题：{question}
+候选工作流：{candidates}
 """
 
-WORKFLOW_TREE_RETRIEVAL_PROMPT = """Select one reusable workflow by traversing the supplied
-workflow tree. Match the current problem semantics and runtime slots to each route's natural-language
-applicability. Children are refinements of their parent; select a child only when its refinement is
-needed. Do not select by shared answer-option words or opaque workflow IDs. Historical counts are
-only a tie-breaker between semantically suitable routes.
+WORKFLOW_TREE_RETRIEVAL_PROMPT = """请沿给定工作流树选择一个可复用工作流。把当前异常事件语义
+和运行时槽位与每条路线的自然语言适用范围进行匹配。子节点是父节点的细化版本，只有当前任务确实
+需要该细化时才选择子节点。不要根据答案选项中的共有词或不透明的工作流 ID 选择；历史次数只能
+用于语义同样适用的路线之间决胜。
 
-Return JSON only:
+只返回 JSON：
 {{
-  "workflow_path": ["root workflow id", "optional child id"],
-  "workflow_id": "final selected workflow id",
-  "reason": "brief applicability reason"
+  "workflow_path": ["根工作流 ID", "可选的子工作流 ID"],
+  "workflow_id": "最终工作流 ID",
+  "reason": "简短中文适用性理由"
 }}
 
-Problem class: {problem_class}
-Runtime slots: {slot_bindings}
-Question: {question}
-Workflow tree: {workflow_tree}
+异常事件类别：{problem_class}
+运行时槽位：{slot_bindings}
+问题：{question}
+工作流树：{workflow_tree}
 """
 
-SUCCESS_ENHANCEMENT_DIRECTION_PROMPT = """Direct mutations that enhance a workflow which already
-answered the exploration task correctly. The goal is broader robustness, complementary evidence,
-or a useful new capability boundary without damaging the validated route. You must not receive or
-infer the ground-truth answer. Select directions only from the supplied ParamType atom IDs. Do not
-invent tools, placements, scores, or final answers.
+SUCCESS_ENHANCEMENT_DIRECTION_PROMPT = """请为已经正确回答探索任务的异常检测工作流规划增强
+方向。目标是在不破坏已验证路线的前提下，提高鲁棒性、补充证据或形成有价值的新能力边界。你不会
+接收真实答案，也不得推测真实答案。只能从给定 ParamType 原子 ID 中选择方向，不得编造工具、
+位置、分数或最终答案。
 
-Return JSON only:
+只返回 JSON：
 {{
-  "objective": "brief enhancement objective",
-  "preferred_atom_ids": ["exact atom id"],
-  "avoid_atom_ids": ["exact atom id"],
-  "tool_hints": {{"exact tool": "short runtime target hint"}},
-  "diagnosis": "why this direction complements the successful evidence"
+  "objective": "简短增强目标",
+  "preferred_atom_ids": ["精确原子 ID"],
+  "avoid_atom_ids": ["精确原子 ID"],
+  "tool_hints": {{"精确工具名": "简短运行时目标提示"}},
+  "diagnosis": "该方向如何补充已有成功证据"
 }}
 
-Problem class: {problem_class}
-Question: {question}
-Runtime slots: {slot_bindings}
-Successful workflow and observations: {workflow_context}
-Allowed ParamType atoms: {param_atoms}
+异常事件类别：{problem_class}
+问题：{question}
+运行时槽位：{slot_bindings}
+成功工作流和观察：{workflow_context}
+允许的 ParamType 原子：{param_atoms}
 """
 
-FAILURE_REPAIR_DIRECTION_PROMPT = """Diagnose why the workflow failed on this exploration example
-and direct mutations that repair the missing evidence. The ground-truth answer is diagnostic-only:
-never copy it, a derived value, or an answer-specific clue into tool hints, workflow arguments,
-applicability text, names, or reusable artifacts. Select directions only from the supplied ParamType
-atom IDs. Do not invent tools, placements, or scores.
+FAILURE_REPAIR_DIRECTION_PROMPT = """请诊断异常检测工作流在当前探索样例上失败的原因，并规划
+能够修复缺失证据的变异。真实答案只能用于诊断：严禁把真实答案、其变换值或能反推出答案的线索
+写入工具提示、工作流参数、适用范围、名称或任何可复用资产。只能从给定 ParamType 原子 ID 中
+选择方向，不得编造工具、位置或分数。
 
-Return JSON only:
+只返回 JSON：
 {{
-  "objective": "brief repair objective",
-  "preferred_atom_ids": ["exact atom id"],
-  "avoid_atom_ids": ["exact atom id"],
-  "tool_hints": {{"exact tool": "short runtime target hint"}},
-  "diagnosis": "evidence-level failure diagnosis"
+  "objective": "简短修复目标",
+  "preferred_atom_ids": ["精确原子 ID"],
+  "avoid_atom_ids": ["精确原子 ID"],
+  "tool_hints": {{"精确工具名": "简短运行时目标提示"}},
+  "diagnosis": "证据层面的失败诊断"
 }}
 
-Problem class: {problem_class}
-Question: {question}
-Incorrect prediction: {prediction}
-Ground-truth answer for diagnosis only: {groundtruth}
-Runtime slots: {slot_bindings}
-Failed workflow and observations: {workflow_context}
-Allowed ParamType atoms: {param_atoms}
+异常事件类别：{problem_class}
+问题：{question}
+错误预测：{prediction}
+仅供诊断的真实答案：{groundtruth}
+运行时槽位：{slot_bindings}
+失败工作流和观察：{workflow_context}
+允许的 ParamType 原子：{param_atoms}
 """
 
-MUTATION_DIRECTION_RETRY_PROMPT = """The previous mutation direction did not select any valid
-ParamType atom. Choose one to three exact IDs from the supplied list that best implement the stated
-objective and evidence diagnosis. Do not invent or rewrite IDs. Return the complete direction JSON
-only, using objective, preferred_atom_ids, avoid_atom_ids, tool_hints, and diagnosis.
+MUTATION_DIRECTION_RETRY_PROMPT = """上一次变异方向没有选中任何合法 ParamType 原子。请从
+给定列表中选择一至三个最能实现当前目标和证据诊断的精确 ID，不得编造或改写 ID。只返回完整
+方向 JSON，键必须是 objective、preferred_atom_ids、avoid_atom_ids、tool_hints、diagnosis。
 
-Mutation mode: {mode}
-Previous direction: {direction}
-Allowed tools: {allowed_tools}
-Allowed ParamType atom IDs: {allowed_atom_ids}
+变异模式：{mode}
+上一次方向：{direction}
+允许的工具：{allowed_tools}
+允许的 ParamType 原子 ID：{allowed_atom_ids}
 """
 
-GROUNDTRUTH_SAFE_DIRECTION_PROMPT = """Rewrite a failure-repair mutation direction into a reusable,
-answer-independent evidence diagnosis. The ground truth may be used only to understand what failed.
-Remove every exact, partial, rounded, transformed, or indirectly revealing answer clue from all text.
-Preserve the intended repair and select only exact supplied ParamType atom IDs and tool names. Return
-the complete direction JSON only, using objective, preferred_atom_ids, avoid_atom_ids, tool_hints,
-and diagnosis. Do not return the ground truth or explain the rewrite.
+GROUNDTRUTH_SAFE_DIRECTION_PROMPT = """请把失败修复方向改写成可复用、与具体答案无关的证据
+诊断。真实答案只能用于理解失败原因。必须删除所有精确、部分、舍入、变换或间接泄露答案的线索，
+同时保留原修复意图；只能使用给定的 ParamType 原子 ID 和工具名。只返回完整方向 JSON，键必须
+是 objective、preferred_atom_ids、avoid_atom_ids、tool_hints、diagnosis。不要返回真实答案，
+也不要解释改写过程。
 
-Ground truth for sanitization only: {groundtruth}
-Candidate direction: {direction}
-Allowed tools: {allowed_tools}
-Allowed ParamType atom IDs: {allowed_atom_ids}
+仅供脱敏的真实答案：{groundtruth}
+候选方向：{direction}
+允许的工具：{allowed_tools}
+允许的 ParamType 原子 ID：{allowed_atom_ids}
 """
 
-APPLICABILITY_GENERALIZATION_PROMPT = """Write reusable natural-language applicability for one
-ground-truth-validated workflow. Generalize the operation and evidence condition; never include a
-task ID, final answer, concrete scene anecdote, benchmark split, reward, or implementation history.
-Keep the supplied tool graph unchanged. Do not broaden a specific operation into the whole problem
-class. Preserve the operation and attribute family required by the question. Object names may be
-abstracted only when the tool graph contains runtime slots that replace them; when no such target
-slot exists, state the detector/target limitation explicitly in applicability or exclusions. Runtime
-required slots are derived from graph references and must not be inferred from language. Return JSON
-only with name, description, exclusions, and capability_boundary.
+APPLICABILITY_GENERALIZATION_PROMPT = """请为一个已由真实答案验证的异常检测工作流编写可复用
+的中文适用范围。应泛化事件检测操作和证据条件，但不得包含任务 ID、最终答案、具体场景故事、
+benchmark 切分、奖励或实现历史。保持给定工具图不变，不要把某个具体异常事件扩大成全部异常
+类别。必须保留当前 event_type 和所需证据边界。只有工具图包含可替换目标的运行时槽位时，才能
+抽象物体名称；没有对应槽位时，必须在适用范围或排除条件中明确检测器限制。必需槽位由工具图引用
+自动推导，不能从自然语言臆测。只返回包含 name、description、exclusions、capability_boundary
+四个键的 JSON，字段内容使用中文，name 可以保留安全的英文标识。
 
-Problem class: {problem_class}
-Question: {question}
-Runtime slots: {slot_bindings}
-Mutation mode: {mutation_mode}
-Tool graph: {tool_graph}
+异常事件类别：{problem_class}
+问题：{question}
+运行时槽位：{slot_bindings}
+变异模式：{mutation_mode}
+工具图：{tool_graph}
 """
 
-APPLICABILITY_COMPATIBILITY_PROMPT = """Decide whether two structurally compatible workflows have
-the same reusable natural-language applicability. Structure was checked separately; now judge only
-semantic applicability, exclusions, and capability boundaries. Never use keyword overlap or object
-name overlap as evidence. Merge only when one generalized route can honestly represent both.
+APPLICABILITY_COMPATIBILITY_PROMPT = """请判断两个结构兼容的异常检测工作流是否具有相同的
+可复用自然语言适用范围。结构已经单独检查；这里只判断语义适用范围、排除条件和能力边界。不能把
+关键词或物体名称重叠当作兼容证据。只有一条泛化路线能够诚实表示两者时才允许合并。
 
-Return JSON only:
+只返回 JSON：
 {{
   "action": "merge|separate",
-  "reason": "brief semantic reason",
-  "generalized_name": "name when merging",
-  "generalized_description": "shared applicability when merging",
-  "generalized_exclusions": "shared exclusions when merging",
-  "generalized_capability_boundary": "shared boundary when merging"
+  "reason": "简短中文语义理由",
+  "generalized_name": "合并后的名称",
+  "generalized_description": "合并后的中文适用范围",
+  "generalized_exclusions": "合并后的中文排除条件",
+  "generalized_capability_boundary": "合并后的中文能力边界"
 }}
 
-Left workflow: {left}
-Right workflow: {right}
+左侧工作流：{left}
+右侧工作流：{right}
 """
 
-SEMANTIC_EVIDENCE_VALIDATION_PROMPT = """Judge whether the workflow observations provide enough
-task-relevant evidence to accept the candidate answer. Do not judge by fluency or format alone. Check
-that the required objects, relation or attribute were actually observed and that failed tool calls do
-not break the evidence chain. For a numerical answer, require observations to expose the relevant
-detected instances, measurements, reference values, or intermediate operands and a derivation that
-supports the exact candidate number. A bare number or an MLLM assertion without observable numerical
-provenance is insufficient. Return JSON only: {{\"accepted\": true|false, \"reason\": \"brief
-evidence reason\"}}.
+SEMANTIC_EVIDENCE_VALIDATION_PROMPT = """请判断工作流观察是否提供了足够的任务相关证据来接受
+候选答案。不能只根据语言流畅度或格式判断。对于异常事件检测，必须确认 embeddingTool 使用了
+与当前 problem class 完全一致的 event_type，并成功返回异常判断；如果使用其他视觉工具补证，
+还要确认观察确实涉及所要求的事件、对象或行为。任何关键工具失败都不能被忽略。数值类答案必须
+展示相关检测实例、测量值、参考值或中间操作数，并给出能够支持精确数值的推导；只有裸数值或
+MLLM 无可观察来源的断言不足以通过。只返回 JSON：
+{{"accepted": true|false, "reason": "简短中文证据理由"}}。
 
-Problem class: {problem_class}
-Answer type: {answer_type}
-Question: {question}
-Candidate answer: {answer}
-Observations: {observations}
+异常事件类别：{problem_class}
+答案类型：{answer_type}
+问题：{question}
+候选答案：{answer}
+观察：{observations}
 """

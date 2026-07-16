@@ -6,6 +6,7 @@ import json
 from typing import Dict, List, Mapping, Optional
 
 from nodes.mem.spatialskillgrowth.benchmark_profiles import (
+    ANOMALY_EVENT_TYPES,
     class_metadata_for,
     has_benchmark_profile,
     normalize_benchmark,
@@ -19,6 +20,7 @@ from prompt.spatialskillgrowth_prompts import (
 
 
 DEFAULT_SLOTS = {
+    "event_type": "",
     "target_a": "",
     "target_b": "",
     "sam_query_a": "",
@@ -34,14 +36,9 @@ SLOT_WORD_LIMITS = {
     "sam_query_a": 3,
     "sam_query_b": 3,
 }
-KNOWN_SPECIALIZED_TOOLS = {
-    "asrTool": "audio_input",
-    "webSearch": "web_access",
-    "webVisit": "web_access",
-    "textInspector": "document_text",
-    "paddleOcrTool": "image_ocr",
-    "paddleHeadDetTool": "closed_set_detector",
-    "paddlePedriderDetTool": "closed_set_detector",
+CLOSED_SET_DETECTION_TOOLS = {
+    "paddleHeadDetTool",
+    "paddlePedriderDetTool",
 }
 
 
@@ -84,10 +81,15 @@ class BenchmarkProblemClassifier:
                 "reason": "Provided by benchmark-specific annotation.",
                 "source": "benchmark",
             }
-        definitions = [
-            {"name": name, **self.metadata.get(name, {})}
-            for name in self.problem_classes
-        ]
+        definitions = []
+        for name in self.problem_classes:
+            metadata = self.metadata.get(name, {})
+            definitions.append({
+                "name": name,
+                "title": metadata.get("title", ""),
+                "description": metadata.get("description", ""),
+                "aliases": metadata.get("aliases", []),
+            })
         prompt = PROBLEM_CLASSIFIER_PROMPT.format(
             class_definitions=json.dumps(definitions, ensure_ascii=False),
             question=question,
@@ -123,7 +125,11 @@ class SlotExtractor:
             return dict(DEFAULT_SLOTS)
         return {
             key: _compact_value(
-                parsed.get(key)
+                (
+                    problem_class
+                    if key == "event_type" and problem_class in ANOMALY_EVENT_TYPES
+                    else parsed.get(key)
+                )
                 or (
                     parsed.get("target_a")
                     if key == "sam_query_a"
@@ -141,27 +147,23 @@ class ToolAvailabilityPolicy:
     def select(
         self,
         registry: Mapping[str, object],
-        input_modalities: Optional[List[str]] = None,
         allowed_closed_set_tools: Optional[List[str]] = None,
     ) -> Dict:
-        modalities = set(input_modalities or ["image", "text"])
         allowed_closed = set(allowed_closed_set_tools or [])
         selected = []
         excluded = []
         decisions = []
         for tool_name in registry:
-            scope = KNOWN_SPECIALIZED_TOOLS.get(tool_name, "general")
+            scope = (
+                "closed_set_detector"
+                if tool_name in CLOSED_SET_DETECTION_TOOLS
+                else "general"
+            )
             keep = True
-            reason = "General-purpose tool remains available."
-            if scope == "audio_input" and "audio" not in modalities:
+            reason = "保留通用工具。"
+            if scope == "closed_set_detector" and tool_name not in allowed_closed:
                 keep = False
-                reason = "No audio input is present."
-            elif scope in {"web_access", "document_text"}:
-                keep = False
-                reason = f"The explicit {scope} modality is not enabled for Omni3D."
-            elif scope == "closed_set_detector" and tool_name not in allowed_closed:
-                keep = False
-                reason = "The benchmark item did not explicitly enable this closed-set detector."
+                reason = "当前任务没有显式启用该闭集检测器。"
             if keep:
                 selected.append(tool_name)
             else:
@@ -196,8 +198,18 @@ class TaskPlanner:
             question, image_paths, fixed_problem_class=fixed_problem_class
         )
         problem_class = classification["problem_class"]
-        slot_bindings = self.slots.extract(question, image_paths, problem_class)
+        if problem_class in ANOMALY_EVENT_TYPES:
+            if len(image_paths) != 1:
+                raise ValueError("异常检测任务必须且只能输入一个视频或图像文件。")
+            slot_bindings = dict(DEFAULT_SLOTS)
+            slot_bindings["event_type"] = problem_class
+        else:
+            slot_bindings = self.slots.extract(question, image_paths, problem_class)
         tool_plan = self.tools.select(registry)
+        if problem_class in ANOMALY_EVENT_TYPES and "embeddingTool" not in tool_plan[
+            "selected_tools"
+        ]:
+            raise RuntimeError("异常检测运行时没有注册必需的 embeddingTool。")
         return {
             "problem_class": problem_class,
             "classification": classification,

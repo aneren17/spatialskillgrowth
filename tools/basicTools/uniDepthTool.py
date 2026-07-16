@@ -24,33 +24,28 @@ def unidepth(
     filename: str,
 ) -> str:
     """
-    Estimate the metric depth of detected objects using UniDepthV2.
+    使用 UniDepthV2 估计已检测目标的度量深度。输入目标检测结果后，计算每个边界框区域内
+    以米为单位的中位深度。
 
-    This tool accepts object detection results and estimates the median depth
-    in meters inside each bounding box.
+    detections 必须是 JSON 字符串列表，每项必须包含：
+        cls: 目标类别名。
+        box: [xmin, ymin, xmax, ymax] 格式的边界框。
+        score: 检测置信度。
 
-    detections MUST be a JSON string list. Each item must contain:
-        cls: Object class name.
-        box: Bounding box in [xmin, ymin, xmax, ymax] format.
-        score: Detection confidence score.
-
-    Example:
+    示例：
         '[{"cls":"person","box":[120,80,460,690],"score":0.92}]'
 
-    The detections returned by GroundingDINO can be passed directly to this
-    tool after converting them to a JSON string.
+    GroundingDINO 返回的检测结果转换成 JSON 字符串后可直接传入。
 
     category: 空间度量类
 
     Args:
-        detections: JSON string containing detection boxes, classes and scores.
-        file: Input image URL, local image path, file identifier, or Base64
-            encoded image.
-        filename: Input image filename.
+        detections: 包含检测框、类别和置信度的 JSON 字符串。
+        file: 输入图像 URL、本地路径、文件标识或 Base64 编码图像。
+        filename: 输入图像文件名。
 
     Returns:
-        A JSON string containing each detected object's class, bounding box,
-        confidence score and estimated depth in meters.
+        JSON 字符串，包含每个目标的类别、边界框、置信度和估计深度（米）。
     """
     try:
         parsed_detections = json.loads(detections)

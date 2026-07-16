@@ -9,6 +9,8 @@ from typing import Dict, List
 
 from nodes.mem.spatialskillgrowth.llm_utils import invoke_json
 from nodes.mem.spatialskillgrowth.models import EvidenceDecision
+from nodes.mem.spatialskillgrowth.benchmark_profiles import ANOMALY_EVENT_TYPES
+from nodes.mem.spatialskillgrowth.tool_runtime import extract_anomaly_result
 from prompt.spatialskillgrowth_prompts import SEMANTIC_EVIDENCE_VALIDATION_PROMPT
 
 
@@ -46,6 +48,60 @@ class EvidenceValidator(ABC):
         image_paths: List[str],
     ) -> EvidenceDecision:
         raise NotImplementedError
+
+
+class AnomalyEvidenceValidator(EvidenceValidator):
+    """异常检测的不可消融契约：类别匹配、明确判断和阈值必须同时存在。"""
+
+    def validate(self, problem_class, question, answer, answer_type, result, image_paths):
+        anomaly = extract_anomaly_result(result)
+        normalized_answer = str(answer or "").strip().lower()
+        answer_decision = (
+            "是" if normalized_answer in {"是", "yes", "true"}
+            else "否" if normalized_answer in {"否", "no", "false"}
+            else ""
+        )
+        checks = {
+            "single_media_input": len(image_paths) == 1,
+            "successful_result": bool(result.get("success")),
+            "embedding_called": "embeddingTool" in set(result.get("used_tools") or []),
+            "event_type_matches": anomaly["event_type"] == problem_class,
+            "decision_present": anomaly["is_anomaly"] is not None,
+            "answer_matches_decision": bool(answer_decision) and (
+                answer_decision == anomaly["decision"]
+            ),
+            "threshold_numeric": (
+                isinstance(anomaly["threshold"], (int, float))
+                and not isinstance(anomaly["threshold"], bool)
+            ),
+        }
+        accepted = all(checks.values())
+        failed_checks = [name for name, passed in checks.items() if not passed]
+        return EvidenceDecision(
+            accepted=accepted,
+            validator="anomaly_contract",
+            reason=(
+                "embeddingTool 异常判断、event_type 和阈值契约均通过。"
+                if accepted
+                else "异常检测契约失败：" + "、".join(failed_checks)
+            ),
+            contract_checks=checks,
+        )
+
+
+class AnomalyAwareEvidenceValidator(EvidenceValidator):
+    def __init__(self, delegate: EvidenceValidator):
+        self.delegate = delegate
+        self.anomaly = AnomalyEvidenceValidator()
+
+    def validate(self, problem_class, question, answer, answer_type, result, image_paths):
+        if problem_class in ANOMALY_EVENT_TYPES:
+            return self.anomaly.validate(
+                problem_class, question, answer, answer_type, result, image_paths
+            )
+        return self.delegate.validate(
+            problem_class, question, answer, answer_type, result, image_paths
+        )
 
 
 class NoEvidenceValidator(EvidenceValidator):
@@ -190,14 +246,16 @@ class HybridEvidenceValidator(EvidenceValidator):
 
 def build_evidence_validator(strategy: str, llm) -> EvidenceValidator:
     if strategy == "none":
-        return NoEvidenceValidator()
-    if strategy == "structural":
-        return StructuralEvidenceValidator()
-    if strategy == "semantic":
-        return SemanticEvidenceValidator(llm)
-    if strategy == "hybrid":
-        return HybridEvidenceValidator(llm)
-    raise ValueError(f"Unknown evidence validation strategy: {strategy}")
+        validator = NoEvidenceValidator()
+    elif strategy == "structural":
+        validator = StructuralEvidenceValidator()
+    elif strategy == "semantic":
+        validator = SemanticEvidenceValidator(llm)
+    elif strategy == "hybrid":
+        validator = HybridEvidenceValidator(llm)
+    else:
+        raise ValueError(f"Unknown evidence validation strategy: {strategy}")
+    return AnomalyAwareEvidenceValidator(validator)
 
 
 def answer_format_valid(answer: str, answer_type: str) -> bool:
@@ -209,7 +267,7 @@ def answer_format_valid(answer: str, answer_type: str) -> bool:
     if answer_type == "float":
         return bool(re.fullmatch(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)", value))
     if answer_type == "bool":
-        return value.lower() in {"yes", "no"}
+        return value.lower() in {"yes", "no", "是", "否"}
     return len(value.split()) <= 20
 
 

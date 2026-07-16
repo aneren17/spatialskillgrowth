@@ -26,39 +26,33 @@ def groundingdino(
     text_threshold: float = 0.25,
 ) -> str:
     """
-    Detect objects in an image using GroundingDINO.
+    使用 GroundingDINO 检测图像中的目标。该工具根据英文物体类别或英文指代表达执行
+    开放词汇目标检测，返回目标类别、边界框和置信度。
 
-    The tool performs open-vocabulary object detection based on an English
-    object category or referring expression. It returns the detected object
-    classes, bounding boxes and confidence scores.
-
-    query supports:
-        A single category or phrase:
+    query 支持：
+        单个类别或短语：
         ✅ "person"
         ✅ "red car"
         ✅ "person wearing a black shirt"
 
-        A JSON string list:
+        JSON 字符串列表：
         ✅ '["person", "car", "dog"]'
         ✅ '["red car", "person wearing black"]'
 
-    Bounding boxes use the format:
+    边界框格式：
         [xmin, ymin, xmax, ymax]
 
     category: 世界模型/检索类
 
     Args:
-        query: English object category, referring expression, or JSON string
-            list of categories.
-        file: Input image URL, local image path, file identifier, or Base64
-            encoded image.
-        filename: Input image filename.
-        box_threshold: Detection box confidence threshold. Default is 0.35.
-        text_threshold: Text matching threshold. Default is 0.25.
+        query: 英文物体类别、英文指代表达，或类别组成的 JSON 字符串列表。
+        file: 输入图像 URL、本地路径、文件标识或 Base64 编码图像。
+        filename: 输入图像文件名。
+        box_threshold: 检测框置信度阈值，默认 0.35。
+        text_threshold: 文本匹配阈值，默认 0.25。
 
     Returns:
-        A JSON string containing the detection result image URL and detected
-        objects with class names, bounding boxes and confidence scores.
+        JSON 字符串，包含检测结果图 URL，以及目标类别、边界框和置信度。
     """
     try:
         processed_file = process_file(file)
@@ -116,4 +110,3 @@ def groundingdino(
             },
             ensure_ascii=False,
         )
-

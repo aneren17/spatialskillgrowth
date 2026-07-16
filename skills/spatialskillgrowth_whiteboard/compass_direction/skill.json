@@ -1,8 +1,0 @@
-{
-  "name": "compass_direction",
-  "title": "Egocentric Compass Direction",
-  "problem_class": "compass_direction",
-  "description": "Resolve N, NE, E, SE, S, SW, W, or NW from the supplied observer position and facing direction.",
-  "workflow_count": 0,
-  "workflows": []
-}

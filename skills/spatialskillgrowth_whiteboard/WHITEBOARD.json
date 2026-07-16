@@ -1,86 +1,681 @@
 {
-  "benchmark": "omni3d",
-  "description": "Blank standard-skill workspace copied into every new SpatialSkillGrowth run.",
+  "benchmark": "anomaly_detection",
+  "description": "每个 SpatialSkillGrowth 异常检测运行使用的空白标准 Skill 工作区。",
   "problem_classes": [
     {
-      "name": "metric_dimension_scaling",
-      "title": "Metric Dimension Scaling",
-      "description": "Transfer a known length, width, height, radius, or size to another target using image geometry."
+      "name": "banner",
+      "title": "违规横幅检测",
+      "description": "检测输入视频或图像中是否发生“违规横幅检测”异常事件（相关显示名称：违规横幅检测、横幅异常）；调用异常检测工具时，必须使用精确类别 ID `banner`。",
+      "aliases": [
+        "违规横幅检测",
+        "横幅异常"
+      ],
+      "display_names": {
+        "dashboard": "违规横幅检测",
+        "rag": "横幅异常",
+        "stream": "横幅异常"
+      }
     },
     {
-      "name": "metric_distance_scaling",
-      "title": "Metric Distance Scaling",
-      "description": "Calibrate target depth or inter-object distance from a supplied metric reference and unit."
+      "name": "billboard_fell",
+      "title": "广告牌倒塌",
+      "description": "检测输入视频或图像中是否发生“广告牌倒塌”异常事件（相关显示名称：广告牌倒塌）；调用异常检测工具时，必须使用精确类别 ID `billboard_fell`。",
+      "aliases": [
+        "广告牌倒塌"
+      ],
+      "display_names": {
+        "rag": "广告牌倒塌"
+      }
     },
     {
-      "name": "dimension_ratio",
-      "title": "Dimension Ratio",
-      "description": "Compare lengths, widths, heights, areas, or dimension expressions as a numeric ratio or difference."
+      "name": "breaking_through_toll_booths",
+      "title": "闯收费站",
+      "description": "检测输入视频或图像中是否发生“闯收费站”异常事件（相关显示名称：闯收费站）；调用异常检测工具时，必须使用精确类别 ID `breaking_through_toll_booths`。",
+      "aliases": [
+        "闯收费站"
+      ],
+      "display_names": {
+        "rag": "闯收费站"
+      }
     },
     {
-      "name": "volume_capacity",
-      "title": "Volume Capacity",
-      "description": "Reason about 3D volume ratios and capacity rather than visible instance counts."
+      "name": "building_collapse",
+      "title": "建筑坍塌",
+      "description": "检测输入视频或图像中是否发生“建筑坍塌”异常事件（相关显示名称：建筑坍塌、建筑倒塌）；调用异常检测工具时，必须使用精确类别 ID `building_collapse`。",
+      "aliases": [
+        "建筑坍塌",
+        "建筑倒塌"
+      ],
+      "display_names": {
+        "dashboard": "建筑坍塌",
+        "rag": "建筑倒塌",
+        "stream": "建筑倒塌"
+      }
     },
     {
-      "name": "linear_fit_stacking",
-      "title": "Linear Fit and Stacking",
-      "description": "Compute how many repeated dimensions are needed to match a requested length, width, height, or area."
+      "name": "bus_shelter_was_vandalized",
+      "title": "公交站台破坏",
+      "description": "检测输入视频或图像中是否发生“公交站台破坏”异常事件（相关显示名称：公交站台破坏、公交候车亭损坏）；调用异常检测工具时，必须使用精确类别 ID `bus_shelter_was_vandalized`。",
+      "aliases": [
+        "公交站台破坏",
+        "公交候车亭损坏"
+      ],
+      "display_names": {
+        "dashboard": "公交站台破坏",
+        "rag": "公交候车亭损坏"
+      }
     },
     {
-      "name": "object_counting",
-      "title": "Object Counting",
-      "description": "Count visible objects, parts, or instances with any inclusion and exclusion constraints."
+      "name": "charger",
+      "title": "充电器未归位",
+      "description": "检测输入视频或图像中是否发生“充电器未归位”异常事件（相关显示名称：充电器未归位）；调用异常检测工具时，必须使用精确类别 ID `charger`。",
+      "aliases": [
+        "充电器未归位"
+      ],
+      "display_names": {
+        "dashboard": "充电器未归位"
+      }
     },
     {
-      "name": "count_arithmetic",
-      "title": "Count Arithmetic",
-      "description": "Count multiple groups and apply deterministic arithmetic to their counts."
+      "name": "climbing_disconnection",
+      "title": "攀爬脱网",
+      "description": "检测输入视频或图像中是否发生“攀爬脱网”异常事件（相关显示名称：攀爬脱网、攀爬脱离）；调用异常检测工具时，必须使用精确类别 ID `climbing_disconnection`。",
+      "aliases": [
+        "攀爬脱网",
+        "攀爬脱离"
+      ],
+      "display_names": {
+        "dashboard": "攀爬脱网",
+        "rag": "攀爬脱离"
+      }
     },
     {
-      "name": "count_comparison",
-      "title": "Count Comparison",
-      "description": "Determine which group has more, fewer, the same number, or enough instances."
+      "name": "cold_flame",
+      "title": "冷焰火检测",
+      "description": "检测输入视频或图像中是否发生“冷焰火检测”异常事件（相关显示名称：冷焰火检测、冷焰）；调用异常检测工具时，必须使用精确类别 ID `cold_flame`。",
+      "aliases": [
+        "冷焰火检测",
+        "冷焰"
+      ],
+      "display_names": {
+        "dashboard": "冷焰火检测",
+        "rag": "冷焰"
+      }
     },
     {
-      "name": "depth_ordering",
-      "title": "Depth Ordering",
-      "description": "Determine which target is closer, farther, nearest, or furthest in 3D."
+      "name": "container_dropped",
+      "title": "集装箱掉落",
+      "description": "检测输入视频或图像中是否发生“集装箱掉落”异常事件（相关显示名称：集装箱掉落、集装箱坠落）；调用异常检测工具时，必须使用精确类别 ID `container_dropped`。",
+      "aliases": [
+        "集装箱掉落",
+        "集装箱坠落"
+      ],
+      "display_names": {
+        "dashboard": "集装箱掉落",
+        "rag": "集装箱坠落"
+      }
     },
     {
-      "name": "depth_filtered_counting",
-      "title": "Depth-filtered Counting",
-      "description": "Count targets that are in front of, behind, closer than, or farther than a reference."
+      "name": "cross_barrier",
+      "title": "翻越护栏",
+      "description": "检测输入视频或图像中是否发生“翻越护栏”异常事件（相关显示名称：翻越护栏、跨越护栏）；调用异常检测工具时，必须使用精确类别 ID `cross_barrier`。",
+      "aliases": [
+        "翻越护栏",
+        "跨越护栏"
+      ],
+      "display_names": {
+        "dashboard": "翻越护栏",
+        "rag": "跨越护栏"
+      }
     },
     {
-      "name": "compass_direction",
-      "title": "Egocentric Compass Direction",
-      "description": "Resolve N, NE, E, SE, S, SW, W, or NW from the supplied observer position and facing direction."
+      "name": "doors_and_windows_are_damaged",
+      "title": "门窗破损",
+      "description": "检测输入视频或图像中是否发生“门窗破损”异常事件（相关显示名称：门窗破损、门窗损坏）；调用异常检测工具时，必须使用精确类别 ID `doors_and_windows_are_damaged`。",
+      "aliases": [
+        "门窗破损",
+        "门窗损坏"
+      ],
+      "display_names": {
+        "dashboard": "门窗破损",
+        "rag": "门窗损坏"
+      }
     },
     {
-      "name": "occlusion_visibility",
-      "title": "Occlusion and Visibility",
-      "description": "Determine whether a target remains visible or becomes covered after a hypothetical placement."
+      "name": "ebike_reverse",
+      "title": "非机动车逆行",
+      "description": "检测输入视频或图像中是否发生“非机动车逆行”异常事件（相关显示名称：非机动车逆行、电动车逆行）；调用异常检测工具时，必须使用精确类别 ID `ebike_reverse`。",
+      "aliases": [
+        "非机动车逆行",
+        "电动车逆行"
+      ],
+      "display_names": {
+        "dashboard": "非机动车逆行",
+        "rag": "电动车逆行"
+      }
     },
     {
-      "name": "physical_interaction",
-      "title": "Physical Interaction",
-      "description": "Reason about falling, hitting, pushing, tipping, hanging over an edge, or collision order."
+      "name": "egress_blocked",
+      "title": "安全出口遮挡",
+      "description": "检测输入视频或图像中是否发生“安全出口遮挡”异常事件（相关显示名称：安全出口遮挡、出口堵塞）；调用异常检测工具时，必须使用精确类别 ID `egress_blocked`。",
+      "aliases": [
+        "安全出口遮挡",
+        "出口堵塞"
+      ],
+      "display_names": {
+        "dashboard": "安全出口遮挡",
+        "rag": "出口堵塞"
+      }
     },
     {
-      "name": "size_fit_comparison",
-      "title": "Size and Fit Comparison",
-      "description": "Compare dimensions or decide whether one object fits on, under, inside, or across another."
+      "name": "emergency_lane_occupancy",
+      "title": "占用应急车道",
+      "description": "检测输入视频或图像中是否发生“占用应急车道”异常事件（相关显示名称：占用应急车道、应急车道占用）；调用异常检测工具时，必须使用精确类别 ID `emergency_lane_occupancy`。",
+      "aliases": [
+        "占用应急车道",
+        "应急车道占用"
+      ],
+      "display_names": {
+        "dashboard": "占用应急车道",
+        "rag": "应急车道占用",
+        "stream": "应急车道占用"
+      }
     },
     {
-      "name": "relative_3d_position",
-      "title": "Relative 3D Position",
-      "description": "Resolve above, below, left, right, inside, on, under, adjacency, or elevation relations."
+      "name": "equipment_rust",
+      "title": "设备生锈",
+      "description": "检测输入视频或图像中是否发生“设备生锈”异常事件（相关显示名称：设备生锈）；调用异常检测工具时，必须使用精确类别 ID `equipment_rust`。",
+      "aliases": [
+        "设备生锈"
+      ],
+      "display_names": {
+        "dashboard": "设备生锈",
+        "rag": "设备生锈"
+      }
     },
     {
-      "name": "visual_attribute_recognition",
-      "title": "Visual Attribute Recognition",
-      "description": "Answer residual Omni3D visual attribute and object-identification questions that are not geometric operations."
+      "name": "explosion",
+      "title": "爆炸检测",
+      "description": "检测输入视频或图像中是否发生“爆炸检测”异常事件（相关显示名称：爆炸检测、爆炸）；调用异常检测工具时，必须使用精确类别 ID `explosion`。",
+      "aliases": [
+        "爆炸检测",
+        "爆炸"
+      ],
+      "display_names": {
+        "dashboard": "爆炸检测",
+        "rag": "爆炸",
+        "stream": "爆炸"
+      }
+    },
+    {
+      "name": "fall",
+      "title": "人员摔倒",
+      "description": "检测输入视频或图像中是否发生“人员摔倒”异常事件（相关显示名称：人员摔倒、跌倒）；调用异常检测工具时，必须使用精确类别 ID `fall`。",
+      "aliases": [
+        "人员摔倒",
+        "跌倒"
+      ],
+      "display_names": {
+        "dashboard": "人员摔倒",
+        "rag": "跌倒",
+        "stream": "跌倒"
+      }
+    },
+    {
+      "name": "fight",
+      "title": "打架斗殴",
+      "description": "检测输入视频或图像中是否发生“打架斗殴”异常事件（相关显示名称：打架斗殴、打架）；调用异常检测工具时，必须使用精确类别 ID `fight`。",
+      "aliases": [
+        "打架斗殴",
+        "打架"
+      ],
+      "display_names": {
+        "dashboard": "打架斗殴",
+        "rag": "打架",
+        "stream": "打架"
+      }
+    },
+    {
+      "name": "fire",
+      "title": "起火",
+      "description": "检测输入视频或图像中是否发生“起火”异常事件（相关显示名称：起火）；调用异常检测工具时，必须使用精确类别 ID `fire`。",
+      "aliases": [
+        "起火"
+      ],
+      "display_names": {
+        "dashboard": "起火"
+      }
+    },
+    {
+      "name": "fire_door_unclosed",
+      "title": "消防门未关闭",
+      "description": "检测输入视频或图像中是否发生“消防门未关闭”异常事件（相关显示名称：消防门未关闭）；调用异常检测工具时，必须使用精确类别 ID `fire_door_unclosed`。",
+      "aliases": [
+        "消防门未关闭"
+      ],
+      "display_names": {
+        "dashboard": "消防门未关闭",
+        "rag": "消防门未关闭",
+        "stream": "消防门未关闭"
+      }
+    },
+    {
+      "name": "fire_hydrant_leakage",
+      "title": "消防栓泄漏",
+      "description": "检测输入视频或图像中是否发生“消防栓泄漏”异常事件（相关显示名称：消防栓泄漏）；调用异常检测工具时，必须使用精确类别 ID `fire_hydrant_leakage`。",
+      "aliases": [
+        "消防栓泄漏"
+      ],
+      "display_names": {
+        "rag": "消防栓泄漏"
+      }
+    },
+    {
+      "name": "firelane_occupied",
+      "title": "占用消防通道",
+      "description": "检测输入视频或图像中是否发生“占用消防通道”异常事件（相关显示名称：占用消防通道、消防通道占用）；调用异常检测工具时，必须使用精确类别 ID `firelane_occupied`。",
+      "aliases": [
+        "占用消防通道",
+        "消防通道占用"
+      ],
+      "display_names": {
+        "dashboard": "占用消防通道",
+        "rag": "消防通道占用"
+      }
+    },
+    {
+      "name": "flag",
+      "title": "旗帜检测",
+      "description": "检测输入视频或图像中是否发生“旗帜检测”异常事件（相关显示名称：旗帜检测、旗帜异常）；调用异常检测工具时，必须使用精确类别 ID `flag`。",
+      "aliases": [
+        "旗帜检测",
+        "旗帜异常"
+      ],
+      "display_names": {
+        "dashboard": "旗帜检测",
+        "rag": "旗帜异常"
+      }
+    },
+    {
+      "name": "foreign_objects_on_transmission_lines",
+      "title": "输电线路异物",
+      "description": "检测输入视频或图像中是否发生“输电线路异物”异常事件（相关显示名称：输电线路异物）；调用异常检测工具时，必须使用精确类别 ID `foreign_objects_on_transmission_lines`。",
+      "aliases": [
+        "输电线路异物"
+      ],
+      "display_names": {
+        "rag": "输电线路异物"
+      }
+    },
+    {
+      "name": "forest_fire",
+      "title": "森林火灾",
+      "description": "检测输入视频或图像中是否发生“森林火灾”异常事件（相关显示名称：森林火灾）；调用异常检测工具时，必须使用精确类别 ID `forest_fire`。",
+      "aliases": [
+        "森林火灾"
+      ],
+      "display_names": {
+        "rag": "森林火灾",
+        "stream": "森林火灾"
+      }
+    },
+    {
+      "name": "garbage_bin_dumping",
+      "title": "垃圾桶倾倒",
+      "description": "检测输入视频或图像中是否发生“垃圾桶倾倒”异常事件（相关显示名称：垃圾桶倾倒）；调用异常检测工具时，必须使用精确类别 ID `garbage_bin_dumping`。",
+      "aliases": [
+        "垃圾桶倾倒"
+      ],
+      "display_names": {
+        "dashboard": "垃圾桶倾倒",
+        "rag": "垃圾桶倾倒"
+      }
+    },
+    {
+      "name": "gas_station_smoking",
+      "title": "加油站抽烟",
+      "description": "检测输入视频或图像中是否发生“加油站抽烟”异常事件（相关显示名称：加油站抽烟、加油站吸烟）；调用异常检测工具时，必须使用精确类别 ID `gas_station_smoking`。",
+      "aliases": [
+        "加油站抽烟",
+        "加油站吸烟"
+      ],
+      "display_names": {
+        "dashboard": "加油站抽烟",
+        "rag": "加油站吸烟"
+      }
+    },
+    {
+      "name": "guardrail_damaged",
+      "title": "护栏损坏",
+      "description": "检测输入视频或图像中是否发生“护栏损坏”异常事件（相关显示名称：护栏损坏）；调用异常检测工具时，必须使用精确类别 ID `guardrail_damaged`。",
+      "aliases": [
+        "护栏损坏"
+      ],
+      "display_names": {
+        "dashboard": "护栏损坏",
+        "rag": "护栏损坏"
+      }
+    },
+    {
+      "name": "instrument_abnormality",
+      "title": "仪表异常",
+      "description": "检测输入视频或图像中是否发生“仪表异常”异常事件（相关显示名称：仪表异常）；调用异常检测工具时，必须使用精确类别 ID `instrument_abnormality`。",
+      "aliases": [
+        "仪表异常"
+      ],
+      "display_names": {
+        "dashboard": "仪表异常",
+        "rag": "仪表异常"
+      }
+    },
+    {
+      "name": "instrument_operation",
+      "title": "是否操作仪器",
+      "description": "检测输入视频或图像中是否发生“是否操作仪器”异常事件（相关显示名称：是否操作仪器）；调用异常检测工具时，必须使用精确类别 ID `instrument_operation`。",
+      "aliases": [
+        "是否操作仪器"
+      ],
+      "display_names": {
+        "dashboard": "是否操作仪器"
+      }
+    },
+    {
+      "name": "kitchen_infested_with_rats",
+      "title": "厨房出现老鼠",
+      "description": "检测输入视频或图像中是否发生“厨房出现老鼠”异常事件（相关显示名称：厨房出现老鼠）；调用异常检测工具时，必须使用精确类别 ID `kitchen_infested_with_rats`。",
+      "aliases": [
+        "厨房出现老鼠"
+      ],
+      "display_names": {
+        "rag": "厨房出现老鼠"
+      }
+    },
+    {
+      "name": "license_plate_is_not_standard",
+      "title": "车牌不规范",
+      "description": "检测输入视频或图像中是否发生“车牌不规范”异常事件（相关显示名称：车牌不规范）；调用异常检测工具时，必须使用精确类别 ID `license_plate_is_not_standard`。",
+      "aliases": [
+        "车牌不规范"
+      ],
+      "display_names": {
+        "rag": "车牌不规范"
+      }
+    },
+    {
+      "name": "litter_randomly",
+      "title": "随地乱扔垃圾",
+      "description": "检测输入视频或图像中是否发生“随地乱扔垃圾”异常事件（相关显示名称：随地乱扔垃圾）；调用异常检测工具时，必须使用精确类别 ID `litter_randomly`。",
+      "aliases": [
+        "随地乱扔垃圾"
+      ],
+      "display_names": {
+        "rag": "随地乱扔垃圾"
+      }
+    },
+    {
+      "name": "lost_manhole_cover",
+      "title": "井盖丢失或井盖没盖好",
+      "description": "检测输入视频或图像中是否发生“井盖丢失或井盖没盖好”异常事件（相关显示名称：井盖丢失或井盖没盖好）；调用异常检测工具时，必须使用精确类别 ID `lost_manhole_cover`。",
+      "aliases": [
+        "井盖丢失或井盖没盖好"
+      ],
+      "display_names": {
+        "rag": "井盖丢失或井盖没盖好"
+      }
+    },
+    {
+      "name": "occluded_license_plate",
+      "title": "车牌遮挡",
+      "description": "检测输入视频或图像中是否发生“车牌遮挡”异常事件（相关显示名称：车牌遮挡）；调用异常检测工具时，必须使用精确类别 ID `occluded_license_plate`。",
+      "aliases": [
+        "车牌遮挡"
+      ],
+      "display_names": {
+        "rag": "车牌遮挡"
+      }
+    },
+    {
+      "name": "pedestrian_queue",
+      "title": "行人排队聚集",
+      "description": "检测输入视频或图像中是否发生“行人排队聚集”异常事件（相关显示名称：行人排队聚集、行人排队）；调用异常检测工具时，必须使用精确类别 ID `pedestrian_queue`。",
+      "aliases": [
+        "行人排队聚集",
+        "行人排队"
+      ],
+      "display_names": {
+        "dashboard": "行人排队聚集",
+        "rag": "行人排队"
+      }
+    },
+    {
+      "name": "pipeline_leak",
+      "title": "管道泄漏",
+      "description": "检测输入视频或图像中是否发生“管道泄漏”异常事件（相关显示名称：管道泄漏）；调用异常检测工具时，必须使用精确类别 ID `pipeline_leak`。",
+      "aliases": [
+        "管道泄漏"
+      ],
+      "display_names": {
+        "dashboard": "管道泄漏",
+        "rag": "管道泄漏"
+      }
+    },
+    {
+      "name": "platform_yellowline",
+      "title": "越过站台黄线",
+      "description": "检测输入视频或图像中是否发生“越过站台黄线”异常事件（相关显示名称：越过站台黄线、站台黄线）；调用异常检测工具时，必须使用精确类别 ID `platform_yellowline`。",
+      "aliases": [
+        "越过站台黄线",
+        "站台黄线"
+      ],
+      "display_names": {
+        "dashboard": "越过站台黄线",
+        "rag": "站台黄线"
+      }
+    },
+    {
+      "name": "road_surface_dameged",
+      "title": "路面破损",
+      "description": "检测输入视频或图像中是否发生“路面破损”异常事件（相关显示名称：路面破损、路面损坏）；调用异常检测工具时，必须使用精确类别 ID `road_surface_dameged`。",
+      "aliases": [
+        "路面破损",
+        "路面损坏"
+      ],
+      "display_names": {
+        "dashboard": "路面破损",
+        "rag": "路面损坏"
+      }
+    },
+    {
+      "name": "roadside_booths",
+      "title": "占道经营",
+      "description": "检测输入视频或图像中是否发生“占道经营”异常事件（相关显示名称：占道经营）；调用异常检测工具时，必须使用精确类别 ID `roadside_booths`。",
+      "aliases": [
+        "占道经营"
+      ],
+      "display_names": {
+        "rag": "占道经营"
+      }
+    },
+    {
+      "name": "run_the_red_light",
+      "title": "闯红灯",
+      "description": "检测输入视频或图像中是否发生“闯红灯”异常事件（相关显示名称：闯红灯）；调用异常检测工具时，必须使用精确类别 ID `run_the_red_light`。",
+      "aliases": [
+        "闯红灯"
+      ],
+      "display_names": {
+        "dashboard": "闯红灯",
+        "rag": "闯红灯"
+      }
+    },
+    {
+      "name": "screen_doors_clamp_passengers",
+      "title": "屏蔽门夹人",
+      "description": "检测输入视频或图像中是否发生“屏蔽门夹人”异常事件（相关显示名称：屏蔽门夹人）；调用异常检测工具时，必须使用精确类别 ID `screen_doors_clamp_passengers`。",
+      "aliases": [
+        "屏蔽门夹人"
+      ],
+      "display_names": {
+        "dashboard": "屏蔽门夹人",
+        "rag": "屏蔽门夹人"
+      }
+    },
+    {
+      "name": "seat_damaged",
+      "title": "座椅损坏",
+      "description": "检测输入视频或图像中是否发生“座椅损坏”异常事件（相关显示名称：座椅损坏、座位损坏）；调用异常检测工具时，必须使用精确类别 ID `seat_damaged`。",
+      "aliases": [
+        "座椅损坏",
+        "座位损坏"
+      ],
+      "display_names": {
+        "dashboard": "座椅损坏",
+        "rag": "座位损坏"
+      }
+    },
+    {
+      "name": "standing_water",
+      "title": "积水检测",
+      "description": "检测输入视频或图像中是否发生“积水检测”异常事件（相关显示名称：积水检测、积水）；调用异常检测工具时，必须使用精确类别 ID `standing_water`。",
+      "aliases": [
+        "积水检测",
+        "积水"
+      ],
+      "display_names": {
+        "dashboard": "积水检测",
+        "rag": "积水"
+      }
+    },
+    {
+      "name": "tank_body_landing",
+      "title": "罐体落地",
+      "description": "检测输入视频或图像中是否发生“罐体落地”异常事件（相关显示名称：罐体落地、罐体着陆）；调用异常检测工具时，必须使用精确类别 ID `tank_body_landing`。",
+      "aliases": [
+        "罐体落地",
+        "罐体着陆"
+      ],
+      "display_names": {
+        "dashboard": "罐体落地",
+        "rag": "罐体着陆"
+      }
+    },
+    {
+      "name": "track_obstacle",
+      "title": "轨道异物",
+      "description": "检测输入视频或图像中是否发生“轨道异物”异常事件（相关显示名称：轨道异物、轨道障碍物）；调用异常检测工具时，必须使用精确类别 ID `track_obstacle`。",
+      "aliases": [
+        "轨道异物",
+        "轨道障碍物"
+      ],
+      "display_names": {
+        "dashboard": "轨道异物",
+        "rag": "轨道障碍物"
+      }
+    },
+    {
+      "name": "traffic_accident",
+      "title": "交通事故",
+      "description": "检测输入视频或图像中是否发生“交通事故”异常事件（相关显示名称：交通事故）；调用异常检测工具时，必须使用精确类别 ID `traffic_accident`。",
+      "aliases": [
+        "交通事故"
+      ],
+      "display_names": {
+        "dashboard": "交通事故",
+        "rag": "交通事故",
+        "stream": "交通事故"
+      }
+    },
+    {
+      "name": "tree_fallen",
+      "title": "树木倒伏",
+      "description": "检测输入视频或图像中是否发生“树木倒伏”异常事件（相关显示名称：树木倒伏、树木倒塌）；调用异常检测工具时，必须使用精确类别 ID `tree_fallen`。",
+      "aliases": [
+        "树木倒伏",
+        "树木倒塌"
+      ],
+      "display_names": {
+        "dashboard": "树木倒伏",
+        "rag": "树木倒塌"
+      }
+    },
+    {
+      "name": "tube_falls_and_breaks",
+      "title": "试管掉落破碎",
+      "description": "检测输入视频或图像中是否发生“试管掉落破碎”异常事件（相关显示名称：试管掉落破碎、管道坠落破裂）；调用异常检测工具时，必须使用精确类别 ID `tube_falls_and_breaks`。",
+      "aliases": [
+        "试管掉落破碎",
+        "管道坠落破裂"
+      ],
+      "display_names": {
+        "dashboard": "试管掉落破碎",
+        "rag": "管道坠落破裂"
+      }
+    },
+    {
+      "name": "vehicle_illegal_parking",
+      "title": "车辆违停",
+      "description": "检测输入视频或图像中是否发生“车辆违停”异常事件（相关显示名称：车辆违停）；调用异常检测工具时，必须使用精确类别 ID `vehicle_illegal_parking`。",
+      "aliases": [
+        "车辆违停"
+      ],
+      "display_names": {
+        "rag": "车辆违停"
+      }
+    },
+    {
+      "name": "walking_a_dog_without_a_leash",
+      "title": "遛狗未牵绳",
+      "description": "检测输入视频或图像中是否发生“遛狗未牵绳”异常事件（相关显示名称：遛狗未牵绳）；调用异常检测工具时，必须使用精确类别 ID `walking_a_dog_without_a_leash`。",
+      "aliases": [
+        "遛狗未牵绳"
+      ],
+      "display_names": {
+        "rag": "遛狗未牵绳"
+      }
+    },
+    {
+      "name": "without_wearing_a_helmet",
+      "title": "未戴安全帽",
+      "description": "检测输入视频或图像中是否发生“未戴安全帽”异常事件（相关显示名称：未戴安全帽）；调用异常检测工具时，必须使用精确类别 ID `without_wearing_a_helmet`。",
+      "aliases": [
+        "未戴安全帽"
+      ],
+      "display_names": {
+        "rag": "未戴安全帽"
+      }
+    },
+    {
+      "name": "without_wearing_a_mask",
+      "title": "未戴口罩",
+      "description": "检测输入视频或图像中是否发生“未戴口罩”异常事件（相关显示名称：未戴口罩）；调用异常检测工具时，必须使用精确类别 ID `without_wearing_a_mask`。",
+      "aliases": [
+        "未戴口罩"
+      ],
+      "display_names": {
+        "rag": "未戴口罩"
+      }
+    },
+    {
+      "name": "without_wearing_clothes",
+      "title": "未穿防护服",
+      "description": "检测输入视频或图像中是否发生“未穿防护服”异常事件（相关显示名称：未穿防护服）；调用异常检测工具时，必须使用精确类别 ID `without_wearing_clothes`。",
+      "aliases": [
+        "未穿防护服"
+      ],
+      "display_names": {
+        "rag": "未穿防护服"
+      }
+    },
+    {
+      "name": "working_at_heights_without_a_safety_harness",
+      "title": "高空作业未系安全带",
+      "description": "检测输入视频或图像中是否发生“高空作业未系安全带”异常事件（相关显示名称：高空作业未系安全带）；调用异常检测工具时，必须使用精确类别 ID `working_at_heights_without_a_safety_harness`。",
+      "aliases": [
+        "高空作业未系安全带"
+      ],
+      "display_names": {
+        "rag": "高空作业未系安全带"
+      }
     }
   ]
 }

@@ -6,6 +6,15 @@ from typing import Dict, Iterable, Set
 
 
 TOOL_CONTRACTS: Dict[str, Dict[str, object]] = {
+    "embeddingTool": {
+        "output": "anomaly_decision",
+        "requires": {"image", "event_type"},
+        "output_fields": {
+            "event_type": "string",
+            "is_anomaly": "boolean",
+            "threshold": "number",
+        },
+    },
     "MLLM": {"output": "answer", "requires": set()},
     "yoloTool": {"output": "pixel_detections", "requires": {"image"}},
     "paddleHeadDetTool": {"output": "pixel_detections", "requires": {"image"}},
@@ -94,6 +103,7 @@ def contract_signature(tool_name: str) -> Dict[str, object]:
         "outputs": sorted(output_types(tool_name)),
         "requires": sorted(str(item) for item in contract.get("requires") or ()),
         "bbox_format": str(contract.get("bbox_format") or ""),
+        "output_fields": dict(contract.get("output_fields") or {}),
     }
 
 

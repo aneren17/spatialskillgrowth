@@ -39,6 +39,7 @@ class TaskRecord(SerializableRecord):
     image_paths: List[str] = field(default_factory=list)
     capability: str = ""
     answer_type: str = ""
+    media_type: str = ""
 
 
 @dataclass
