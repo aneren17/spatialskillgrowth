@@ -13,9 +13,13 @@ from nodes.mem.spatialskillgrowth.models import WorkflowSpec
 from nodes.mem.spatialskillgrowth.tool_runtime import (
     ToolRuntime,
     build_evidence_text,
+    execute_parallel_tools,
     extract_anomaly_result,
     extract_final_answer,
     resolve_workflow_args,
+)
+from nodes.mem.spatialskillgrowth.tool_contracts import (
+    FRAME_INDEPENDENT_IMAGE_TOOLS,
 )
 
 
@@ -92,11 +96,19 @@ class SkillExecutionContext:
         question: str,
         image_paths: List[str],
         slot_bindings: Dict[str, str],
+        media_path: str = "",
     ):
         self._tool_runtime = tool_runtime
         self._workflow = workflow
         self._question = question
         self._image_paths = list(image_paths)
+        self._media_path = str(media_path or "")
+        if not self._media_path and self._image_paths:
+            self._media_path = self._image_paths[0]
+        self._selected_image_path = (
+            self._image_paths[len(self._image_paths) // 2]
+            if self._image_paths else self._media_path
+        )
         self._slots = dict(slot_bindings)
         self._allowed_tools = {step.tool_name for step in workflow.steps}
         self._observations: List[Dict[str, Any]] = []
@@ -116,7 +128,13 @@ class SkillExecutionContext:
                 f"Python Skill called undeclared tool {tool_name!r}; "
                 "add it to the JSON workflow graph before executing the script"
             )
-        result = self._tool_runtime.execute(tool_name, dict(args or {}))
+        prepared_args = dict(args or {})
+        if tool_name == "embeddingTool" and self._media_path:
+            prepared_args["file_path"] = self._media_path
+        if self._should_fan_out(tool_name, prepared_args):
+            result = self._call_sampled_frames(tool_name, prepared_args)
+        else:
+            result = self._tool_runtime.execute(tool_name, prepared_args)
         self._results[step_id] = result
         self._observations.append({
             "step": len(self._observations),
@@ -132,6 +150,68 @@ class SkillExecutionContext:
             self._previous = str(result.get("content") or "")
         return result
 
+    def _should_fan_out(self, tool_name: str, args: Dict[str, Any]) -> bool:
+        if tool_name not in FRAME_INDEPENDENT_IMAGE_TOOLS:
+            return False
+        if len(self._image_paths) <= 1:
+            return False
+        input_path = next(
+            (
+                str(args[key])
+                for key in ("file", "image", "image_path")
+                if key in args
+            ),
+            "",
+        )
+        return input_path in set(self._image_paths)
+
+    def _call_sampled_frames(
+        self,
+        tool_name: str,
+        args: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        requests = []
+        for frame_path in self._image_paths:
+            current = dict(args)
+            for key in ("file", "image", "image_path"):
+                if key in current:
+                    current[key] = frame_path
+            if "filename" in current:
+                current["filename"] = os.path.basename(frame_path)
+            requests.append((tool_name, current))
+        results = execute_parallel_tools(self._tool_runtime, requests)
+        successful = [
+            (index, result)
+            for index, result in enumerate(results)
+            if result.get("ok")
+        ]
+        if not successful:
+            failed = results[0] if results else ToolRuntime.skipped(
+                tool_name, "没有可处理的抽样帧。"
+            )
+            failed = dict(failed)
+            failed["data"] = {
+                **dict(failed.get("data") or {}),
+                "frame_results": _frame_result_records(
+                    self._image_paths, results
+                ),
+                "successful_frame_count": 0,
+            }
+            return failed
+        best_index, best = max(successful, key=_frame_result_score)
+        self._selected_image_path = self._image_paths[best_index]
+        aggregate = dict(best)
+        aggregate["data"] = {
+            **dict(best.get("data") or {}),
+            "source_frame": self._selected_image_path,
+            "sampled_frame_count": len(self._image_paths),
+            "successful_frame_count": len(successful),
+            "frame_results": _frame_result_records(
+                self._image_paths, results
+            ),
+        }
+        return aggregate
+
     @staticmethod
     def require(result: Dict[str, Any], step_id: str) -> None:
         if not result.get("ok"):
@@ -145,9 +225,15 @@ class SkillExecutionContext:
             return result[field]
         return (result.get("data") or {}).get(field, default)
 
-    @staticmethod
-    def filename(image_path: str) -> str:
-        return os.path.basename(image_path) if image_path else "image"
+    def media_path(self) -> str:
+        return self._media_path
+
+    def image_path(self) -> str:
+        return self._selected_image_path
+
+    def filename(self, image_path: str = "") -> str:
+        path = image_path or self._selected_image_path
+        return os.path.basename(path) if path else "image"
 
     def evidence_text(self) -> str:
         return build_evidence_text(self._observations)
@@ -157,10 +243,10 @@ class SkillExecutionContext:
             image = str(((item.get("result") or {}).get("data") or {}).get("image") or "")
             if image:
                 return image
-        return self._image_paths[0] if self._image_paths else ""
+        return self._selected_image_path
 
     def render(self, value: Any) -> Any:
-        image_path = self._image_paths[0] if self._image_paths else ""
+        image_path = self._selected_image_path
         return resolve_workflow_args(
             value,
             image_path=image_path,
@@ -170,6 +256,8 @@ class SkillExecutionContext:
             step_results=self._results,
             slots=self._slots,
             evidence_image=self.evidence_image(),
+            media_path=self._media_path,
+            frame_paths=self._image_paths,
         )
 
     @staticmethod
@@ -223,6 +311,7 @@ class PythonSkillExecutor:
         question: str,
         image_paths: List[str],
         slot_bindings: Dict[str, str],
+        media_path: str = "",
     ) -> Dict[str, Any]:
         context = SkillExecutionContext(
             self.tool_runtime,
@@ -230,6 +319,7 @@ class PythonSkillExecutor:
             question,
             image_paths,
             slot_bindings,
+            media_path=media_path,
         )
         try:
             namespace = self._load(script_path)
@@ -274,6 +364,57 @@ class PythonSkillExecutor:
         namespace: Dict[str, Any] = {"__builtins__": SAFE_BUILTINS}
         exec(compile(tree, str(script_path), "exec"), namespace, namespace)
         return namespace
+
+
+def _frame_result_score(item) -> tuple:
+    index, result = item
+    data = dict(result.get("data") or {})
+    detections = list(data.get("detections") or [])
+    confidences = []
+    for detection in detections:
+        if not isinstance(detection, dict):
+            continue
+        value = detection.get("score", detection.get("confidence", 0.0))
+        try:
+            confidences.append(float(value))
+        except (TypeError, ValueError):
+            continue
+    return (
+        len(detections),
+        max(confidences, default=0.0),
+        bool(data.get("image")),
+        len(str(result.get("content") or "")),
+        -index,
+    )
+
+
+def _frame_result_records(
+    frame_paths: List[str],
+    results: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    records = []
+    for frame_path, result in zip(frame_paths, results):
+        data = dict(result.get("data") or {})
+        detections = list(data.get("detections") or [])
+        confidences = []
+        for detection in detections:
+            if not isinstance(detection, dict):
+                continue
+            value = detection.get("score", detection.get("confidence", 0.0))
+            try:
+                confidences.append(float(value))
+            except (TypeError, ValueError):
+                continue
+        records.append({
+            "frame_path": frame_path,
+            "ok": bool(result.get("ok")),
+            "status": str(result.get("status") or ""),
+            "detection_count": len(detections),
+            "max_confidence": max(confidences, default=0.0),
+            "image": str(data.get("image") or ""),
+            "error": str(result.get("error") or ""),
+        })
+    return records
 
 
 def _validate_tree(tree: ast.AST, script_path: Path) -> None:

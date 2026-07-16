@@ -36,6 +36,7 @@ from prompt.spatialskillgrowth_prompts import (
     FREE_REACT_SYSTEM_PROMPT,
     REACT_FINALIZATION_PROMPT,
     REACT_ATTACHMENT_PROMPT,
+    REACT_VIDEO_ATTACHMENT_PROMPT,
     WORKFLOW_REJECTION_CONTEXT_PROMPT,
 )
 
@@ -93,6 +94,7 @@ class WorkflowExecutor:
         question: str,
         image_paths: List[str],
         slot_bindings: Dict[str, str],
+        media_path: str = "",
     ) -> Dict:
         started = time.perf_counter()
         script_path = (
@@ -114,6 +116,7 @@ class WorkflowExecutor:
             question,
             image_paths,
             slot_bindings,
+            media_path=media_path,
         )
         result["latency_ms"] = (time.perf_counter() - started) * 1000.0
         return result
@@ -133,10 +136,16 @@ class ReactSolver:
         allowed_tool_names: Iterable[str],
         answer_type: str,
         repair_context: str = "",
+        media_path: str = "",
     ) -> Dict:
         started = time.perf_counter()
         task_text = question
-        if image_paths:
+        if media_path and image_paths and media_path not in image_paths:
+            task_text += REACT_VIDEO_ATTACHMENT_PROMPT.format(
+                media_path=media_path,
+                frame_paths="\n".join(image_paths),
+            )
+        elif image_paths:
             task_text += REACT_ATTACHMENT_PROMPT.format(paths="\n".join(image_paths))
         messages = [
             SystemMessage(content=FREE_REACT_SYSTEM_PROMPT),
@@ -248,12 +257,18 @@ class CandidateExecutionCoordinator:
         workflows: List[WorkflowSpec],
         slot_bindings: Dict[str, str],
         allowed_tool_names: List[str],
+        media_path: str = "",
     ) -> Dict:
         attempts = []
         repair_contexts = []
         for workflow in workflows[: self.max_workflow_attempts]:
-            result = self.workflow_executor.execute(
-                workflow, question, image_paths, slot_bindings
+            result = _execute_workflow_with_media(
+                self.workflow_executor,
+                workflow,
+                question,
+                image_paths,
+                slot_bindings,
+                media_path,
             )
             answer = str(result.get("final_answer") or "").strip()
             evidence = self.evidence_validator.validate(
@@ -262,7 +277,7 @@ class CandidateExecutionCoordinator:
                 answer,
                 answer_type,
                 result,
-                image_paths,
+                _validation_paths(media_path, image_paths),
             )
             attempt = {
                 "kind": "workflow",
@@ -308,8 +323,13 @@ class CandidateExecutionCoordinator:
             baseline = build_anomaly_baseline_workflow(problem_class)
             attempted_ids = {item.get("workflow_id") for item in attempts}
             if baseline.workflow_id not in attempted_ids:
-                result = self.workflow_executor.execute(
-                    baseline, question, image_paths, slot_bindings
+                result = _execute_workflow_with_media(
+                    self.workflow_executor,
+                    baseline,
+                    question,
+                    image_paths,
+                    slot_bindings,
+                    media_path,
                 )
                 answer = str(result.get("final_answer") or "").strip()
                 evidence = self.evidence_validator.validate(
@@ -318,7 +338,7 @@ class CandidateExecutionCoordinator:
                     answer,
                     answer_type,
                     result,
-                    image_paths,
+                    _validation_paths(media_path, image_paths),
                 )
                 attempts.append({
                     "kind": "embedding_baseline",
@@ -364,6 +384,7 @@ class CandidateExecutionCoordinator:
             allowed_tool_names,
             answer_type,
             repair_context="\n".join(repair_contexts)[-6000:],
+            media_path=media_path,
         )
         answer = str(result.get("final_answer") or "").strip()
         evidence = self.evidence_validator.validate(
@@ -372,7 +393,7 @@ class CandidateExecutionCoordinator:
             answer,
             answer_type,
             result,
-            image_paths,
+            _validation_paths(media_path, image_paths),
         )
         attempts.append({
             "kind": "react",
@@ -432,8 +453,6 @@ class WorkflowPythonExporter:
             "    question,",
             f"    image_paths,{keyword_separator}{slot_parameters}",
             "):",
-            "    image_path = image_paths[0] if image_paths else \"\"",
-            "    filename = runtime.filename(image_path)",
         ]
         for step in steps:
             variable = variables[step.step_id]
@@ -472,6 +491,29 @@ def legacy_python_wrapper(path: Path) -> bool:
     )
 
 
+def _validation_paths(media_path: str, image_paths: List[str]) -> List[str]:
+    return [media_path] if media_path else image_paths
+
+
+def _execute_workflow_with_media(
+    executor,
+    workflow: WorkflowSpec,
+    question: str,
+    image_paths: List[str],
+    slot_bindings: Dict[str, str],
+    media_path: str,
+) -> Dict:
+    if media_path:
+        return executor.execute(
+            workflow,
+            question,
+            image_paths,
+            slot_bindings,
+            media_path=media_path,
+        )
+    return executor.execute(workflow, question, image_paths, slot_bindings)
+
+
 def _python_value(value: Any, variables: Dict[str, str]) -> str:
     if isinstance(value, dict):
         items = [
@@ -484,8 +526,11 @@ def _python_value(value: Any, variables: Dict[str, str]) -> str:
     if not isinstance(value, str):
         return repr(value)
     exact_values = {
-        "$image": "image_path",
-        "$filename": "filename",
+        "$image": "runtime.image_path()",
+        "$media": "runtime.media_path()",
+        "$frames": "image_paths",
+        "$filename": "runtime.filename()",
+        "$media_filename": "runtime.filename(runtime.media_path())",
         "$question": "question",
         "$evidence": "runtime.evidence_text()",
         "$evidence_image": "runtime.evidence_image()",

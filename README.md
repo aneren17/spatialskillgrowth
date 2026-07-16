@@ -57,6 +57,7 @@
 nodes/mem/spatialskillgrowth/
 ├── experiment_config.py     # 实验预设、seed 和运行目录隔离
 ├── models.py                 # 工作流、方向、检索和证据模型
+├── media_processing.py       # 检测窗口视频的缓存抽帧与媒体双通道路由
 ├── growth_store.py           # SQLite 实验事实、轨迹、三状态 JSON/Skill 仓库
 ├── task_router.py            # BenchmarkProblemClassifier、SlotExtractor、ToolAvailabilityPolicy
 ├── skill_retriever.py        # multimodal flat、legacy tree、history-only
@@ -119,6 +120,30 @@ GroundingDINO、SAM3、UniDepth、YOLO、Paddle OCR/检测、图像裁剪和 Pyt
 均可省略。类别可以使用精确英文 `event_type`，也可以使用能唯一映射的中文显示名称。加载器会验证
 文件类型和文件数量，自动生成中文检测描述，并固定使用 `bool` 答案。探索数据仍必须额外提供真实答案。
 
+### 短视频检测窗口
+
+Agent 接收的是上游已经裁好的一个不定长短视频窗口，不维护整条实时流，也不负责决定下一个窗口
+的起止时间。输入进入探索或推理前会统一转换成两条媒体通道：
+
+1. 原始窗口视频保留为 `$media`，`embeddingTool` 对它完整调用一次；
+2. 视频默认按 1 FPS 抽帧，最多保留 12 帧并缓存到当前 run 的
+   `state/sampled_frames/`；`$image` 及图像工具只接收这些 JPG；
+3. YOLO、SAM3、GroundingDINO、Paddle OCR/检测等无跨帧依赖的图像工具并行处理抽样帧，沿用
+   全局工具并发上限；运行时选择检测框数量、置信度和有效图像证据较好的一帧，后续裁剪、深度等
+   依赖工具只跟随该帧，避免跨帧复用边界框；
+4. ReAct 会同时看到原视频路径和按时间排序的抽样帧路径，但检索、Skill 执行和 ReAct 回退顺序
+   不变。
+
+抽帧参数可通过 `ExperimentConfig.extra` 设置：`video_sample_fps` 默认 `1.0`，
+`max_sampled_frames` 默认 `12`。对 2～6 秒检测窗口通常得到 2～6 帧；更长窗口会均匀降采样到上限，
+避免图像工具调用数随视频长度无限增长。
+
+实时流的窗口增长、缩短、两阶段冷却和异常回溯切片应留在上游调度器。例如上游可以依次发送
+`0～5s`、`5～10s`、`10～16s` 等裁剪结果，并依据本 Agent 返回的 `is_anomaly` 和 `threshold`
+决定下一个窗口。这里的 `threshold` 原样来自 embedding 后端的“判定阈值”；除非后端接口另有
+保证，不应直接把它解释为概率或置信度。接收端应在视频文件写入完成后再调用 Agent，并为每个
+窗口提供唯一 `task_id`；即使临时文件路径复用，抽帧缓存也会用文件大小和修改时间检查内容变化。
+
 单文件可以直接检测，不需要先创建数据集 JSON：
 
 ```bash
@@ -143,6 +168,46 @@ python -m agents.spatialskillgrowth.anomaly_detection_agent \
 ```
 
 `embeddingTool` 调用失败、类别不一致或后端没有返回 threshold 时，证据门会拒绝该结果。
+
+### 对话式轨迹
+
+每个完成的任务除结构化 JSON 外，还会在
+`trajectories/<state_task_id>/conversation.md` 生成一份对话式审计轨迹，依次展示用户输入、任务规划、
+Skill 检索、工具参数、工具返回、证据验收、Skill 生命周期和最终答案。该文件不包含或伪造模型的
+隐藏思维过程。已有 run 可以补生成：
+
+```bash
+python -m scripts.render_spatialskillgrowth_conversations \
+  benchmark_result/spatialskillgrowth_anomaly_detection/retrieval_only/banner_direct_test
+```
+
+### Banner 十帧演示数据集
+
+下面的命令从 `test/banner.mp4` 均匀抽取 10 张图片，并把它们都标注为 `banner=是`：
+
+```bash
+python -m scripts.build_banner_demo_dataset --force
+```
+
+输出位于 `benchmark/anomaly/banner_demo/`。这些样本来自同一个视频且全部为正样本，只适合展示
+框架流程，不能评估泛化能力。外部模型服务不可用时，可以运行明确标记为 mock 的离线流程：
+
+```bash
+python -m scripts.run_banner_demo_exploration --force
+```
+
+它使用真实的 Pipeline、Skill Repository、证据验收和 provisional/active 生命周期，只把外部
+embedding 响应替换为确定性模拟值。外部 LLM 和工具服务可用后，应使用标准探索入口：
+
+```bash
+python -m agents.spatialskillgrowth.spatialskillgrowth_explore_omni3d_agent \
+  --benchmark anomaly_detection \
+  --problem-classes banner \
+  --experiment full \
+  --run-id banner_demo_real_explore \
+  --dataset benchmark/anomaly/banner_demo/explore.json \
+  --img-root benchmark/anomaly/banner_demo/images
+```
 
 ## 主实验
 

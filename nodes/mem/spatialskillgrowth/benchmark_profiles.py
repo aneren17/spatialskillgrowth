@@ -35,7 +35,7 @@ ANOMALY_CLASS_METADATA = {
         "tool_template": {
             "tool_name": "embeddingTool",
             "args": {
-                "file_path": "$image",
+                "file_path": "$media",
                 "event_type": event_type,
             },
         },

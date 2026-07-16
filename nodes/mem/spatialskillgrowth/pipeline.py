@@ -13,6 +13,7 @@ from nodes.mem.spatialskillgrowth.benchmark_profiles import class_metadata_for
 from nodes.mem.spatialskillgrowth.benchmark_profiles import ANOMALY_BENCHMARK
 from nodes.mem.spatialskillgrowth.experiment_config import ExperimentConfig, ExperimentPaths
 from nodes.mem.spatialskillgrowth.models import TaskRecord
+from nodes.mem.spatialskillgrowth.media_processing import MediaPreprocessor
 from nodes.mem.spatialskillgrowth.tool_runtime import ToolRuntime
 from nodes.mem.spatialskillgrowth.skill_consolidator import (
     ApplicabilityCompatibilityJudge,
@@ -77,6 +78,7 @@ class ExplorationPipeline:
         lifecycle: WorkflowLifecycleManager,
         workflow_executor: WorkflowExecutor,
         split_name: str = "explore",
+        media_preprocessor: Optional[MediaPreprocessor] = None,
     ):
         self.config = config
         self.paths = paths
@@ -91,6 +93,7 @@ class ExplorationPipeline:
         self.lifecycle = lifecycle
         self.workflow_executor = workflow_executor
         self.split_name = split_name
+        self.media_preprocessor = media_preprocessor
 
     def ask(self, task: TaskRecord, resume: bool = False) -> Dict:
         state_task_id = f"explore__{task.task_id}"
@@ -98,6 +101,8 @@ class ExplorationPipeline:
             summary = self.store.get_summary(state_task_id) or {}
             summary["cached"] = True
             return summary
+        if self.media_preprocessor is not None:
+            task = self.media_preprocessor.prepare(task)
         try:
             plan = self.planner.plan(
                 task.question,
@@ -136,7 +141,7 @@ class ExplorationPipeline:
             workflows, retrieval = self.retriever.retrieve(
                 problem_class,
                 task.question,
-                task.image_paths,
+                task.visual_paths,
                 plan["slot_bindings"],
                 plan["selected_tools"],
                 task.answer_type,
@@ -150,11 +155,12 @@ class ExplorationPipeline:
             state_task_id,
             problem_class,
             task.question,
-            task.image_paths,
+            task.visual_paths,
             task.answer_type,
             workflows,
             plan["slot_bindings"],
             plan["selected_tools"],
+            media_path=task.media_path,
         )
         lifecycle_results = self._persist_execution_attempts(
             state_task_id, task, execution, update_metrics=True
@@ -172,7 +178,10 @@ class ExplorationPipeline:
         provisional = []
         consolidation_results = []
         for lifecycle_result in lifecycle_results:
-            if lifecycle_result.get("to") == "active":
+            if (
+                lifecycle_result.get("to") == "active"
+                and lifecycle_result.get("from") != "active"
+            ):
                 activated.append(lifecycle_result["workflow_id"])
             elif lifecycle_result.get("to") == "provisional":
                 provisional.append(lifecycle_result["workflow_id"])
@@ -185,9 +194,12 @@ class ExplorationPipeline:
                 plan,
                 parent_attempt,
             )
-            if persisted["status"] == "active":
+            if persisted.get("registered") and persisted["status"] == "active":
                 activated.append(persisted["representative_workflow_id"])
-            elif persisted["status"] == "provisional":
+            elif (
+                persisted.get("registered")
+                and persisted["status"] == "provisional"
+            ):
                 provisional.append(persisted["representative_workflow_id"])
             if persisted.get("consolidation"):
                 consolidation_results.append(persisted["consolidation"])
@@ -253,6 +265,7 @@ class ExplorationPipeline:
             "run_id": self.paths.run_id,
             "split": self.split_name,
             "problem_class": problem_class,
+            "question": task.question,
             "answer_type": task.answer_type,
             "groundtruth": task.groundtruth,
             "answer": final_answer,
@@ -261,6 +274,8 @@ class ExplorationPipeline:
                 "title", problem_class
             ),
             "media_type": task.media_type,
+            "sampled_frame_paths": task.sampled_frame_paths,
+            "media_metadata": task.media_metadata,
             "is_anomaly": final_detection.get("is_anomaly"),
             "threshold": final_detection.get("threshold"),
             "correct": final_correct,
@@ -302,6 +317,15 @@ class ExplorationPipeline:
             )
             workflow = attempt.get("workflow")
             if update_metrics and isinstance(workflow, WorkflowSpec):
+                if self.repository.get(workflow.workflow_id) is None:
+                    workflow.metrics.structural_coverage = _structural_coverage(
+                        workflow
+                    )
+                    workflow = self.lifecycle.register(
+                        workflow,
+                        task.task_id,
+                        evidence.accepted,
+                    )
                 updated = _update_workflow_metrics(
                     self.repository,
                     workflow,
@@ -363,6 +387,7 @@ class ExplorationPipeline:
                 "status": existing.status,
                 "representative_workflow_id": existing.workflow_id,
                 "consolidation": None,
+                "registered": False,
             }
         if workflow.status == "active":
             consolidation = self.consolidator.consolidate(workflow, task.task_id)
@@ -372,19 +397,22 @@ class ExplorationPipeline:
                     "representative_workflow_id"
                 ],
                 "consolidation": consolidation,
+                "registered": True,
             }
         return {
             "status": workflow.status,
             "representative_workflow_id": workflow.workflow_id,
             "consolidation": None,
+            "registered": True,
         }
 
     def _execute_mutant(self, state_task_id, task, plan, mutant, index):
         result = self.workflow_executor.execute(
             mutant,
             task.question,
-            task.image_paths,
+            task.visual_paths,
             plan["slot_bindings"],
+            media_path=task.media_path,
         )
         answer = str(result.get("final_answer") or "")
         correct = answer_matches_typed(answer, task.groundtruth, task.answer_type)
@@ -506,14 +534,17 @@ class ExplorationPipeline:
             for index, (task, plan) in enumerate(
                 validation_tasks[: self.config.provisional_validation_trials]
             ):
+                if self.media_preprocessor is not None:
+                    task = self.media_preprocessor.prepare(task)
                 current = self.repository.get(workflow_id)
                 if current is None or current.status != "provisional":
                     break
                 result = self.workflow_executor.execute(
                     current,
                     task.question,
-                    task.image_paths,
+                    task.visual_paths,
                     dict(plan.get("slot_bindings") or {}),
+                    media_path=task.media_path,
                 )
                 answer = str(result.get("final_answer") or "")
                 correct = answer_matches_typed(
@@ -589,6 +620,7 @@ class InferencePipeline:
         retriever,
         coordinator: CandidateExecutionCoordinator,
         runtime: ToolRuntime,
+        media_preprocessor: Optional[MediaPreprocessor] = None,
     ):
         self.config = config
         self.paths = paths
@@ -597,6 +629,7 @@ class InferencePipeline:
         self.retriever = retriever
         self.coordinator = coordinator
         self.runtime = runtime
+        self.media_preprocessor = media_preprocessor
 
     def ask(self, task: TaskRecord, split_name: str, resume: bool = False) -> Dict:
         state_task_id = f"infer__{task.task_id}"
@@ -604,6 +637,8 @@ class InferencePipeline:
             summary = self.store.get_summary(state_task_id) or {}
             summary["cached"] = True
             return summary
+        if self.media_preprocessor is not None:
+            task = self.media_preprocessor.prepare(task)
         try:
             return self._ask(task, split_name, state_task_id)
         except Exception:
@@ -639,7 +674,7 @@ class InferencePipeline:
             workflows, retrieval = self.retriever.retrieve(
                 plan["problem_class"],
                 task.question,
-                task.image_paths,
+                task.visual_paths,
                 plan["slot_bindings"],
                 plan["selected_tools"],
                 task.answer_type,
@@ -653,11 +688,12 @@ class InferencePipeline:
             state_task_id,
             plan["problem_class"],
             task.question,
-            task.image_paths,
+            task.visual_paths,
             task.answer_type,
             workflows,
             plan["slot_bindings"],
             plan["selected_tools"],
+            media_path=task.media_path,
         )
         for index, attempt in enumerate(execution["attempts"]):
             answer = str(attempt.get("answer") or "")
@@ -688,6 +724,7 @@ class InferencePipeline:
             "run_id": self.paths.run_id,
             "split": split_name,
             "problem_class": plan["problem_class"],
+            "question": task.question,
             "answer_type": task.answer_type,
             "groundtruth": task.groundtruth,
             "answer": answer,
@@ -696,6 +733,8 @@ class InferencePipeline:
                 plan["problem_class"], {}
             ).get("title", plan["problem_class"]),
             "media_type": task.media_type,
+            "sampled_frame_paths": task.sampled_frame_paths,
+            "media_metadata": task.media_metadata,
             "is_anomaly": execution.get("is_anomaly"),
             "threshold": execution.get("threshold"),
             "correct": correct,
@@ -736,6 +775,13 @@ class ExperimentFactory:
         self.benchmark = benchmark
         self.exploration_split_name = exploration_split_name
         self.class_metadata = class_metadata or class_metadata_for(benchmark)
+        self.media_preprocessor = MediaPreprocessor(
+            paths.state_dir / "sampled_frames",
+            sample_fps=float(config.extra.get("video_sample_fps", 1.0)),
+            max_sampled_frames=int(
+                config.extra.get("max_sampled_frames", 12)
+            ),
+        )
         classifier = BenchmarkProblemClassifier(
             llm,
             benchmark,
@@ -806,6 +852,7 @@ class ExperimentFactory:
             lifecycle,
             self.workflow_executor,
             self.exploration_split_name,
+            media_preprocessor=self.media_preprocessor,
         )
 
     def build_inference(self) -> InferencePipeline:
@@ -819,6 +866,7 @@ class ExperimentFactory:
             self.retriever,
             self.coordinator,
             self.runtime,
+            media_preprocessor=self.media_preprocessor,
         )
 
 

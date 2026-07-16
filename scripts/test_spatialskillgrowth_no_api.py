@@ -50,6 +50,7 @@ from nodes.mem.spatialskillgrowth.models import (
     WorkflowStatus,
     WorkflowStep,
 )
+from nodes.mem.spatialskillgrowth.media_processing import MediaPreprocessor
 from nodes.mem.spatialskillgrowth.param_space import ParamSpace
 from nodes.mem.spatialskillgrowth.skill_consolidator import (
     ApplicabilityCompatibilityJudge,
@@ -155,7 +156,7 @@ def workflow(
         if tool_name == "MLLM":
             args = {"query": "$question"}
         elif tool_name == "embeddingTool":
-            args = {"file_path": "$image", "event_type": "$slot.event_type"}
+            args = {"file_path": "$media", "event_type": "$slot.event_type"}
         else:
             args = {
                 "file": "$image",
@@ -249,7 +250,7 @@ def test_anomaly_taxonomy_and_embedding_workflow():
     )
     assert [step.tool_name for step in spec.steps] == ["embeddingTool"]
     assert spec.steps[0].args == {
-        "file_path": "$image",
+        "file_path": "$media",
         "event_type": "$slot.event_type",
     }
     assert spec.applicability.required_slots == ["event_type"]
@@ -351,6 +352,95 @@ def test_anomaly_taxonomy_and_embedding_workflow():
     assert summary["threshold"] == 0.61
     assert summary["correct"] is None
 
+
+def test_video_sampling_and_dual_media_routing():
+    video_task = build_anomaly_task("test/banner.mp4", "banner")
+    with tempfile.TemporaryDirectory() as root:
+        prepared = MediaPreprocessor(Path(root)).prepare(video_task)
+        assert prepared.media_path.endswith("banner.mp4")
+        assert prepared.sampled_frame_paths
+        assert all(path.endswith(".jpg") for path in prepared.sampled_frame_paths)
+        assert prepared.media_metadata["sample_fps"] == 1.0
+        assert prepared.media_metadata["sampled_frame_count"] == len(
+            prepared.sampled_frame_paths
+        )
+        assert len(prepared.sampled_frame_paths) <= 12
+        cached = MediaPreprocessor(Path(root)).prepare(video_task)
+        assert cached.sampled_frame_paths == prepared.sampled_frame_paths
+
+        embedding_calls = []
+        image_calls = []
+
+        def detect(args):
+            embedding_calls.append(dict(args))
+            return "是 (判定阈值: 0.65)"
+
+        def detect_frame(args):
+            image_calls.append(dict(args))
+            frame_index = int(Path(args["file"]).stem.split("_")[1])
+            return json.dumps({
+                "status": "success",
+                "detections": [{
+                    "class_name": "person",
+                    "bbox": [0, 0, 10, 10],
+                    "score": frame_index / 100.0,
+                }],
+            })
+
+        dual_workflow = WorkflowSpec(
+            workflow_id="dual_media",
+            name="dual_media",
+            applicability=ApplicabilitySpec(
+                problem_class="banner",
+                required_slots=["event_type"],
+                required_tools=["embeddingTool", "yoloTool"],
+                answer_types=["bool"],
+            ),
+            steps=[
+                WorkflowStep(
+                    tool_name="embeddingTool",
+                    args={
+                        "file_path": "$media",
+                        "event_type": "$slot.event_type",
+                    },
+                    step_id="embedding",
+                ),
+                WorkflowStep(
+                    tool_name="yoloTool",
+                    args={
+                        "file": "$image",
+                        "filename": "$filename",
+                        "threshold": 0.5,
+                    },
+                    step_id="frames",
+                ),
+            ],
+        )
+        result = WorkflowExecutor(
+            ToolRuntime({
+                "embeddingTool": FakeTool("embeddingTool", detect),
+                "yoloTool": FakeTool("yoloTool", detect_frame),
+            }),
+            candidate_script_root=Path(root) / "scripts",
+        ).execute(
+            dual_workflow,
+            prepared.question,
+            prepared.visual_paths,
+            {"event_type": "banner"},
+            media_path=prepared.media_path,
+        )
+        assert result["success"]
+        assert embedding_calls == [{
+            "file_path": prepared.media_path,
+            "event_type": "banner",
+        }]
+        assert len(image_calls) == len(prepared.sampled_frame_paths)
+        assert all(call["file"].endswith(".jpg") for call in image_calls)
+        frame_data = result["observations"][1]["result"]["data"]
+        assert frame_data["successful_frame_count"] == len(image_calls)
+        assert frame_data["source_frame"].endswith(
+            prepared.sampled_frame_paths[-1]
+        )
 
 def test_removed_tools_are_not_in_active_runtime():
     removed_tools = {

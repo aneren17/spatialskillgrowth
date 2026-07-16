@@ -86,6 +86,14 @@ DEPENDENT_TOOLS = {
     for name, contract in TOOL_CONTRACTS.items()
     if set(contract.get("requires") or ()).intersection(PRODUCED_RESOURCE_TYPES)
 }
+FRAME_INDEPENDENT_IMAGE_TOOLS = {
+    "groundingdino",
+    "paddleHeadDetTool",
+    "paddleOcrTool",
+    "paddlePedriderDetTool",
+    "sam3",
+    "yoloTool",
+}
 
 
 def output_type(tool_name: str) -> str:

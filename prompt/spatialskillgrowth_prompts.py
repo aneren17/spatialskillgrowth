@@ -19,6 +19,11 @@ WORKFLOW_REJECTION_CONTEXT_PROMPT = (
     "工作流 {workflow_id} 未通过证据验收：{reason}。候选答案：{answer}。"
 )
 REACT_ATTACHMENT_PROMPT = "\n附件路径：\n{paths}"
+REACT_VIDEO_ATTACHMENT_PROMPT = """
+原始检测窗口视频（只传给支持视频的 embeddingTool）：{media_path}
+按时间顺序抽取的图像帧（只传给图像工具）：
+{frame_paths}
+不要把原始视频传给仅支持图像的工具，也不要把抽样帧代替原视频传给 embeddingTool。"""
 
 FINAL_ANSWER_NORMALIZATION_PROMPT = """请把视觉智能体的原始回答规范成问题要求的精确格式。
 这一步只做格式整理：保留原回答表达的结论，不要重新解题，不要添加原回答未断言的信息，也不要

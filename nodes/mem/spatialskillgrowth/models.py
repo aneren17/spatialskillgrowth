@@ -40,6 +40,16 @@ class TaskRecord(SerializableRecord):
     capability: str = ""
     answer_type: str = ""
     media_type: str = ""
+    sampled_frame_paths: List[str] = field(default_factory=list)
+    media_metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def media_path(self) -> str:
+        return self.image_paths[0] if self.image_paths else ""
+
+    @property
+    def visual_paths(self) -> List[str]:
+        return list(self.sampled_frame_paths or self.image_paths)
 
 
 @dataclass

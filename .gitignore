@@ -4,5 +4,6 @@ __pycache__/
 .ruff_cache/
 *.py[cod]
 benchmark_result/
+benchmark/
 tools/basicTools/sandbox_output/
 test/

@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Dict, Iterator, List, Optional
 
 from nodes.mem.spatialskillgrowth.experiment_config import ExperimentPaths
+from nodes.mem.spatialskillgrowth.conversation_trace import (
+    write_conversation_trace,
+)
 from nodes.mem.spatialskillgrowth.models import (
     EvidenceDecision,
     RetrievalDecision,
@@ -281,6 +284,11 @@ class ExperimentStore:
 
     def complete_task(self, task_id: str, answer: str, correct: bool, summary: Dict) -> None:
         self.save_trajectory(task_id, "summary", summary)
+        write_conversation_trace(
+            self.paths.trajectory_root,
+            task_id,
+            summary,
+        )
         with self._lock, self._connect() as connection:
             cursor = connection.execute(
                 """

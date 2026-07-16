@@ -579,6 +579,8 @@ def resolve_workflow_args(
     step_results: Optional[Dict[str, Dict[str, Any]]] = None,
     slots: Optional[Dict[str, Any]] = None,
     evidence_image: str = "",
+    media_path: str = "",
+    frame_paths: Optional[List[str]] = None,
 ):
     if isinstance(value, dict):
         return {
@@ -591,6 +593,8 @@ def resolve_workflow_args(
                 step_results=step_results,
                 slots=slots,
                 evidence_image=evidence_image,
+                media_path=media_path,
+                frame_paths=frame_paths,
             )
             for key, item in value.items()
         }
@@ -605,6 +609,8 @@ def resolve_workflow_args(
                 step_results=step_results,
                 slots=slots,
                 evidence_image=evidence_image,
+                media_path=media_path,
+                frame_paths=frame_paths,
             )
             for item in value
         ]
@@ -618,9 +624,15 @@ def resolve_workflow_args(
     exact_slot = SLOT_REFERENCE_PATTERN.fullmatch(value)
     if exact_slot:
         return slot_values.get(exact_slot.group(1), "")
+    if value == "$frames":
+        return list(frame_paths or [])
     replacements = {
         "$image": image_path,
+        "$media": media_path or image_path,
         "$filename": os.path.basename(image_path) if image_path else "image",
+        "$media_filename": (
+            os.path.basename(media_path) if media_path else "media"
+        ),
         "$question": question,
         "$previous": previous,
         "$evidence": evidence,

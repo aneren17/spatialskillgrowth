@@ -20,7 +20,7 @@ COMMON_MUTATIONS = (
         "runtime_event_type",
         "fixed",
         "使用当前异常事件类别对应的精确 event_type 进行检测。",
-        args={"file_path": "$image", "event_type": "$slot.event_type"},
+        args={"file_path": "$media", "event_type": "$slot.event_type"},
     ),
     ParamAtom("MLLM", "scope", "whole_image", "world_model", "分析完整图像。"),
     ParamAtom("MLLM", "scope", "local_regions", "world_model", "分析已定位的局部区域。"),
