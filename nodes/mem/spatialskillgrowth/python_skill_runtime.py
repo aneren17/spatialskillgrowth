@@ -358,12 +358,16 @@ class PythonSkillExecutor:
 
     @staticmethod
     def _load(script_path: Path) -> Dict[str, Any]:
-        source = script_path.read_text(encoding="utf-8")
-        tree = ast.parse(source, filename=str(script_path))
-        _validate_tree(tree, script_path)
-        namespace: Dict[str, Any] = {"__builtins__": SAFE_BUILTINS}
-        exec(compile(tree, str(script_path), "exec"), namespace, namespace)
-        return namespace
+        return load_skill_script(script_path)
+
+
+def load_skill_script(script_path: Path) -> Dict[str, Any]:
+    source = Path(script_path).read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(script_path))
+    _validate_tree(tree, Path(script_path))
+    namespace: Dict[str, Any] = {"__builtins__": SAFE_BUILTINS}
+    exec(compile(tree, str(script_path), "exec"), namespace, namespace)
+    return namespace
 
 
 def _frame_result_score(item) -> tuple:

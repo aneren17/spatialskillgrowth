@@ -1,0 +1,33 @@
+{
+  "name": "equipment-rust",
+  "title": "设备生锈",
+  "problem_class": "equipment_rust",
+  "event_type": "equipment_rust",
+  "description": "检测输入视频或图像中是否发生“设备生锈”异常事件（相关显示名称：设备生锈）；调用异常检测工具时，必须使用精确类别 ID `equipment_rust`。",
+  "aliases": [
+    "设备生锈"
+  ],
+  "display_names": {
+    "dashboard": "设备生锈",
+    "rag": "设备生锈"
+  },
+  "primary_tool": "embeddingTool",
+  "answer_type": "bool",
+  "required_slots": [
+    "event_type"
+  ],
+  "tool_template": {
+    "tool_name": "embeddingTool",
+    "args": {
+      "file_path": "$media",
+      "event_type": "equipment_rust"
+    }
+  },
+  "evidence_requirements": [
+    "embeddingTool 必须使用精确 event_type `equipment_rust`。",
+    "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
+    "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+  ],
+  "workflow_count": 0,
+  "workflows": []
+}

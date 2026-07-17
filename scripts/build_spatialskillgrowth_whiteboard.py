@@ -13,10 +13,23 @@ from nodes.mem.spatialskillgrowth.benchmark_profiles import (
     ANOMALY_CLASS_METADATA,
     ANOMALY_EVENT_TYPES,
 )
+from nodes.mem.spatialskillgrowth.skill_layout import (
+    skill_metadata_path,
+    standard_skill_name,
+    workflow_reference_directory,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = PROJECT_ROOT / "skills" / "spatialskillgrowth_whiteboard"
+WHITEBOARD_README = """# SpatialSkillGrowth 标准模板
+
+本目录由 `python -m scripts.build_spatialskillgrowth_whiteboard --force` 自动重建，只用于定义 55 个异常
+事件类别的标准 Skill 结构、元数据和空工作流目录。请勿在这里编写或保存人工脚本。
+
+人工维护位置是 `skills/spatialskillgrowth/`。实习生应在那里修改 `SKILL.md` 和 `scripts/*.py`，再运行
+项目提供的验证器生成 `references/workflows/*.json`。
+"""
 
 
 def build_whiteboard(output: Path, force: bool = False) -> None:
@@ -29,36 +42,43 @@ def build_whiteboard(output: Path, force: bool = False) -> None:
     problem_classes = []
     for problem_class in ANOMALY_EVENT_TYPES:
         metadata = dict(ANOMALY_CLASS_METADATA[problem_class])
-        skill_metadata = _skill_metadata(problem_class, metadata)
+        skill_name = standard_skill_name(problem_class)
+        skill_metadata = _skill_metadata(problem_class, skill_name, metadata)
         skills.append(skill_metadata)
         problem_classes.append({
             "name": problem_class,
+            "skill_name": skill_name,
             "title": metadata["title"],
             "description": metadata["description"],
             "aliases": metadata["aliases"],
             "display_names": metadata["display_names"],
         })
-        directory = output / problem_class
+        directory = output / skill_name
         (directory / "scripts").mkdir(parents=True)
-        (directory / "workflows").mkdir(parents=True)
+        workflow_reference_directory(directory).mkdir(parents=True)
         (directory / "SKILL.md").write_text(
             _skill_markdown(problem_class, metadata),
             encoding="utf-8",
         )
-        _write_json(directory / "skill.json", skill_metadata)
+        _write_json(skill_metadata_path(directory), skill_metadata)
         (directory / "scripts" / ".gitkeep").touch()
-        (directory / "workflows" / ".gitkeep").touch()
+        (workflow_reference_directory(directory) / ".gitkeep").touch()
     _write_json(output / "SKILLS.json", {"skills": skills})
     _write_json(output / "WHITEBOARD.json", {
         "benchmark": ANOMALY_BENCHMARK,
         "description": "每个 SpatialSkillGrowth 异常检测运行使用的空白标准 Skill 工作区。",
         "problem_classes": problem_classes,
     })
+    (output / "README.md").write_text(WHITEBOARD_README, encoding="utf-8")
 
 
-def _skill_metadata(problem_class: str, metadata: Dict[str, Any]) -> Dict:
+def _skill_metadata(
+    problem_class: str,
+    skill_name: str,
+    metadata: Dict[str, Any],
+) -> Dict:
     return {
-        "name": problem_class,
+        "name": skill_name,
         "title": metadata["title"],
         "problem_class": problem_class,
         "event_type": problem_class,
@@ -94,7 +114,7 @@ def _skill_markdown(problem_class: str, metadata: Dict[str, Any]) -> str:
     )
     return (
         "---\n"
-        f"name: {problem_class}\n"
+        f"name: {standard_skill_name(problem_class)}\n"
         f"description: {json.dumps(description, ensure_ascii=False)}\n"
         "---\n\n"
         f"# {metadata['title']}\n\n"
@@ -116,8 +136,10 @@ def _skill_markdown(problem_class: str, metadata: Dict[str, Any]) -> str:
         "## 证据要求\n\n"
         f"{evidence_rows}\n\n"
         "## 资源\n\n"
-        "- `workflows/*.json` 保存可检索的工作流定义。\n"
-        "- `scripts/*.py` 保存实际执行的 Python Skill，函数参数暴露运行时槽位。\n\n"
+        "- 本 whiteboard 的 `scripts/` 只是空模板，不在这里编写人工脚本。\n"
+        "- `references/skill.json` 保存机器可读的 Skill 索引。\n"
+        "- 本 whiteboard 的 `references/workflows/` 保持为空。\n"
+        "- 人工工作请复制到 `skills/spatialskillgrowth/` 并阅读项目级编写说明。\n\n"
         "## 已验证工作流\n\n"
         "当前运行尚无通过验证的工作流。\n"
     )

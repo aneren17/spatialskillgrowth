@@ -12,16 +12,24 @@ from typing import Dict, List, Optional
 
 from nodes.mem.spatialskillgrowth.benchmark_profiles import (
     ANOMALY_BENCHMARK,
+    ANOMALY_EVENT_TYPES,
     class_metadata_for,
     normalize_benchmark,
     problem_classes_for,
+)
+from nodes.mem.spatialskillgrowth.skill_layout import (
+    skill_directory,
+    skill_metadata_path,
+    standard_skill_name,
+    workflow_reference_directory,
 )
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_RESULT_ROOT = "benchmark_result/spatialskillgrowth_anomaly_detection"
 DEFAULT_SKILL_WHITEBOARD_ROOT = PROJECT_ROOT / "skills" / "spatialskillgrowth_whiteboard"
-SKILL_WHITEBOARD_FILE = "WHITEBOARD.json"
+DEFAULT_EDITABLE_SKILL_ROOT = PROJECT_ROOT / "skills" / "spatialskillgrowth"
+RUN_SKILLSET_FILE = "SKILLSET.json"
 DEFAULT_SEED = 3407
 DEFAULT_TOP_K = 3
 DEFAULT_ACTIVE_CAP = 12
@@ -180,44 +188,77 @@ class ExperimentPaths:
         _write_json(config_path, config.to_dict())
 
     def _initialize_skill_workspace(self) -> None:
-        """从只读白板初始化新 run；恢复运行时绝不覆盖已有技能。"""
-        whiteboard_path = DEFAULT_SKILL_WHITEBOARD_ROOT / SKILL_WHITEBOARD_FILE
-        if not whiteboard_path.is_file():
-            raise FileNotFoundError(f"Skill whiteboard does not exist: {whiteboard_path}")
-        whiteboard = json.loads(whiteboard_path.read_text(encoding="utf-8"))
-        problem_classes = _whiteboard_problem_classes(whiteboard)
-        whiteboard_benchmark = normalize_benchmark(whiteboard.get("benchmark") or "")
-        whiteboard_classes = tuple(item["name"] for item in problem_classes)
-        if (
-            self.benchmark != whiteboard_benchmark
-            or tuple(self.problem_classes) != whiteboard_classes
-        ):
+        """从人工可编辑 Skill 根初始化异常 active；恢复运行时不覆盖。"""
+        if self.benchmark != ANOMALY_BENCHMARK:
             self._initialize_dynamic_skill_workspace()
             return
+        unknown_classes = set(self.problem_classes).difference(ANOMALY_EVENT_TYPES)
+        if unknown_classes:
+            raise ValueError(
+                "Unknown anomaly problem classes: "
+                + ", ".join(sorted(unknown_classes))
+            )
+        problem_classes = []
+        for name in self.problem_classes:
+            metadata = self.class_metadata.get(name, {})
+            problem_classes.append({
+                "name": name,
+                "skill_name": standard_skill_name(name),
+                "title": str(metadata.get("title") or name),
+                "description": str(metadata.get("description") or ""),
+            })
+        item_by_name = {item["name"]: item for item in problem_classes}
+        selected_items = [item_by_name[name] for name in self.problem_classes]
+        if not DEFAULT_EDITABLE_SKILL_ROOT.is_dir():
+            raise FileNotFoundError(
+                "Editable Skill root does not exist: "
+                f"{DEFAULT_EDITABLE_SKILL_ROOT}"
+            )
         self.skill_root.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(whiteboard_path, self.skill_root / SKILL_WHITEBOARD_FILE)
-        for item in problem_classes:
+        _write_json(self.skill_root / RUN_SKILLSET_FILE, {
+            "benchmark": self.benchmark,
+            "description": "Run-local Skill set initialized from editable skills.",
+            "source_root": str(DEFAULT_EDITABLE_SKILL_ROOT.resolve()),
+            "problem_classes": selected_items,
+        })
+        active_skills = []
+        for item in selected_items:
             problem_class = item["name"]
-            source = DEFAULT_SKILL_WHITEBOARD_ROOT / problem_class
+            source = DEFAULT_EDITABLE_SKILL_ROOT / item["skill_name"]
             required = (
                 source / "SKILL.md",
-                source / "skill.json",
+                skill_metadata_path(source),
                 source / "scripts",
-                source / "workflows",
+                workflow_reference_directory(source),
             )
             if not all(path.exists() for path in required):
                 raise ValueError(f"Incomplete skill whiteboard entry: {source}")
-        for root in (
-            self.active_skill_root,
-            self.provisional_skill_root,
-            self.archive_skill_root,
+            target = self.active_skill_root / item["skill_name"]
+            shutil.copytree(source, target, dirs_exist_ok=True)
+            active_skills.append(json.loads(
+                skill_metadata_path(target).read_text(encoding="utf-8")
+            ))
+        _write_json(
+            self.active_skill_root / "SKILLS.json",
+            {"skills": active_skills},
+        )
+        for status, root in (
+            ("provisional", self.provisional_skill_root),
+            ("archive", self.archive_skill_root),
         ):
-            shutil.copytree(
-                DEFAULT_SKILL_WHITEBOARD_ROOT,
-                root,
-                dirs_exist_ok=True,
-                ignore=shutil.ignore_patterns(SKILL_WHITEBOARD_FILE),
-            )
+            skills = []
+            for item in selected_items:
+                source = DEFAULT_EDITABLE_SKILL_ROOT / item["skill_name"]
+                blank_item = dict(item)
+                blank_item["metadata"] = json.loads(
+                    skill_metadata_path(source).read_text(encoding="utf-8")
+                )
+                blank_item["skill_markdown"] = (
+                    source / "SKILL.md"
+                ).read_text(encoding="utf-8")
+                metadata = _write_blank_skill(root, blank_item, status)
+                skills.append(metadata)
+            _write_json(root / "SKILLS.json", {"skills": skills})
 
     def _initialize_dynamic_skill_workspace(self) -> None:
         problem_classes = []
@@ -225,6 +266,7 @@ class ExperimentPaths:
             metadata = self.class_metadata.get(name, {})
             problem_classes.append({
                 "name": name,
+                "skill_name": standard_skill_name(name),
                 "title": str(metadata.get("title") or name.replace("_", " ").title()),
                 "description": str(
                     metadata.get("description")
@@ -233,12 +275,12 @@ class ExperimentPaths:
             })
         if not problem_classes:
             raise ValueError(f"No problem classes configured for benchmark: {self.benchmark}")
-        whiteboard = {
+        skillset = {
             "benchmark": self.benchmark,
-            "description": "Run-local dynamic standard-skill whiteboard.",
+            "description": "Run-local dynamic standard Skill set.",
             "problem_classes": problem_classes,
         }
-        _write_json(self.skill_root / SKILL_WHITEBOARD_FILE, whiteboard)
+        _write_json(self.skill_root / RUN_SKILLSET_FILE, skillset)
         for status, root in (
             ("active", self.active_skill_root),
             ("provisional", self.provisional_skill_root),
@@ -246,7 +288,12 @@ class ExperimentPaths:
         ):
             skills = []
             for item in problem_classes:
-                metadata = _write_blank_skill(root, item, status)
+                blank_item = dict(item)
+                blank_item["metadata"] = dict(
+                    self.class_metadata.get(item["name"], {})
+                )
+                blank_item["metadata"].setdefault("event_type", item["name"])
+                metadata = _write_blank_skill(root, blank_item, status)
                 skills.append(metadata)
             _write_json(root / "SKILLS.json", {"skills": skills})
 
@@ -256,61 +303,43 @@ def _write_json(path: Path, value: Dict) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _whiteboard_problem_classes(whiteboard: Dict) -> List[Dict[str, str]]:
-    values = whiteboard.get("problem_classes")
-    if not isinstance(values, list) or not values:
-        raise ValueError("Skill whiteboard must define non-empty problem_classes")
-    output = []
-    seen = set()
-    for value in values:
-        if not isinstance(value, dict):
-            raise ValueError("Each whiteboard problem class must be an object")
-        name = str(value.get("name") or "")
-        if _safe_component(name) != name or name in seen:
-            raise ValueError(f"Invalid or duplicate whiteboard problem class: {name!r}")
-        seen.add(name)
-        output.append({
-            "name": name,
-            "title": str(value.get("title") or ""),
-            "description": str(value.get("description") or ""),
-        })
-    return output
-
-
 def _write_blank_skill(root: Path, item: Dict[str, str], status: str) -> Dict:
     name = item["name"]
+    skill_name = str(item.get("skill_name") or standard_skill_name(name))
     title = item["title"]
     description = item["description"]
-    directory = root / name
+    directory = skill_directory(root, name)
     (directory / "scripts").mkdir(parents=True, exist_ok=True)
-    (directory / "workflows").mkdir(parents=True, exist_ok=True)
+    workflow_reference_directory(directory).mkdir(parents=True, exist_ok=True)
     (directory / "scripts" / ".gitkeep").touch()
-    (directory / "workflows" / ".gitkeep").touch()
-    (directory / "SKILL.md").write_text(
-        "---\n"
-        f"name: {name}\n"
-        f"description: {json.dumps(description, ensure_ascii=False)}\n"
-        "---\n\n"
-        f"# {title}\n\n"
-        "## Purpose\n\n"
-        f"{description}\n\n"
-        "## Resources\n\n"
-        "- `workflows/*.json` contains executable workflow definitions.\n"
-        "- `scripts/*.py` contains generated Python functions whose parameters expose runtime slots.\n\n"
-        "## Validated Workflows\n\n"
-        "No workflow has passed validation in this run.\n",
-        encoding="utf-8",
-    )
-    metadata = {
-        "name": name,
+    (workflow_reference_directory(directory) / ".gitkeep").touch()
+    skill_markdown = str(item.get("skill_markdown") or "")
+    if not skill_markdown:
+        skill_markdown = (
+            "---\n"
+            f"name: {skill_name}\n"
+            f"description: {json.dumps(description, ensure_ascii=False)}\n"
+            "---\n\n"
+            f"# {title}\n\n"
+            "## 用途\n\n"
+            f"{description}\n\n"
+            "## 资源\n\n"
+            "- `scripts/*.py` 保存人工或自动生成的实际执行脚本。\n"
+            "- `references/skill.json` 保存机器可读索引。\n"
+            "- `references/workflows/*.json` 保存可检索工作流契约。\n"
+        )
+    (directory / "SKILL.md").write_text(skill_markdown, encoding="utf-8")
+    metadata = dict(item.get("metadata") or {})
+    metadata.update({
+        "name": skill_name,
         "title": title,
         "problem_class": name,
         "description": description,
         "status": status,
         "workflow_count": 0,
         "workflows": [],
-    }
-    _write_json(directory / "skill.json", metadata)
+    })
+    _write_json(skill_metadata_path(directory), metadata)
     return metadata
 
 

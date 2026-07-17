@@ -7,6 +7,7 @@ Run:
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -39,6 +40,7 @@ from nodes.mem.spatialskillgrowth.benchmark_profiles import (
 )
 from nodes.mem.spatialskillgrowth.answer_evaluator import answer_matches_typed
 from nodes.mem.spatialskillgrowth.experiment_config import (
+    DEFAULT_EDITABLE_SKILL_ROOT,
     DEFAULT_SKILL_WHITEBOARD_ROOT,
     ExperimentPaths,
     build_experiment_config,
@@ -86,7 +88,9 @@ from nodes.mem.spatialskillgrowth.skill_retriever import (
     HistoryOnlyRetriever,
     MultimodalLLMFlatRetriever,
 )
+from nodes.mem.spatialskillgrowth.skill_layout import standard_skill_name
 from nodes.mem.spatialskillgrowth.growth_store import ExperimentStore, WorkflowRepository
+from nodes.mem.spatialskillgrowth.human_skill_validation import validate_human_skill
 from nodes.mem.spatialskillgrowth.omni3d_eval_adapter import (
     evaluate_run,
     export_inference_predictions,
@@ -530,7 +534,7 @@ def test_benchmark_aware_problem_classes_and_skills():
         assert set(manifest["problem_classes"]) == set(LEGACY_PROBLEM_CLASSES)
         assert {
             path.name for path in paths.active_skill_root.iterdir() if path.is_dir()
-        } == set(LEGACY_PROBLEM_CLASSES)
+        } == {standard_skill_name(item) for item in LEGACY_PROBLEM_CLASSES}
         assert not set(OMNI3D_PROBLEM_CLASSES).difference(
             LEGACY_PROBLEM_CLASSES
         ).intersection(path.name for path in paths.active_skill_root.iterdir())
@@ -580,34 +584,52 @@ def test_cross_benchmark_source_uses_source_taxonomy():
 
 
 def test_skill_whiteboard_initializes_without_overwriting():
+    assert not list(DEFAULT_SKILL_WHITEBOARD_ROOT.glob("*/scripts/*.py"))
+    assert not list(
+        DEFAULT_SKILL_WHITEBOARD_ROOT.glob("*/references/workflows/*.json")
+    )
     with tempfile.TemporaryDirectory() as root:
         config, paths = temporary_run(root)
-        copied_whiteboard = paths.skill_root / "WHITEBOARD.json"
-        assert copied_whiteboard.read_bytes() == (
-            DEFAULT_SKILL_WHITEBOARD_ROOT / "WHITEBOARD.json"
-        ).read_bytes()
+        skillset = json.loads(
+            (paths.skill_root / "SKILLSET.json").read_text()
+        )
+        assert not (paths.skill_root / "WHITEBOARD.json").exists()
+        assert skillset["source_root"] == str(
+            DEFAULT_EDITABLE_SKILL_ROOT.resolve()
+        )
+        assert [item["name"] for item in skillset["problem_classes"]] == list(
+            ANOMALY_EVENT_TYPES
+        )
         assert {
             path.name for path in paths.active_skill_root.iterdir() if path.is_dir()
-        } == set(ANOMALY_EVENT_TYPES)
+        } == {standard_skill_name(item) for item in ANOMALY_EVENT_TYPES}
         assert {
             path.name for path in paths.archive_skill_root.iterdir() if path.is_dir()
-        } == set(ANOMALY_EVENT_TYPES)
+        } == {standard_skill_name(item) for item in ANOMALY_EVENT_TYPES}
         assert {
             path.name for path in paths.provisional_skill_root.iterdir() if path.is_dir()
-        } == set(ANOMALY_EVENT_TYPES)
+        } == {standard_skill_name(item) for item in ANOMALY_EVENT_TYPES}
         for problem_class in ANOMALY_EVENT_TYPES:
             for root_path in (
                 paths.active_skill_root,
                 paths.provisional_skill_root,
                 paths.archive_skill_root,
             ):
-                skill_path = root_path / problem_class
+                skill_path = root_path / standard_skill_name(problem_class)
                 assert (skill_path / "SKILL.md").is_file()
-                assert (skill_path / "skill.json").is_file()
+                assert (skill_path / "SKILL.md").read_bytes() == (
+                    DEFAULT_EDITABLE_SKILL_ROOT
+                    / standard_skill_name(problem_class)
+                    / "SKILL.md"
+                ).read_bytes()
                 assert (skill_path / "scripts").is_dir()
-                assert (skill_path / "workflows").is_dir()
+                assert (skill_path / "references").is_dir()
+                assert (skill_path / "references" / "skill.json").is_file()
+                assert (skill_path / "references" / "workflows").is_dir()
+                assert not (skill_path / "skill.json").exists()
+                assert not (skill_path / "workflows").exists()
                 skill_metadata = json.loads(
-                    (skill_path / "skill.json").read_text()
+                    (skill_path / "references" / "skill.json").read_text()
                 )
                 assert skill_metadata["event_type"] == problem_class
                 assert skill_metadata["primary_tool"] == "embeddingTool"
@@ -628,6 +650,7 @@ def test_skill_whiteboard_initializes_without_overwriting():
         generated_path = (
             paths.active_skill_root
             / "fall"
+            / "references"
             / "workflows"
             / "whiteboard_generated.json"
         )
@@ -639,15 +662,25 @@ def test_skill_whiteboard_initializes_without_overwriting():
             / "whiteboard_generated.py"
         ).is_file()
         skill_path = paths.active_skill_root / "fall"
-        assert "whiteboard_generated" in (skill_path / "SKILL.md").read_text()
-        skill_metadata = json.loads((skill_path / "skill.json").read_text())
+        assert "whiteboard_generated" not in (skill_path / "SKILL.md").read_text()
+        skill_metadata = json.loads(
+            (skill_path / "references" / "skill.json").read_text()
+        )
         assert skill_metadata["workflow_count"] == 1
         assert skill_metadata["event_type"] == "fall"
         assert skill_metadata["display_names"]["dashboard"] == "人员摔倒"
         assert skill_metadata["tool_template"]["args"]["event_type"] == "fall"
         assert skill_metadata["workflows"][0]["path"] == (
-            "workflows/whiteboard_generated.json"
+            "references/workflows/whiteboard_generated.json"
         )
+        assert skill_metadata["workflows"][0]["authorship"] == "generated"
+        generated_validation = validate_human_skill(
+            skill_path,
+            skill_path / "scripts" / "whiteboard_generated.py",
+            Path("test/banner.jpg"),
+            "fall",
+        )
+        assert generated_validation["valid"]
         active_index = json.loads(
             (paths.active_skill_root / "SKILLS.json").read_text()
         )
@@ -662,17 +695,111 @@ def test_skill_whiteboard_initializes_without_overwriting():
         archived_path = (
             paths.archive_skill_root
             / "fall"
+            / "references"
             / "workflows"
             / "whiteboard_generated.json"
         )
         assert archived_path.is_file() and not generated_path.exists()
         assert (paths.archive_skill_root / "fall" / "SKILL.md").is_file()
         archived_skill_metadata = json.loads(
-            (paths.archive_skill_root / "fall" / "skill.json").read_text()
+            (
+                paths.archive_skill_root
+                / "fall"
+                / "references"
+                / "skill.json"
+            ).read_text()
         )
         assert archived_skill_metadata["event_type"] == "fall"
         assert archived_skill_metadata["display_names"]["rag"] == "跌倒"
         assert not list(DEFAULT_SKILL_WHITEBOARD_ROOT.rglob("whiteboard_generated.json"))
+
+
+def test_human_banner_skill_validation_and_inference():
+    source_skill = DEFAULT_EDITABLE_SKILL_ROOT / "banner"
+    source_script = source_skill / "scripts" / "banner-human-review-v1.py"
+    validation = validate_human_skill(
+        source_skill,
+        source_script,
+        Path("test/banner.jpg"),
+        "banner",
+    )
+    assert validation["valid"]
+    assert validation["checks"]["execution"]
+
+    with tempfile.TemporaryDirectory() as root:
+        broken_skill = Path(root) / "banner"
+        shutil.copytree(source_skill, broken_skill)
+        broken_script = broken_skill / "scripts" / source_script.name
+        broken_script.write_text(
+            broken_script.read_text().replace(
+                'runtime.call(\n        "paddleOcrTool"',
+                'runtime.call(\n        "unknownTool"',
+                1,
+            )
+        )
+        broken = validate_human_skill(
+            broken_skill,
+            broken_script,
+            Path("test/banner.jpg"),
+            "banner",
+        )
+        assert not broken["valid"]
+        assert any("runtime.call" in error for error in broken["errors"])
+
+    with tempfile.TemporaryDirectory() as root:
+        config = build_experiment_config("history_only")
+        paths = ExperimentPaths(
+            config.name,
+            "human_banner_inference",
+            root,
+            benchmark=ANOMALY_BENCHMARK,
+            problem_classes=["banner"],
+        )
+        paths.ensure(config, "infer", False)
+        assert {
+            path.name for path in paths.active_skill_root.iterdir()
+            if path.is_dir()
+        } == {"banner"}
+        copied_script = (
+            paths.active_skill_root
+            / "banner"
+            / "scripts"
+            / "banner-human-review-v1.py"
+        )
+        assert copied_script.is_file()
+        repository = WorkflowRepository(paths)
+        active = repository.list_active("banner")
+        assert [item.workflow_id for item in active] == [
+            "banner-human-review-v1"
+        ]
+        runtime = ToolRuntime({
+            "embeddingTool": FakeTool(
+                "embeddingTool", "是 (判定阈值: 0.66)"
+            ),
+            "paddleOcrTool": FakeTool(
+                "paddleOcrTool", "示例横幅文字"
+            ),
+            "MLLM": FakeTool("MLLM", "是"),
+        })
+        pipeline = ExperimentFactory(
+            config,
+            paths,
+            QueueLLM([]),
+            runtime=runtime,
+            benchmark=ANOMALY_BENCHMARK,
+            problem_classes=["banner"],
+        ).build_inference()
+        result = pipeline.ask(
+            build_anomaly_task("test/banner.jpg", "banner"),
+            "online",
+        )
+        assert result["accepted"]
+        assert result["selected_workflow_id"] == "banner-human-review-v1"
+        assert result["answer"] == "是"
+        assert result["event_type"] == "banner"
+        assert result["threshold"] == 0.66
+        assert result["attempts"][0]["kind"] == "workflow"
+        assert result["attempts"][0]["accepted"]
 
 
 def test_retrievers_are_multimodal_and_support_reject():
@@ -699,6 +826,9 @@ def test_retrievers_are_multimodal_and_support_reject():
         )
         assert [item.workflow_id for item in ranked] == ["wf_3", "wf_1", "wf_0"]
         assert len(llm.messages[0][0].content) == 2
+        retrieval_text = llm.messages[0][0].content[0]["text"]
+        assert "人工维护的标准 SKILL.md 指引" in retrieval_text
+        assert "Object Counting" in retrieval_text
         assert not decision.rejected
         reject_llm = QueueLLM([{
             "action": "reject_all",
@@ -847,7 +977,7 @@ def test_python_skill_is_execution_source_and_snapshot_is_local():
         target_repository = WorkflowRepository(target_paths)
         snapshot = target_repository.snapshot_active_from(source_repository)
         copied_script = target_repository.script_path(spec.workflow_id)
-        assert snapshot["active_workflow_count"] == 2
+        assert snapshot["active_workflow_count"] == 3
         assert snapshot["legacy_scripts_migrated"] == ["legacy_wf"]
         assert copied_script is not None
         assert "manual-edit-is-preserved" in copied_script.read_text()
@@ -1349,6 +1479,7 @@ def main():
         test_benchmark_aware_problem_classes_and_skills,
         test_cross_benchmark_source_uses_source_taxonomy,
         test_skill_whiteboard_initializes_without_overwriting,
+        test_human_banner_skill_validation_and_inference,
         test_retrievers_are_multimodal_and_support_reject,
         test_mutation_director_groundtruth_boundary_and_budget,
         test_json_execution_and_optional_export,

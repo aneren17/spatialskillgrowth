@@ -1,0 +1,75 @@
+{
+  "workflow_id": "banner-human-review-v1",
+  "name": "banner_human_review",
+  "applicability": {
+    "problem_class": "banner",
+    "required_slots": [
+      "event_type"
+    ],
+    "required_tools": [
+      "embeddingTool",
+      "paddleOcrTool",
+      "MLLM"
+    ],
+    "answer_types": [
+      "bool"
+    ],
+    "description": "先取得 banner 的 embedding 判断，再用 OCR 和 MLLM 补充可审计视觉证据。",
+    "exclusions": "不适用于 banner 以外的事件类别；辅助工具不能替代 embedding 的异常判断和阈值。",
+    "capability_boundary": "embedding 为强制主判断；OCR 与 MLLM 失败时降级返回 embedding 结论。"
+  },
+  "steps": [
+    {
+      "tool_name": "embeddingTool",
+      "args": {
+        "file_path": "$media",
+        "event_type": "$slot.event_type"
+      },
+      "param_atoms": [],
+      "purpose": "取得 banner 异常判断和判定阈值。",
+      "step_id": "embedding",
+      "depends_on": []
+    },
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [],
+      "purpose": "提取横幅区域中的可见文字。",
+      "step_id": "ocr",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "补充 Banner 视觉审阅证据。",
+      "step_id": "visual-review",
+      "depends_on": [
+        "embedding",
+        "ocr"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "",
+  "mutation_mode": "manual",
+  "mutation_direction": {},
+  "metrics": {
+    "trial_count": 0,
+    "correct_count": 0,
+    "evidence_accept_count": 0,
+    "tool_failure_count": 0,
+    "total_tool_calls": 0,
+    "total_latency_ms": 0.0,
+    "structural_coverage": 5.0
+  },
+  "source_task_ids": []
+}

@@ -1,6 +1,6 @@
 # SpatialSkillGrowth
 
-这是一个以异常事件检测为核心的 SpatialSkillGrowth 子项目。标准 Skill 白板包含
+这是一个以异常事件检测为核心的 SpatialSkillGrowth 子项目。只读标准 Skill 白板包含
 `embeddingTool.py` 声明的全部 55 个异常事件类别；类别 ID 保持后端要求的英文 `event_type`，
 类别标题、说明、框架提示词和工具描述均使用中文。框架先在有真实答案的样本上探索并生长工作流，
 再冻结 active Skill 做推理。
@@ -8,7 +8,8 @@
 55 个类别来自大屏端、RAG 检索/检测端和实时视频流检测页事件表的英文 ID 并集。相同英文 ID
 只建立一个 Skill；不同前端对同一 ID 使用的不同中文名称会按来源保存在 `display_names`，完全
 相同的中文名称只在 `aliases` 中保留一次。每个白板 Skill 都声明精确 `event_type`、中文别名、
-`embeddingTool` 调用模板、布尔答案格式和证据要求，但 `workflows/` 仍只接收经过探索验证的工作流。
+`embeddingTool` 调用模板、布尔答案格式和证据要求。机器可读工作流统一保存在
+`references/workflows/`；除自动探索验证的工作流外，也允许经过验证器验收的人工工作流进入 active。
 
 默认 benchmark 是 `anomaly_detection`。入口仍兼容其他 benchmark；`--benchmark auto` 会优先读取数据 metadata/source 和路径；
 已知 benchmark 使用专属 taxonomy，未知 benchmark 使用数据中的 `problem_class`，也可通过
@@ -24,7 +25,9 @@
 - 探索和推理共用的 LLM temperature 固定为 `0.7`，由配置中的唯一常量控制。
 - JSON 保存工作流诞生时的结构化工具图、检索字段、结构签名和工具许可；同一标准 Skill 的
   `scripts/*.py` 是实际执行源。生成的 `solve(...)` 使用显式变量和 `runtime.call(...)`，可以人工加入
-  `if`、`for` 和中间计算。指标更新和状态迁移不会覆盖人工修改的脚本。
+  `if`、`for` 和中间计算。指标更新和状态迁移不会覆盖人工修改的脚本或 `SKILL.md`。
+- 人工与自动生成脚本使用相同的 `WorkflowSpec`、结构过滤、检索排序、Python 执行器和证据门；
+  框架不因来源是 human/generated 改变执行优先级。
 - Python Skill 在 AST 校验、受限 builtins 和 JSON 声明工具白名单中执行；报错保留真实脚本路径、
   行号和 traceback。这是进程内受限执行环境，不是操作系统级容器隔离，不应执行不可信第三方脚本。
 - 异常检测使用 55 个专用 problem class，每类与 `embeddingTool` 的一个精确 `event_type` 一一对应。
@@ -47,9 +50,13 @@
   provisional，避免候选只因探索顺序而永远无法晋升。探索可检索 provisional，全量推理只检索 active。
 - 每个 problem class 默认保留最多 12 条 active 工作流，并按正确率、证据接受率、工具成本/失败
   和结构覆盖做质量降级及 Pareto 软裁剪；低质量路线会降级或归档。
-- `skills/spatialskillgrowth_whiteboard/` 是异常检测的标准技能白板。其他 benchmark 会按照自身
-  taxonomy 在新 run 中动态生成相同格式的 `SKILL.md`、`skill.json`、`scripts/` 和
-  `workflows/`，不会混入异常事件类别。`--resume` 不会覆盖已有技能。
+- `skills/spatialskillgrowth_whiteboard/` 是可重复生成的只读标准模板，只保存 55 类结构、元数据和空
+  工作流目录；不得在这里编写人工脚本。
+- `skills/spatialskillgrowth/` 是人工可编辑 Skill 根。实习生只在这里修改 `SKILL.md` 和
+  `scripts/*.py`，验证器生成对应 references。异常检测新 run 使用代码中的 55 类标准表校验类别，再从
+  该可编辑根复制 Skill；运行目录不再复制 whiteboard。其他 benchmark 按自身 taxonomy 动态生成。
+- 内部类别 ID 可保留下划线，但 Skill 目录名和 frontmatter `name` 使用小写连字符；`--resume` 不会
+  覆盖已有 run 技能。
 
 ## 主要类
 
@@ -73,6 +80,9 @@ nodes/mem/spatialskillgrowth/
 ```
 
 全部提示词位于 `prompt/spatialskillgrowth_prompts.py`，业务代码中没有硬编码提示词正文。
+
+`nodes/mem/spatialskillgrowth/` 的逐模块说明、banner 数据贯穿案例和完整函数/变量索引见
+[架构文档入口](docs/nodes-spatialskillgrowth/README.md)。
 
 ## 环境
 
@@ -240,7 +250,7 @@ python -m agents.spatialskillgrowth.anomaly_detection_agent \
 ```
 
 中断恢复使用 `--resume`。同一 experiment/run-id 的配置或 seed 不一致时程序会拒绝混用。
-要完全重新探索，请使用新的 `run-id`；新 run 会自动从技能白板开始，不能用 `--resume` 清空
+要完全重新探索，请使用新的 `run-id`；新 run 会用标准白板校验类别并从可编辑 Skill 根初始化，不能用 `--resume` 清空
 已有技能。
 
 推理结束后会生成：
@@ -329,7 +339,8 @@ python -m agents.spatialskillgrowth.spatialskillgrowth_infer_omni3d_agent \
 python -m scripts.build_spatialskillgrowth_whiteboard --force
 ```
 
-该命令只重建 `skills/spatialskillgrowth_whiteboard/`，不会修改任何已有 run 下的技能。
+该命令只重建只读模板 `skills/spatialskillgrowth_whiteboard/`，不会修改
+`skills/spatialskillgrowth/` 或任何已有 run 下的技能。
 
 每个工作流保存时，函数脚本会自动写入对应 skill 的 `scripts/`。例如：
 
@@ -359,11 +370,25 @@ def solve(
 
 ```bash
 python -m scripts.generate_workflow_python \
-  benchmark_result/.../skills/active/<class>/workflows/<workflow_id>.json \
+  benchmark_result/.../skills/active/<skill-name>/references/workflows/<workflow_id>.json \
   --force
 ```
 
 传入探索入口的 `--export-python` 只会额外复制一份到统一的 `exports/python/`。
+
+人工补充 Skill 时，实习生只维护 `SKILL.md` 和 `scripts/<WORKFLOW_ID>.py`；验证器会检查并生成
+`references/workflows/*.json`：
+
+```bash
+python -m scripts.validate_spatialskillgrowth_skill \
+  --skill-dir skills/spatialskillgrowth/banner \
+  --script skills/spatialskillgrowth/banner/scripts/banner-human-review-v1.py \
+  --media test/banner.jpg \
+  --event-type banner \
+  --install
+```
+
+完整契约、模板和排错方法见 `docs/spatialskillgrowth-skill-authoring.md`。
 
 ### 多 benchmark 共 256 条 zeroshot
 
@@ -456,17 +481,18 @@ benchmark_result/spatialskillgrowth_omni3d/<experiment>/<run-id>/
 ├── split.json
 ├── state/spatialskillgrowth.db
 ├── skills/
-│   ├── WHITEBOARD.json
+│   ├── SKILLSET.json               # 当前 run 的真实 Skill 来源和类别清单
 │   ├── SOURCE_SNAPSHOT.json        # 推理使用的来源、文件哈希和迁移记录
 │   ├── active/
 │   │   ├── SKILLS.json
-│   │   └── <problem_class>/
+│   │   └── <skill-name>/
 │   │       ├── SKILL.md
-│   │       ├── skill.json
-│   │       ├── scripts/
-│   │       └── workflows/*.json
-│   ├── provisional/<problem_class>/{SKILL.md,skill.json,scripts/,workflows/}
-│   └── archive/<problem_class>/{SKILL.md,skill.json,scripts/,workflows/}
+│   │       ├── scripts/*.py
+│   │       └── references/
+│   │           ├── skill.json
+│   │           └── workflows/*.json
+│   ├── provisional/<skill-name>/{SKILL.md,scripts/,references/}
+│   └── archive/<skill-name>/{SKILL.md,scripts/,references/}
 ├── trajectories/<task_id>/*.json
 ├── retrieval_rankings/<task_id>.json
 ├── results/per_task.jsonl

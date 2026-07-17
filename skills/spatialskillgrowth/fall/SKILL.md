@@ -44,8 +44,10 @@ description: "检测输入视频或图像中是否发生“人员摔倒”异常
 
 ## 资源
 
-- `workflows/*.json` 保存可检索的工作流定义。
-- `scripts/*.py` 保存实际执行的 Python Skill，函数参数暴露运行时槽位。
+- `scripts/*.py` 保存人工或自动生成的实际执行脚本。
+- `references/skill.json` 保存机器可读的 Skill 索引。
+- `references/workflows/*.json` 保存可检索工作流契约。
+- 修改脚本前阅读项目级 `docs/spatialskillgrowth-skill-authoring.md`。
 
 ## 已验证工作流
 

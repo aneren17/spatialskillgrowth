@@ -116,6 +116,7 @@ class MultimodalLLMFlatRetriever(WorkflowRetriever):
             answer_type=answer_type,
             slot_bindings=json.dumps(slot_bindings, ensure_ascii=False),
             question=question,
+            skill_guidance=self.repository.skill_guidance(problem_class),
             candidates=json.dumps(payload, ensure_ascii=False),
         )
         try:

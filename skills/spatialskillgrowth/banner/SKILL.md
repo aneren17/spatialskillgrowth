@@ -1,52 +1,27 @@
 ---
 name: banner
-description: "检测输入视频或图像中是否发生“违规横幅检测”异常事件（相关显示名称：违规横幅检测、横幅异常）；调用异常检测工具时，必须使用精确类别 ID `banner`。"
+description: "检测视频或图像中是否出现违规横幅，并输出 embeddingTool 的异常判断和判定阈值；当任务给定精确 event_type `banner`，或要求识别违规横幅、横幅异常时使用。"
 ---
 
 # 违规横幅检测
 
-## 用途
+## 执行流程
 
-检测输入视频或图像中是否发生“违规横幅检测”异常事件（相关显示名称：违规横幅检测、横幅异常）；调用异常检测工具时，必须使用精确类别 ID `banner`。
+1. 保持调用方给出的精确 `event_type=banner`，不要重新分类。
+2. 始终先用 `embeddingTool` 处理原始视频或图像，取得“是/否”和 `threshold`。
+3. 对图片或视频代表帧按需执行 OCR 和 MLLM，补充可见文字与视觉证据。
+4. 辅助工具失败时保留 embedding 结论，不要把 OCR 文本、检测框 JSON 或文件地址当成最终答案。
+5. 最终只输出“是”或“否”，并在结构化结果中保留 `event_type`、`is_anomaly`、`threshold`。
 
-## 事件接口
+## 人工脚本
 
-- 精确 `event_type`：`banner`
-- 主检测工具：`embeddingTool`
-- 答案类型：`bool`，输出“是”或“否”
-- 结构化结果：必须包含 `is_anomaly` 和 `threshold`
+- 优先使用 `scripts/banner-human-review-v1.py` 作为人工审阅的稳定路线。
+- 运行或修改脚本前阅读项目级 `docs/spatialskillgrowth-skill-authoring.md`。
+- 修改后必须运行 `scripts.validate_spatialskillgrowth_skill`；验证失败时不得发布。
+- 机器契约和工作流历史位于 `references/`，按需读取，不要手工复制到本文。
 
-## 各端显示名称
+## 能力边界
 
-| 来源 | 中文显示名称 |
-|---|---|
-| 大屏端 | 违规横幅检测 |
-| RAG 检索/检测端 | 横幅异常 |
-| 实时视频流检测页 | 横幅异常 |
-
-## 工具调用模板
-
-```json
-{
-  "tool_name": "embeddingTool",
-  "args": {
-    "file_path": "$media",
-    "event_type": "banner"
-  }
-}
-```
-
-## 证据要求
-
-- embeddingTool 必须使用精确 event_type `banner`。
-- 工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。
-- 工具失败、event_type 不一致或缺少检测结果时不得接受答案。
-
-## 资源
-
-- `workflows/*.json` 保存可检索的工作流定义。
-- `scripts/*.py` 保存实际执行的 Python Skill，函数参数暴露运行时槽位。
-
-## 已验证工作流
-
-当前运行尚无通过验证的工作流。
+- 只处理 `banner`，不扩展到旗帜、广告牌倒塌或其他事件类别。
+- OCR 与 MLLM 只提供补充证据；embedding 返回失败、类别不一致或缺少阈值时不得接受结果。
+- 当前样本数量有限，人工脚本不能替代不同场景正负样本的后续验证。

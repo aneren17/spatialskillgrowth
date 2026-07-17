@@ -32,11 +32,19 @@
         "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
         "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 1,
+      "workflows": [
+        {
+          "workflow_id": "banner-human-review-v1",
+          "name": "banner_human_review",
+          "path": "references/workflows/banner-human-review-v1.json",
+          "script": "scripts/banner-human-review-v1.py",
+          "authorship": "human"
+        }
+      ]
     },
     {
-      "name": "billboard_fell",
+      "name": "billboard-fell",
       "title": "广告牌倒塌",
       "problem_class": "billboard_fell",
       "event_type": "billboard_fell",
@@ -68,7 +76,7 @@
       "workflows": []
     },
     {
-      "name": "breaking_through_toll_booths",
+      "name": "breaking-through-toll-booths",
       "title": "闯收费站",
       "problem_class": "breaking_through_toll_booths",
       "event_type": "breaking_through_toll_booths",
@@ -100,7 +108,7 @@
       "workflows": []
     },
     {
-      "name": "building_collapse",
+      "name": "building-collapse",
       "title": "建筑坍塌",
       "problem_class": "building_collapse",
       "event_type": "building_collapse",
@@ -135,7 +143,7 @@
       "workflows": []
     },
     {
-      "name": "bus_shelter_was_vandalized",
+      "name": "bus-shelter-was-vandalized",
       "title": "公交站台破坏",
       "problem_class": "bus_shelter_was_vandalized",
       "event_type": "bus_shelter_was_vandalized",
@@ -201,7 +209,7 @@
       "workflows": []
     },
     {
-      "name": "climbing_disconnection",
+      "name": "climbing-disconnection",
       "title": "攀爬脱网",
       "problem_class": "climbing_disconnection",
       "event_type": "climbing_disconnection",
@@ -235,7 +243,7 @@
       "workflows": []
     },
     {
-      "name": "cold_flame",
+      "name": "cold-flame",
       "title": "冷焰火检测",
       "problem_class": "cold_flame",
       "event_type": "cold_flame",
@@ -269,7 +277,7 @@
       "workflows": []
     },
     {
-      "name": "container_dropped",
+      "name": "container-dropped",
       "title": "集装箱掉落",
       "problem_class": "container_dropped",
       "event_type": "container_dropped",
@@ -303,7 +311,7 @@
       "workflows": []
     },
     {
-      "name": "cross_barrier",
+      "name": "cross-barrier",
       "title": "翻越护栏",
       "problem_class": "cross_barrier",
       "event_type": "cross_barrier",
@@ -337,7 +345,7 @@
       "workflows": []
     },
     {
-      "name": "doors_and_windows_are_damaged",
+      "name": "doors-and-windows-are-damaged",
       "title": "门窗破损",
       "problem_class": "doors_and_windows_are_damaged",
       "event_type": "doors_and_windows_are_damaged",
@@ -371,7 +379,7 @@
       "workflows": []
     },
     {
-      "name": "ebike_reverse",
+      "name": "ebike-reverse",
       "title": "非机动车逆行",
       "problem_class": "ebike_reverse",
       "event_type": "ebike_reverse",
@@ -405,7 +413,7 @@
       "workflows": []
     },
     {
-      "name": "egress_blocked",
+      "name": "egress-blocked",
       "title": "安全出口遮挡",
       "problem_class": "egress_blocked",
       "event_type": "egress_blocked",
@@ -439,7 +447,7 @@
       "workflows": []
     },
     {
-      "name": "emergency_lane_occupancy",
+      "name": "emergency-lane-occupancy",
       "title": "占用应急车道",
       "problem_class": "emergency_lane_occupancy",
       "event_type": "emergency_lane_occupancy",
@@ -474,7 +482,7 @@
       "workflows": []
     },
     {
-      "name": "equipment_rust",
+      "name": "equipment-rust",
       "title": "设备生锈",
       "problem_class": "equipment_rust",
       "event_type": "equipment_rust",
@@ -644,7 +652,7 @@
       "workflows": []
     },
     {
-      "name": "fire_door_unclosed",
+      "name": "fire-door-unclosed",
       "title": "消防门未关闭",
       "problem_class": "fire_door_unclosed",
       "event_type": "fire_door_unclosed",
@@ -678,7 +686,7 @@
       "workflows": []
     },
     {
-      "name": "fire_hydrant_leakage",
+      "name": "fire-hydrant-leakage",
       "title": "消防栓泄漏",
       "problem_class": "fire_hydrant_leakage",
       "event_type": "fire_hydrant_leakage",
@@ -710,7 +718,7 @@
       "workflows": []
     },
     {
-      "name": "firelane_occupied",
+      "name": "firelane-occupied",
       "title": "占用消防通道",
       "problem_class": "firelane_occupied",
       "event_type": "firelane_occupied",
@@ -778,7 +786,7 @@
       "workflows": []
     },
     {
-      "name": "foreign_objects_on_transmission_lines",
+      "name": "foreign-objects-on-transmission-lines",
       "title": "输电线路异物",
       "problem_class": "foreign_objects_on_transmission_lines",
       "event_type": "foreign_objects_on_transmission_lines",
@@ -810,7 +818,7 @@
       "workflows": []
     },
     {
-      "name": "forest_fire",
+      "name": "forest-fire",
       "title": "森林火灾",
       "problem_class": "forest_fire",
       "event_type": "forest_fire",
@@ -843,7 +851,7 @@
       "workflows": []
     },
     {
-      "name": "garbage_bin_dumping",
+      "name": "garbage-bin-dumping",
       "title": "垃圾桶倾倒",
       "problem_class": "garbage_bin_dumping",
       "event_type": "garbage_bin_dumping",
@@ -876,7 +884,7 @@
       "workflows": []
     },
     {
-      "name": "gas_station_smoking",
+      "name": "gas-station-smoking",
       "title": "加油站抽烟",
       "problem_class": "gas_station_smoking",
       "event_type": "gas_station_smoking",
@@ -910,7 +918,7 @@
       "workflows": []
     },
     {
-      "name": "guardrail_damaged",
+      "name": "guardrail-damaged",
       "title": "护栏损坏",
       "problem_class": "guardrail_damaged",
       "event_type": "guardrail_damaged",
@@ -943,7 +951,7 @@
       "workflows": []
     },
     {
-      "name": "instrument_abnormality",
+      "name": "instrument-abnormality",
       "title": "仪表异常",
       "problem_class": "instrument_abnormality",
       "event_type": "instrument_abnormality",
@@ -976,7 +984,7 @@
       "workflows": []
     },
     {
-      "name": "instrument_operation",
+      "name": "instrument-operation",
       "title": "是否操作仪器",
       "problem_class": "instrument_operation",
       "event_type": "instrument_operation",
@@ -1008,7 +1016,7 @@
       "workflows": []
     },
     {
-      "name": "kitchen_infested_with_rats",
+      "name": "kitchen-infested-with-rats",
       "title": "厨房出现老鼠",
       "problem_class": "kitchen_infested_with_rats",
       "event_type": "kitchen_infested_with_rats",
@@ -1040,7 +1048,7 @@
       "workflows": []
     },
     {
-      "name": "license_plate_is_not_standard",
+      "name": "license-plate-is-not-standard",
       "title": "车牌不规范",
       "problem_class": "license_plate_is_not_standard",
       "event_type": "license_plate_is_not_standard",
@@ -1072,7 +1080,7 @@
       "workflows": []
     },
     {
-      "name": "litter_randomly",
+      "name": "litter-randomly",
       "title": "随地乱扔垃圾",
       "problem_class": "litter_randomly",
       "event_type": "litter_randomly",
@@ -1104,7 +1112,7 @@
       "workflows": []
     },
     {
-      "name": "lost_manhole_cover",
+      "name": "lost-manhole-cover",
       "title": "井盖丢失或井盖没盖好",
       "problem_class": "lost_manhole_cover",
       "event_type": "lost_manhole_cover",
@@ -1136,7 +1144,7 @@
       "workflows": []
     },
     {
-      "name": "occluded_license_plate",
+      "name": "occluded-license-plate",
       "title": "车牌遮挡",
       "problem_class": "occluded_license_plate",
       "event_type": "occluded_license_plate",
@@ -1168,7 +1176,7 @@
       "workflows": []
     },
     {
-      "name": "pedestrian_queue",
+      "name": "pedestrian-queue",
       "title": "行人排队聚集",
       "problem_class": "pedestrian_queue",
       "event_type": "pedestrian_queue",
@@ -1202,7 +1210,7 @@
       "workflows": []
     },
     {
-      "name": "pipeline_leak",
+      "name": "pipeline-leak",
       "title": "管道泄漏",
       "problem_class": "pipeline_leak",
       "event_type": "pipeline_leak",
@@ -1235,7 +1243,7 @@
       "workflows": []
     },
     {
-      "name": "platform_yellowline",
+      "name": "platform-yellowline",
       "title": "越过站台黄线",
       "problem_class": "platform_yellowline",
       "event_type": "platform_yellowline",
@@ -1269,7 +1277,7 @@
       "workflows": []
     },
     {
-      "name": "road_surface_dameged",
+      "name": "road-surface-dameged",
       "title": "路面破损",
       "problem_class": "road_surface_dameged",
       "event_type": "road_surface_dameged",
@@ -1303,7 +1311,7 @@
       "workflows": []
     },
     {
-      "name": "roadside_booths",
+      "name": "roadside-booths",
       "title": "占道经营",
       "problem_class": "roadside_booths",
       "event_type": "roadside_booths",
@@ -1335,7 +1343,7 @@
       "workflows": []
     },
     {
-      "name": "run_the_red_light",
+      "name": "run-the-red-light",
       "title": "闯红灯",
       "problem_class": "run_the_red_light",
       "event_type": "run_the_red_light",
@@ -1368,7 +1376,7 @@
       "workflows": []
     },
     {
-      "name": "screen_doors_clamp_passengers",
+      "name": "screen-doors-clamp-passengers",
       "title": "屏蔽门夹人",
       "problem_class": "screen_doors_clamp_passengers",
       "event_type": "screen_doors_clamp_passengers",
@@ -1401,7 +1409,7 @@
       "workflows": []
     },
     {
-      "name": "seat_damaged",
+      "name": "seat-damaged",
       "title": "座椅损坏",
       "problem_class": "seat_damaged",
       "event_type": "seat_damaged",
@@ -1435,7 +1443,7 @@
       "workflows": []
     },
     {
-      "name": "standing_water",
+      "name": "standing-water",
       "title": "积水检测",
       "problem_class": "standing_water",
       "event_type": "standing_water",
@@ -1469,7 +1477,7 @@
       "workflows": []
     },
     {
-      "name": "tank_body_landing",
+      "name": "tank-body-landing",
       "title": "罐体落地",
       "problem_class": "tank_body_landing",
       "event_type": "tank_body_landing",
@@ -1503,7 +1511,7 @@
       "workflows": []
     },
     {
-      "name": "track_obstacle",
+      "name": "track-obstacle",
       "title": "轨道异物",
       "problem_class": "track_obstacle",
       "event_type": "track_obstacle",
@@ -1537,7 +1545,7 @@
       "workflows": []
     },
     {
-      "name": "traffic_accident",
+      "name": "traffic-accident",
       "title": "交通事故",
       "problem_class": "traffic_accident",
       "event_type": "traffic_accident",
@@ -1571,7 +1579,7 @@
       "workflows": []
     },
     {
-      "name": "tree_fallen",
+      "name": "tree-fallen",
       "title": "树木倒伏",
       "problem_class": "tree_fallen",
       "event_type": "tree_fallen",
@@ -1605,7 +1613,7 @@
       "workflows": []
     },
     {
-      "name": "tube_falls_and_breaks",
+      "name": "tube-falls-and-breaks",
       "title": "试管掉落破碎",
       "problem_class": "tube_falls_and_breaks",
       "event_type": "tube_falls_and_breaks",
@@ -1639,7 +1647,7 @@
       "workflows": []
     },
     {
-      "name": "vehicle_illegal_parking",
+      "name": "vehicle-illegal-parking",
       "title": "车辆违停",
       "problem_class": "vehicle_illegal_parking",
       "event_type": "vehicle_illegal_parking",
@@ -1671,7 +1679,7 @@
       "workflows": []
     },
     {
-      "name": "walking_a_dog_without_a_leash",
+      "name": "walking-a-dog-without-a-leash",
       "title": "遛狗未牵绳",
       "problem_class": "walking_a_dog_without_a_leash",
       "event_type": "walking_a_dog_without_a_leash",
@@ -1703,7 +1711,7 @@
       "workflows": []
     },
     {
-      "name": "without_wearing_a_helmet",
+      "name": "without-wearing-a-helmet",
       "title": "未戴安全帽",
       "problem_class": "without_wearing_a_helmet",
       "event_type": "without_wearing_a_helmet",
@@ -1735,7 +1743,7 @@
       "workflows": []
     },
     {
-      "name": "without_wearing_a_mask",
+      "name": "without-wearing-a-mask",
       "title": "未戴口罩",
       "problem_class": "without_wearing_a_mask",
       "event_type": "without_wearing_a_mask",
@@ -1767,7 +1775,7 @@
       "workflows": []
     },
     {
-      "name": "without_wearing_clothes",
+      "name": "without-wearing-clothes",
       "title": "未穿防护服",
       "problem_class": "without_wearing_clothes",
       "event_type": "without_wearing_clothes",
@@ -1799,7 +1807,7 @@
       "workflows": []
     },
     {
-      "name": "working_at_heights_without_a_safety_harness",
+      "name": "working-at-heights-without-a-safety-harness",
       "title": "高空作业未系安全带",
       "problem_class": "working_at_heights_without_a_safety_harness",
       "event_type": "working_at_heights_without_a_safety_harness",

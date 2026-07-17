@@ -40,6 +40,7 @@ from nodes.mem.spatialskillgrowth.benchmark_profiles import (
 from nodes.mem.spatialskillgrowth.pipeline import ExperimentFactory
 from nodes.mem.spatialskillgrowth.workflow_executor import WorkflowPythonExporter
 from nodes.mem.spatialskillgrowth.growth_store import WorkflowRepository
+from nodes.mem.spatialskillgrowth.skill_layout import skill_directory
 
 
 DEFAULT_DATASET = "benchmark/anomaly/explore.json"
@@ -208,8 +209,10 @@ def main() -> None:
         for workflow in WorkflowRepository(paths).list_active():
             exported.append(exporter.export(workflow))
             skill_script_root = (
-                paths.active_skill_root
-                / workflow.applicability.problem_class
+                skill_directory(
+                    paths.active_skill_root,
+                    workflow.applicability.problem_class,
+                )
                 / "scripts"
             )
             WorkflowPythonExporter(skill_script_root).export(workflow)

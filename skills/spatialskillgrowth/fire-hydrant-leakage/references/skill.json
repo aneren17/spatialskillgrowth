@@ -1,0 +1,32 @@
+{
+  "name": "fire-hydrant-leakage",
+  "title": "消防栓泄漏",
+  "problem_class": "fire_hydrant_leakage",
+  "event_type": "fire_hydrant_leakage",
+  "description": "检测输入视频或图像中是否发生“消防栓泄漏”异常事件（相关显示名称：消防栓泄漏）；调用异常检测工具时，必须使用精确类别 ID `fire_hydrant_leakage`。",
+  "aliases": [
+    "消防栓泄漏"
+  ],
+  "display_names": {
+    "rag": "消防栓泄漏"
+  },
+  "primary_tool": "embeddingTool",
+  "answer_type": "bool",
+  "required_slots": [
+    "event_type"
+  ],
+  "tool_template": {
+    "tool_name": "embeddingTool",
+    "args": {
+      "file_path": "$media",
+      "event_type": "fire_hydrant_leakage"
+    }
+  },
+  "evidence_requirements": [
+    "embeddingTool 必须使用精确 event_type `fire_hydrant_leakage`。",
+    "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
+    "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+  ],
+  "workflow_count": 0,
+  "workflows": []
+}

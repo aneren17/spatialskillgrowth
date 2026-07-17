@@ -23,6 +23,12 @@ from nodes.mem.spatialskillgrowth.models import (
     WorkflowSpec,
     WorkflowStatus,
 )
+from nodes.mem.spatialskillgrowth.skill_layout import (
+    skill_directory,
+    skill_metadata_path,
+    standard_skill_name,
+    workflow_reference_directory,
+)
 from nodes.mem.spatialskillgrowth.workflow_executor import (
     WorkflowPythonExporter,
     legacy_python_wrapper,
@@ -380,9 +386,9 @@ class WorkflowRepository:
         status = WorkflowStatus(workflow.status)
         root = self._root_for_status(status)
         path = (
-            root
-            / workflow.applicability.problem_class
-            / "workflows"
+            workflow_reference_directory(skill_directory(
+                root, workflow.applicability.problem_class
+            ))
             / f"{workflow.workflow_id}.json"
         )
         with self._lock:
@@ -394,11 +400,12 @@ class WorkflowRepository:
             )
             self._remove_from_other_statuses(workflow, status)
             _write_json_atomic(path, workflow.to_dict())
-            target_script = path.parents[1] / "scripts" / f"{workflow.workflow_id}.py"
+            skill_root = path.parents[2]
+            target_script = skill_root / "scripts" / f"{workflow.workflow_id}.py"
             if not target_script.exists() and existing_script_content is not None:
                 target_script.parent.mkdir(parents=True, exist_ok=True)
                 target_script.write_bytes(existing_script_content)
-            WorkflowPythonExporter(path.parents[1] / "scripts").export(
+            WorkflowPythonExporter(skill_root / "scripts").export(
                 workflow,
                 force=False,
             )
@@ -410,7 +417,10 @@ class WorkflowRepository:
 
     def get(self, workflow_id: str) -> Optional[WorkflowSpec]:
         for root in self._status_roots().values():
-            matches = list(root.glob(f"*/workflows/{workflow_id}.json"))
+            matches = list(root.glob(
+                f"*/references/workflows/{workflow_id}.json"
+            ))
+            matches.extend(root.glob(f"*/workflows/{workflow_id}.json"))
             if matches:
                 return self.load(matches[0])
         return None
@@ -453,9 +463,11 @@ class WorkflowRepository:
                     workflow, force=True
                 )
                 migrated_scripts.append(workflow.workflow_id)
-        source_whiteboard = source.paths.skill_root / "WHITEBOARD.json"
-        if source_whiteboard.is_file():
-            shutil.copy2(source_whiteboard, self.paths.skill_root / "WHITEBOARD.json")
+        source_skillset = source.paths.skill_root / "SKILLSET.json"
+        if not source_skillset.is_file():
+            source_skillset = source.paths.skill_root / "WHITEBOARD.json"
+        if source_skillset.is_file():
+            shutil.copy2(source_skillset, self.paths.skill_root / "SKILLSET.json")
         files = []
         for path in sorted(self.paths.active_skill_root.rglob("*")):
             if not path.is_file():
@@ -495,6 +507,21 @@ class WorkflowRepository:
             workflows.extend(self.list_provisional(problem_class))
         return workflows
 
+    def skill_guidance(self, problem_class: str, limit: int = 6000) -> str:
+        """读取人工可维护的 SKILL.md，供主检索器判断适用范围。"""
+        for root in (
+            self.paths.active_skill_root,
+            self.paths.provisional_skill_root,
+        ):
+            for directory in (
+                skill_directory(root, problem_class),
+                root / problem_class,
+            ):
+                path = directory / "SKILL.md"
+                if path.is_file():
+                    return path.read_text(encoding="utf-8")[:max(0, int(limit))]
+        return ""
+
     def transition(
         self,
         workflow: WorkflowSpec,
@@ -505,10 +532,11 @@ class WorkflowRepository:
         workflow.status = status.value
         self.save(workflow)
         if reason and status == WorkflowStatus.ARCHIVE:
-            metadata = (
-                self.paths.archive_skill_root
-                / workflow.applicability.problem_class
-                / "workflows"
+            metadata = workflow_reference_directory(
+                skill_directory(
+                    self.paths.archive_skill_root,
+                    workflow.applicability.problem_class,
+                )
             )
             _write_json_atomic(
                 metadata / f"{workflow.workflow_id}.archive.json",
@@ -546,28 +574,45 @@ class WorkflowRepository:
 
     def _list(self, root: Path, problem_class: str) -> List[WorkflowSpec]:
         pattern = (
+            f"{standard_skill_name(problem_class)}/references/workflows/*.json"
+            if problem_class
+            else "*/references/workflows/*.json"
+        )
+        paths = list(root.glob(pattern))
+        legacy_pattern = (
             f"{problem_class}/workflows/*.json"
             if problem_class
             else "*/workflows/*.json"
         )
+        paths.extend(root.glob(legacy_pattern))
         workflows = []
-        for path in sorted(root.glob(pattern)):
+        seen = set()
+        for path in sorted(paths):
             if path.name.endswith(".archive.json"):
                 continue
-            workflows.append(self.load(path))
+            workflow = self.load(path)
+            if workflow.workflow_id in seen:
+                continue
+            seen.add(workflow.workflow_id)
+            workflows.append(workflow)
         return workflows
 
     def _rebuild_docs(self, problem_class: str, status: WorkflowStatus) -> None:
         workflows = self._list(self._root_for_status(status), problem_class)
         root = self._root_for_status(status)
-        directory = root / problem_class
+        directory = skill_directory(root, problem_class)
         directory.mkdir(parents=True, exist_ok=True)
         (directory / "scripts").mkdir(parents=True, exist_ok=True)
-        (directory / "workflows").mkdir(parents=True, exist_ok=True)
-        metadata_path = directory / "skill.json"
+        workflow_reference_directory(directory).mkdir(parents=True, exist_ok=True)
+        metadata_path = skill_metadata_path(directory)
         existing_metadata = {}
         if metadata_path.exists():
             existing_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        existing_workflows = {
+            str(item.get("workflow_id") or ""): item
+            for item in existing_metadata.get("workflows", [])
+            if isinstance(item, dict)
+        }
         description = str(
             existing_metadata.get("description")
             or next(
@@ -580,91 +625,21 @@ class WorkflowRepository:
             )
         )
         title = str(existing_metadata.get("title") or problem_class.replace("_", " ").title())
-        lines = [
-            "---",
-            f"name: {problem_class}",
-            f"description: {json.dumps(description, ensure_ascii=False)}",
-            "---",
-            "",
-            f"# {title}",
-            "",
-            "## 用途",
-            "",
-            description,
-            "",
-        ]
+        skill_markdown_path = directory / "SKILL.md"
         event_type = str(existing_metadata.get("event_type") or "")
-        display_names = existing_metadata.get("display_names") or {}
-        if event_type:
-            lines.extend([
-                "## 事件接口",
-                "",
-                f"- 精确 `event_type`：`{event_type}`",
-                f"- 主检测工具：`{existing_metadata.get('primary_tool') or 'embeddingTool'}`",
-                f"- 答案类型：`{existing_metadata.get('answer_type') or 'bool'}`，输出“是”或“否”",
-                "- 结构化结果：必须包含 `is_anomaly` 和 `threshold`",
-                "",
-            ])
-        if isinstance(display_names, dict) and display_names:
-            source_titles = {
-                "dashboard": "大屏端",
-                "rag": "RAG 检索/检测端",
-                "stream": "实时视频流检测页",
-            }
-            lines.extend([
-                "## 各端显示名称",
-                "",
-                "| 来源 | 中文显示名称 |",
-                "|---|---|",
-            ])
-            lines.extend(
-                f"| {source_titles.get(source, source)} | {label} |"
-                for source, label in display_names.items()
+        if not skill_markdown_path.is_file():
+            skill_markdown_path.write_text(
+                _default_skill_markdown(
+                    standard_skill_name(problem_class),
+                    title,
+                    description,
+                    event_type,
+                ),
+                encoding="utf-8",
             )
-            lines.append("")
-        tool_template = existing_metadata.get("tool_template")
-        if isinstance(tool_template, dict) and tool_template:
-            lines.extend([
-                "## 工具调用模板",
-                "",
-                "```json",
-                json.dumps(tool_template, ensure_ascii=False, indent=2),
-                "```",
-                "",
-            ])
-        evidence_requirements = existing_metadata.get("evidence_requirements") or []
-        if isinstance(evidence_requirements, list) and evidence_requirements:
-            lines.extend(["## 证据要求", ""])
-            lines.extend(f"- {item}" for item in evidence_requirements)
-            lines.append("")
-        lines.extend([
-            "## 资源",
-            "",
-            "- `workflows/*.json` 保存可检索的工作流定义。",
-            "- `scripts/*.py` 保存实际执行的 Python Skill。",
-            "",
-            "## 已验证工作流",
-            "",
-        ])
-        if not workflows:
-            lines.append("当前运行尚无通过验证的工作流。")
-            lines.append("")
-        for workflow in sorted(workflows, key=lambda item: item.workflow_id):
-            lines.extend([
-                f"## {workflow.name or workflow.workflow_id}",
-                "",
-                f"- id: `{workflow.workflow_id}`",
-                f"- 来源工作流：`{workflow.derived_from_workflow_id or '无'}`",
-                f"- 变异模式：`{workflow.mutation_mode}`",
-                f"- 工具：`{', '.join(step.tool_name for step in workflow.steps)}`",
-                f"- 适用范围：{workflow.applicability.description or '未说明'}",
-                f"- 排除条件：{workflow.applicability.exclusions or '未说明'}",
-                "",
-            ])
-        (directory / "SKILL.md").write_text("\n".join(lines), encoding="utf-8")
         metadata = dict(existing_metadata)
         metadata.update({
-            "name": problem_class,
+            "name": standard_skill_name(problem_class),
             "title": title,
             "problem_class": problem_class,
             "description": description,
@@ -674,8 +649,18 @@ class WorkflowRepository:
                 {
                     "workflow_id": workflow.workflow_id,
                     "name": workflow.name,
-                    "path": f"workflows/{workflow.workflow_id}.json",
+                    "path": f"references/workflows/{workflow.workflow_id}.json",
                     "script": f"scripts/{workflow.workflow_id}.py",
+                    "authorship": str(
+                        existing_workflows.get(workflow.workflow_id, {}).get(
+                            "authorship"
+                        )
+                        or (
+                            "human"
+                            if workflow.mutation_mode == "manual"
+                            else "generated"
+                        )
+                    ),
                 }
                 for workflow in sorted(workflows, key=lambda item: item.workflow_id)
             ],
@@ -692,10 +677,25 @@ class WorkflowRepository:
         for status, root in self._status_roots().items():
             if status == target_status:
                 continue
-            workflow_path = root / problem_class / "workflows" / f"{workflow.workflow_id}.json"
-            script_path = root / problem_class / "scripts" / f"{workflow.workflow_id}.py"
+            directory = skill_directory(root, problem_class)
+            workflow_path = (
+                workflow_reference_directory(directory)
+                / f"{workflow.workflow_id}.json"
+            )
+            legacy_workflow_path = (
+                root / problem_class / "workflows" / f"{workflow.workflow_id}.json"
+            )
+            script_path = directory / "scripts" / f"{workflow.workflow_id}.py"
+            legacy_script_path = (
+                root / problem_class / "scripts" / f"{workflow.workflow_id}.py"
+            )
             removed = False
-            for path in (workflow_path, script_path):
+            for path in (
+                workflow_path,
+                legacy_workflow_path,
+                script_path,
+                legacy_script_path,
+            ):
                 if path.exists():
                     path.unlink()
                     removed = True
@@ -714,10 +714,38 @@ class WorkflowRepository:
 
     @staticmethod
     def _rebuild_skill_index(root: Path) -> None:
-        skills = []
-        for path in sorted(root.glob("*/skill.json")):
-            skills.append(json.loads(path.read_text(encoding="utf-8")))
+        skills_by_class = {}
+        paths = list(root.glob("*/references/skill.json"))
+        paths.extend(root.glob("*/skill.json"))
+        for path in sorted(paths):
+            metadata = json.loads(path.read_text(encoding="utf-8"))
+            key = str(metadata.get("problem_class") or metadata.get("name") or path)
+            skills_by_class[key] = metadata
+        skills = [skills_by_class[key] for key in sorted(skills_by_class)]
         _write_json_atomic(root / "SKILLS.json", {"skills": skills})
+
+
+def _default_skill_markdown(
+    skill_name: str,
+    title: str,
+    description: str,
+    event_type: str,
+) -> str:
+    event_line = f"- 精确 `event_type`：`{event_type}`\n" if event_type else ""
+    return (
+        "---\n"
+        f"name: {skill_name}\n"
+        f"description: {json.dumps(description, ensure_ascii=False)}\n"
+        "---\n\n"
+        f"# {title}\n\n"
+        "## 用途\n\n"
+        f"{description}\n\n"
+        "## 执行约束\n\n"
+        f"{event_line}"
+        "- 使用 `scripts/*.py` 执行工作流。\n"
+        "- 按需读取 `references/skill.json` 和 `references/workflows/*.json`。\n"
+        "- 人工脚本必须通过项目提供的 Skill 验证程序。\n"
+    )
 
 
 class TrajectoryRecorder:

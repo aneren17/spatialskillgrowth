@@ -1,0 +1,33 @@
+{
+  "name": "pipeline-leak",
+  "title": "管道泄漏",
+  "problem_class": "pipeline_leak",
+  "event_type": "pipeline_leak",
+  "description": "检测输入视频或图像中是否发生“管道泄漏”异常事件（相关显示名称：管道泄漏）；调用异常检测工具时，必须使用精确类别 ID `pipeline_leak`。",
+  "aliases": [
+    "管道泄漏"
+  ],
+  "display_names": {
+    "dashboard": "管道泄漏",
+    "rag": "管道泄漏"
+  },
+  "primary_tool": "embeddingTool",
+  "answer_type": "bool",
+  "required_slots": [
+    "event_type"
+  ],
+  "tool_template": {
+    "tool_name": "embeddingTool",
+    "args": {
+      "file_path": "$media",
+      "event_type": "pipeline_leak"
+    }
+  },
+  "evidence_requirements": [
+    "embeddingTool 必须使用精确 event_type `pipeline_leak`。",
+    "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
+    "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+  ],
+  "workflow_count": 0,
+  "workflows": []
+}

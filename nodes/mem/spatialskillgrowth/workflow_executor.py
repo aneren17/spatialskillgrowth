@@ -436,6 +436,7 @@ class WorkflowPythonExporter:
             json.dumps(graph_payload, sort_keys=True, ensure_ascii=True).encode("utf-8")
         ).hexdigest()
         tool_names = tuple(dict.fromkeys(step.tool_name for step in steps))
+        contract = _workflow_contract(workflow, steps)
         variables = {
             step.step_id: _safe_python_identifier(step.step_id)
             for step in steps
@@ -444,8 +445,10 @@ class WorkflowPythonExporter:
             f'"""Executable SpatialSkillGrowth Skill: {workflow.name or workflow.workflow_id}."""',
             "",
             f"WORKFLOW_ID = {workflow.workflow_id!r}",
+            f"PROBLEM_CLASS = {workflow.applicability.problem_class!r}",
             f"WORKFLOW_GRAPH_SHA256 = {graph_hash!r}",
             f"DECLARED_TOOLS = {tool_names!r}",
+            f"WORKFLOW_CONTRACT = {contract!r}",
             "",
             "",
             "def solve(",
@@ -551,6 +554,25 @@ def _python_value(value: Any, variables: Dict[str, str]) -> str:
     if "$" in value:
         return f"runtime.render({value!r})"
     return repr(value)
+
+
+def _workflow_contract(
+    workflow: WorkflowSpec,
+    steps,
+) -> Dict[str, Any]:
+    applicability = workflow.applicability
+    return {
+        "workflow_id": workflow.workflow_id,
+        "name": workflow.name,
+        "problem_class": applicability.problem_class,
+        "required_slots": list(applicability.required_slots),
+        "required_tools": list(applicability.required_tools),
+        "answer_types": list(applicability.answer_types),
+        "description": applicability.description,
+        "exclusions": applicability.exclusions,
+        "capability_boundary": applicability.capability_boundary,
+        "steps": [step.to_dict() for step in steps],
+    }
 
 
 def _safe_python_identifier(value: str) -> str:

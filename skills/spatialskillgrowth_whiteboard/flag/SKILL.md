@@ -43,8 +43,10 @@ description: "检测输入视频或图像中是否发生“旗帜检测”异常
 
 ## 资源
 
-- `workflows/*.json` 保存可检索的工作流定义。
-- `scripts/*.py` 保存实际执行的 Python Skill，函数参数暴露运行时槽位。
+- 本 whiteboard 的 `scripts/` 只是空模板，不在这里编写人工脚本。
+- `references/skill.json` 保存机器可读的 Skill 索引。
+- 本 whiteboard 的 `references/workflows/` 保持为空。
+- 人工工作请复制到 `skills/spatialskillgrowth/` 并阅读项目级编写说明。
 
 ## 已验证工作流
 
