@@ -9,7 +9,6 @@ WORKFLOW_CONTRACT = {
     "problem_class": PROBLEM_CLASS,
     "required_slots": ["event_type"],
     "required_tools": list(DECLARED_TOOLS),
-    "answer_types": ["bool"],
     "description": "先取得 banner 的 embedding 判断，再用 OCR 和 MLLM 补充可审计视觉证据。",
     "exclusions": "不适用于 banner 以外的事件类别；辅助工具不能替代 embedding 的异常判断和阈值。",
     "capability_boundary": "embedding 为强制主判断；OCR 与 MLLM 失败时降级返回 embedding 结论。",

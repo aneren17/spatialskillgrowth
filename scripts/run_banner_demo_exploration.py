@@ -9,24 +9,22 @@ import shutil
 from pathlib import Path
 
 from agents.spatialskillgrowth.online_data import load_online_tasks
-from nodes.mem.spatialskillgrowth.benchmark_profiles import (
-    ANOMALY_BENCHMARK,
-    class_metadata_for,
+from nodes.mem.spatialskillgrowth.core.anomaly_events import (
+    class_metadata_for_anomaly,
 )
-from nodes.mem.spatialskillgrowth.experiment_config import (
+from nodes.mem.spatialskillgrowth.core.experiment_config import (
     DEFAULT_RESULT_ROOT,
     ExperimentPaths,
     build_experiment_config,
 )
-from nodes.mem.spatialskillgrowth.growth_store import WorkflowRepository
-from nodes.mem.spatialskillgrowth.pipeline import ExperimentFactory
-from nodes.mem.spatialskillgrowth.tool_runtime import ToolRuntime
+from nodes.mem.spatialskillgrowth.pipeline.orchestrator import ExperimentFactory
+from nodes.mem.spatialskillgrowth.runtime.tool_runtime import ToolRuntime
+from nodes.mem.spatialskillgrowth.storage.growth_store import WorkflowRepository
 
 
 DEFAULT_DATASET = Path("benchmark/anomaly/banner_demo/explore.json")
 DEFAULT_IMAGE_ROOT = Path("benchmark/anomaly/banner_demo/images")
 DEFAULT_RUN_ID = "banner_demo_mock_explore"
-DEFAULT_EXPERIMENT = "retrieval_only"
 DEFAULT_SPLIT = "explore10_demo"
 
 
@@ -55,19 +53,19 @@ def run_demo(
     run_id: str,
     force: bool = False,
 ) -> Path:
-    config = build_experiment_config(DEFAULT_EXPERIMENT)
-    config.retriever = "history_only"
+    config = build_experiment_config()
+    config.use_react = False
+    config.success_enhancement = False
+    config.failure_repair = False
     config.extra = {
         "demo_mode": True,
         "embedding_backend": "deterministic_mock",
         "warning": "该 run 只用于展示框架流程，不代表真实模型效果。",
     }
-    metadata = class_metadata_for(ANOMALY_BENCHMARK)
+    metadata = class_metadata_for_anomaly()
     paths = ExperimentPaths(
-        config.name,
         run_id,
         str(result_root),
-        benchmark=ANOMALY_BENCHMARK,
         problem_classes=["banner"],
         class_metadata=metadata,
     )
@@ -77,7 +75,6 @@ def run_demo(
     tasks = load_online_tasks(str(dataset), str(image_root))
     (paths.root / "split.json").write_text(
         json.dumps({
-            "benchmark": ANOMALY_BENCHMARK,
             "seed": config.seed,
             "exploration_task_ids": [task.task_id for task in tasks],
             "demo_mode": True,
@@ -89,9 +86,6 @@ def run_demo(
         paths,
         DisabledDemoLLM(),
         runtime=ToolRuntime({"embeddingTool": DemoEmbeddingTool()}),
-        benchmark=ANOMALY_BENCHMARK,
-        problem_classes=["banner"],
-        class_metadata=metadata,
         exploration_split_name=DEFAULT_SPLIT,
     ).build_exploration()
     summaries = [pipeline.ask(task) for task in tasks]

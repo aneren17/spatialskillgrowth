@@ -66,7 +66,6 @@ WORKFLOW_CONTRACT = {
     "problem_class": PROBLEM_CLASS,
     "required_slots": ["event_type"],
     "required_tools": list(DECLARED_TOOLS),
-    "answer_types": ["bool"],
     "description": "使用人工审阅的稳定流程检测 banner。",
     "exclusions": "不适用于其他 event_type。",
     "capability_boundary": "必须获得 embeddingTool 的判断和阈值。",

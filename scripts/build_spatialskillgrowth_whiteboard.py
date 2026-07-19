@@ -8,12 +8,11 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict
 
-from nodes.mem.spatialskillgrowth.benchmark_profiles import (
-    ANOMALY_BENCHMARK,
+from nodes.mem.spatialskillgrowth.core.anomaly_events import (
     ANOMALY_CLASS_METADATA,
     ANOMALY_EVENT_TYPES,
 )
-from nodes.mem.spatialskillgrowth.skill_layout import (
+from nodes.mem.spatialskillgrowth.skills.skill_layout import (
     skill_metadata_path,
     standard_skill_name,
     workflow_reference_directory,
@@ -65,7 +64,6 @@ def build_whiteboard(output: Path, force: bool = False) -> None:
         (workflow_reference_directory(directory) / ".gitkeep").touch()
     _write_json(output / "SKILLS.json", {"skills": skills})
     _write_json(output / "WHITEBOARD.json", {
-        "benchmark": ANOMALY_BENCHMARK,
         "description": "每个 SpatialSkillGrowth 异常检测运行使用的空白标准 Skill 工作区。",
         "problem_classes": problem_classes,
     })

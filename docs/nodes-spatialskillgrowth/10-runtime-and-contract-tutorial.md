@@ -249,7 +249,6 @@ WORKFLOW_CONTRACT = {
     "problem_class": PROBLEM_CLASS,
     "required_slots": ["event_type"],
     "required_tools": list(DECLARED_TOOLS),
-    "answer_types": ["bool"],
     "description": "适合什么情况，以及大致怎么做。",
     "exclusions": "明确不适合什么情况。",
     "capability_boundary": "成功所需证据和失败降级边界。",
@@ -286,11 +285,6 @@ def solve(runtime, question, image_paths, *, event_type=""):
 
 运行前必须注册的工具集合。它必须与 `DECLARED_TOOLS` 和 steps 中工具集合完全相同。若某工具只是可选
 调用，它仍需声明，因为 Runtime 白名单在脚本执行前确定。
-
-### `answer_types`
-
-该路线能输出的答案类型。异常检测固定 `bool`，最终只允许“是/否”。Retriever 会拒绝答案类型不匹配的
-路线。
 
 ### `description`
 
@@ -376,7 +370,6 @@ WORKFLOW_CONTRACT = {
     "problem_class": PROBLEM_CLASS,
     "required_slots": ["event_type"],
     "required_tools": list(DECLARED_TOOLS),
-    "answer_types": ["bool"],
     "description": "用 embedding 判断 banner，并用 OCR 补充可见文字。",
     "exclusions": "不适用于 banner 以外类别。",
     "capability_boundary": "embedding 必须成功；OCR 可以失败并降级。",

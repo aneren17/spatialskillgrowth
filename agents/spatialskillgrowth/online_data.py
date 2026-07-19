@@ -1,264 +1,141 @@
-"""Load benchmark-independent normalized JSON tasks for online exploration."""
+"""读取“一个媒体文件 + 一个异常类别”的任务数据。"""
 
-import json
 import hashlib
+import json
 import os
 import re
-from typing import Iterable, List
 
-from nodes.mem.spatialskillgrowth.models import TaskRecord
-from nodes.mem.spatialskillgrowth.benchmark_profiles import normalize_benchmark
+from nodes.mem.spatialskillgrowth.core.models import TaskRecord
 from prompt.spatialskillgrowth_prompts import ANOMALY_INPUT_QUESTION_PROMPT
-from tools.basicTools.embeddingTool import (
-    EVENT_TYPE_ALIASES,
-    EVENT_TYPE_LABELS,
-    VALID_EVENT_TYPES,
-)
+from tools.basicTools.embeddingTool import EVENT_TYPE_ALIASES
+from tools.basicTools.embeddingTool import EVENT_TYPE_LABELS
+from tools.basicTools.embeddingTool import VALID_EVENT_TYPES
 
 
-TASK_LIST_KEYS = ("data", "items", "tasks", "questions")
-BENCHMARK_KEYS = ("benchmark", "dataset", "source")
 IMAGE_SUFFIXES = {".bmp", ".jpeg", ".jpg", ".png", ".webp"}
 VIDEO_SUFFIXES = {".avi", ".m4v", ".mkv", ".mov", ".mp4", ".mpeg", ".mpg", ".webm"}
+MEDIA_KEYS = ("media_path", "image_path", "video_path", "file_path")
 EVENT_TYPES_BY_LABEL = {}
-for _event_type, _labels in EVENT_TYPE_ALIASES.items():
-    for _label in _labels:
-        EVENT_TYPES_BY_LABEL.setdefault(_label, set()).add(_event_type)
+
+for event_type, labels in EVENT_TYPE_ALIASES.items():
+    for label in labels:
+        if label not in EVENT_TYPES_BY_LABEL:
+            EVENT_TYPES_BY_LABEL[label] = set()
+        EVENT_TYPES_BY_LABEL[label].add(event_type)
 
 
-def load_online_tasks(
-    dataset_path: str,
-    image_root: str,
-    limit: int = 0,
-    require_groundtruth: bool = True,
-) -> List[TaskRecord]:
-    if not os.path.exists(dataset_path):
-        raise FileNotFoundError(f"Dataset file does not exist: {dataset_path}")
+def load_online_tasks(dataset_path, media_root, limit=0, require_groundtruth=True):
+    if not os.path.isfile(dataset_path):
+        raise FileNotFoundError("数据集文件不存在：" + str(dataset_path))
     with open(dataset_path, "r", encoding="utf-8") as handle:
-        raw = json.load(handle)
-    if isinstance(raw, dict):
-        raw = next(
-            (raw.get(key) for key in TASK_LIST_KEYS if isinstance(raw.get(key), list)),
-            None,
-        )
-    if not isinstance(raw, list):
-        raise ValueError(
-            "Online dataset must be a JSON list or contain data/items/tasks/questions"
-        )
+        items = json.load(handle)
+    if not isinstance(items, list):
+        raise ValueError("异常检测数据集必须是 JSON 数组。")
     if limit > 0:
-        raw = raw[:limit]
-    return [
-        parse_online_item(item, image_root, require_groundtruth=require_groundtruth)
-        for item in raw
-    ]
+        items = items[:limit]
 
-
-def parse_online_item(
-    item: dict,
-    image_root: str,
-    require_groundtruth: bool = True,
-) -> TaskRecord:
-    if not isinstance(item, dict):
-        raise ValueError("Each online task must be a JSON object")
-    task_id = str(
-        item.get("question_id")
-        or item.get("task_id")
-        or item.get("id")
-        or _omni_task_id(item)
-        or ""
-    ).strip()
-    capability = _resolve_capability(_extract_problem_class(item))
-    groundtruth = _first_value(item, ("answer", "groundtruth", "ground_truth", "gt"))
-    if require_groundtruth and (groundtruth is None or not str(groundtruth).strip()):
-        raise ValueError(
-            f"Online exploration requires a ground-truth answer: {task_id}"
+    tasks = []
+    for item in items:
+        tasks.append(
+            parse_online_item(item, media_root, require_groundtruth)
         )
-    image_field = _first_value(item, (
-        "image_paths",
-        "images",
-        "image",
-        "image_path",
-        "image_filename",
-        "video",
-        "video_path",
-        "video_filename",
-        "file",
-        "file_path",
-    ))
-    image_items: Iterable[str]
-    if isinstance(image_field, list):
-        image_items = [str(value) for value in image_field if value]
-    else:
-        image_items = [str(image_field)] if image_field else []
-    image_paths = []
-    for image_value in image_items:
-        candidates = [image_value] if os.path.isabs(image_value) else [
-            os.path.join(image_root, image_value),
-            os.path.join(os.path.dirname(os.path.normpath(image_root)), image_value),
-        ]
-        path = next((candidate for candidate in candidates if os.path.exists(candidate)), "")
-        if path:
-            image_paths.append(os.path.abspath(path))
-    if capability in VALID_EVENT_TYPES:
-        if len(image_paths) != 1:
-            raise ValueError(
-                "异常检测输入必须且只能包含一个存在的视频或图像文件："
-                f"event_type={capability}, resolved_files={len(image_paths)}"
-            )
-        media_type = detect_media_type(image_paths[0])
-        question = build_anomaly_question(capability, media_type)
-        task_id = task_id or anomaly_task_id(image_paths[0], capability)
-        answer_type = "bool"
-    else:
-        question = str(item.get("question") or item.get("query") or "").strip()
-        media_type = detect_media_type(image_paths[0]) if len(image_paths) == 1 else ""
-        answer_type = str(item.get("answer_type") or "").strip().lower()
-    if not task_id or not question:
-        raise ValueError("每条任务必须能够确定 task_id 和问题描述。")
+    return tasks
+
+
+def parse_online_item(item, media_root, require_groundtruth=True):
+    if not isinstance(item, dict):
+        raise ValueError("数据集中的每一项必须是 JSON 对象。")
+    event_type = resolve_event_type(item.get("event_type"))
+    media_value = ""
+    for key in MEDIA_KEYS:
+        if item.get(key):
+            media_value = str(item[key])
+            break
+    if not media_value:
+        raise ValueError("任务缺少 media_path、image_path、video_path 或 file_path。")
+
+    media_path = media_value
+    if not os.path.isabs(media_path):
+        media_path = os.path.join(media_root, media_path)
+    media_path = os.path.abspath(media_path)
+    if not os.path.isfile(media_path):
+        raise FileNotFoundError("媒体文件不存在：" + media_path)
+
+    groundtruth = str(item.get("answer") or "").strip()
+    if require_groundtruth and not groundtruth:
+        raise ValueError("探索数据必须提供 answer：" + media_path)
+    task_id = str(item.get("task_id") or "").strip()
+    if not task_id:
+        task_id = anomaly_task_id(media_path, event_type)
+    media_type = detect_media_type(media_path)
     return TaskRecord(
         task_id=task_id,
-        question=question,
-        groundtruth=str(groundtruth or "").strip(),
-        image_paths=image_paths,
-        capability=capability,
-        answer_type=answer_type,
+        question=build_anomaly_question(event_type, media_type),
+        media_path=media_path,
+        event_type=event_type,
+        groundtruth=groundtruth,
         media_type=media_type,
     )
 
 
-def build_anomaly_task(
-    file_path: str,
-    event_type: str,
-    task_id: str = "",
-    groundtruth: str = "",
-) -> TaskRecord:
-    resolved_path = os.path.abspath(str(file_path or "").strip())
-    if not os.path.isfile(resolved_path):
-        raise FileNotFoundError(f"异常检测输入文件不存在：{resolved_path}")
-    resolved_event_type = resolve_event_type(event_type)
-    media_type = detect_media_type(resolved_path)
+def build_anomaly_task(file_path, event_type, task_id="", groundtruth=""):
+    media_path = os.path.abspath(str(file_path or "").strip())
+    if not os.path.isfile(media_path):
+        raise FileNotFoundError("异常检测输入文件不存在：" + media_path)
+    event_type = resolve_event_type(event_type)
+    media_type = detect_media_type(media_path)
+    if not task_id:
+        task_id = anomaly_task_id(media_path, event_type)
     return TaskRecord(
-        task_id=str(task_id or "").strip() or anomaly_task_id(
-            resolved_path, resolved_event_type
-        ),
-        question=build_anomaly_question(resolved_event_type, media_type),
+        task_id=str(task_id),
+        question=build_anomaly_question(event_type, media_type),
+        media_path=media_path,
+        event_type=event_type,
         groundtruth=str(groundtruth or "").strip(),
-        image_paths=[resolved_path],
-        capability=resolved_event_type,
-        answer_type="bool",
         media_type=media_type,
     )
 
 
-def resolve_event_type(value: str) -> str:
+def resolve_event_type(value):
     raw = str(value or "").strip()
     normalized = raw.lower()
     if normalized in VALID_EVENT_TYPES:
         return normalized
     matches = EVENT_TYPES_BY_LABEL.get(raw, set())
     if len(matches) == 1:
-        return next(iter(matches))
+        for event_type in matches:
+            return event_type
     if len(matches) > 1:
-        raise ValueError(f"中文类别名称对应多个 event_type，请改用英文 ID：{raw}")
-    raise ValueError(f"不支持的异常事件类别：{raw}")
+        raise ValueError("中文类别名称不唯一，请使用英文 event_type：" + raw)
+    raise ValueError("不支持的异常事件类别：" + raw)
 
 
-def detect_media_type(file_path: str) -> str:
+def detect_media_type(file_path):
     suffix = os.path.splitext(str(file_path or ""))[1].lower()
     if suffix in IMAGE_SUFFIXES:
         return "image"
     if suffix in VIDEO_SUFFIXES:
         return "video"
-    raise ValueError(f"不支持的异常检测文件类型：{suffix or '无扩展名'}")
+    raise ValueError("不支持的媒体类型：" + (suffix or "无扩展名"))
 
 
-def build_anomaly_question(event_type: str, media_type: str) -> str:
-    resolved_event_type = resolve_event_type(event_type)
+def build_anomaly_question(event_type, media_type):
+    event_type = resolve_event_type(event_type)
+    media_name = "图像"
+    if media_type == "video":
+        media_name = "视频"
     return ANOMALY_INPUT_QUESTION_PROMPT.format(
-        media_name="视频" if media_type == "video" else "图像",
-        event_name=EVENT_TYPE_LABELS[resolved_event_type],
-        event_type=resolved_event_type,
-        aliases="、".join(EVENT_TYPE_ALIASES[resolved_event_type]),
+        media_name=media_name,
+        event_name=EVENT_TYPE_LABELS[event_type],
+        event_type=event_type,
+        aliases="、".join(EVENT_TYPE_ALIASES[event_type]),
     )
 
 
-def anomaly_task_id(file_path: str, event_type: str) -> str:
+def anomaly_task_id(file_path, event_type):
     stem = os.path.splitext(os.path.basename(file_path))[0]
-    safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", stem).strip("._") or "media"
-    digest = hashlib.sha1(os.path.abspath(file_path).encode("utf-8")).hexdigest()[:8]
-    return f"{event_type}__{safe_stem}__{digest}"
-
-
-def _resolve_capability(value: str) -> str:
-    raw = str(value or "").strip()
-    if not raw:
-        return ""
-    if raw.lower() in VALID_EVENT_TYPES or raw in EVENT_TYPES_BY_LABEL:
-        return resolve_event_type(raw)
-    return raw
-
-
-def infer_online_benchmark(dataset_path: str) -> str:
-    with open(dataset_path, "r", encoding="utf-8") as handle:
-        raw = json.load(handle)
-    candidates = [dataset_path]
-    if isinstance(raw, dict):
-        metadata = raw.get("metadata") if isinstance(raw.get("metadata"), dict) else {}
-        candidates.extend(str(raw.get(key) or "") for key in BENCHMARK_KEYS)
-        candidates.extend(str(metadata.get(key) or "") for key in BENCHMARK_KEYS)
-        items = next(
-            (raw.get(key) for key in TASK_LIST_KEYS if isinstance(raw.get(key), list)),
-            [],
-        )
-    else:
-        items = raw if isinstance(raw, list) else []
-    if items and isinstance(items[0], dict):
-        candidates.extend(str(items[0].get(key) or "") for key in BENCHMARK_KEYS)
-    joined = " ".join(candidates).lower()
-    if "omni-3d" in joined or "omni_3d" in joined or "omni3d" in joined:
-        return "omni3d"
-    if "stvqa" in re.sub(r"[^a-z0-9]+", "", joined):
-        return "stvqa"
-    for candidate in candidates[1:]:
-        normalized = normalize_benchmark(candidate)
-        if normalized and normalized != "generic":
-            return normalized
-    return "generic"
-
-
-def _first_value(item: dict, keys: Iterable[str]):
-    for key in keys:
-        if key in item and item[key] is not None:
-            return item[key]
-    return None
-
-
-def _extract_problem_class(item: dict) -> str:
-    direct = str(item.get("problem_class") or item.get("event_type") or "").strip()
-    if direct:
-        return direct
-    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
-    metadata_class = str(
-        metadata.get("event_type")
-        or metadata.get("problem_class")
-        or metadata.get("spatial_problem_class")
-        or ""
-    ).strip()
-    if metadata_class:
-        return metadata_class
-    capability = str(item.get("capability") or "").strip()
-    match = re.search(r"(?:^|,)\s*problem_class=([^,]+)", capability, flags=re.I)
-    if match:
-        return match.group(1).strip()
-    if re.fullmatch(r"[A-Za-z0-9_.-]+", capability):
-        return capability
-    return ""
-
-
-def _omni_task_id(item: dict) -> str:
-    image_index = str(item.get("image_index") or "").strip()
-    question_index = str(item.get("question_index") or "").strip()
-    if not image_index:
-        return ""
-    stem = os.path.splitext(os.path.basename(image_index))[0]
-    return f"{stem}_{question_index}" if question_index else stem
+    safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", stem).strip("._")
+    if not safe_stem:
+        safe_stem = "media"
+    digest = hashlib.sha1(os.path.abspath(file_path).encode("utf-8")).hexdigest()
+    return event_type + "__" + safe_stem + "__" + digest[:8]

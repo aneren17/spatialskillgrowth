@@ -6,8 +6,10 @@ import argparse
 import json
 from pathlib import Path
 
-from nodes.mem.spatialskillgrowth.models import WorkflowSpec
-from nodes.mem.spatialskillgrowth.workflow_executor import WorkflowPythonExporter
+from nodes.mem.spatialskillgrowth.core.models import WorkflowSpec
+from nodes.mem.spatialskillgrowth.runtime.workflow_executor import (
+    WorkflowPythonExporter,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:

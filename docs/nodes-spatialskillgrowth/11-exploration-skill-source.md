@@ -39,9 +39,7 @@ whiteboard 对应目录没有这份脚本。
 
 ```python
 paths = ExperimentPaths(
-    experiment="full",
     run_id="banner-new-explore",
-    benchmark="anomaly_detection",
     problem_classes=["banner"],
 )
 paths.ensure(config, "explore", resume=False)

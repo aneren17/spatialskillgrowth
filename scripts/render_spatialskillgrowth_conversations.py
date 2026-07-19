@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from nodes.mem.spatialskillgrowth.conversation_trace import (
+from nodes.mem.spatialskillgrowth.storage.conversation_trace import (
     write_conversation_trace,
 )
 

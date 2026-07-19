@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-from nodes.mem.spatialskillgrowth.human_skill_validation import (
+from nodes.mem.spatialskillgrowth.skills.human_skill_validation import (
     validate_human_skill,
 )
 
