@@ -64,6 +64,11 @@ class WorkflowMutator:
         derived_from_workflow_id: str = "",
         slot_bindings: Dict[str, str] = None,
     ) -> WorkflowSpec:
+        """
+        [轨迹固化]：将一次纯 ReAct 的自由探索轨迹，抽取成标准的 JSON 工作流。
+        假设大模型为了做题，先后调用了：yoloTool -> 失败报错 -> 重新 yoloTool -> MLLM回答。
+        这个函数会把它清洗成干净的：yoloTool -> MLLM。
+        """
         steps: List[WorkflowStep] = []
         seen_calls = set()
         for item in trajectory or []:
@@ -85,10 +90,14 @@ class WorkflowMutator:
                     args=args,
                     purpose=self._step_purpose(tool_name, problem_class),
                 ))
+        # 2. 压缩与精简：把步骤控制在合理数量内，强制最后一个步骤是 MLLM 或 embeddingTool
         steps = self._compact_steps(steps, problem_class)
         if not steps:
             steps = [self._default_step(problem_class)]
+        # 3. 理顺执行依赖顺序并连线 (非常重要！)
+        # 比如：先跑独立工具 (yolo)，再跑依赖工具 (crop 裁剪需要 yolo 的框)，最后跑总结 (MLLM)
         steps = self._order_and_wire(steps, problem_class)
+        # 4. 封装成完整的 WorkflowSpec 并返回
         applicability = ApplicabilitySpec(
             problem_class=problem_class,
             description=self.class_descriptions.get(
@@ -108,12 +117,16 @@ class WorkflowMutator:
         )
 
     def generalize(self, workflow: WorkflowSpec, question: str = "") -> WorkflowSpec:
+
         generalized = copy.deepcopy(workflow)
         for step in generalized.steps:
             if step.tool_name == "MLLM":
+                # 提取控制大模型认知方式的“配置原子” (比如是看全图，还是看局部)
                 world_atoms = [
                     atom for atom in step.param_atoms if atom.kind == "world_model"
                 ]
+                # 动态生成全新的、不含具体物品名称的通用 Prompt
+                # 例如生成："请根据局部区域的视觉线索，判断是否发生了 {problem_class} 异常。"
                 step.args["query"] = (
                     self._semantic_query_for_atoms(
                         world_atoms, generalized.applicability
@@ -129,6 +142,7 @@ class WorkflowMutator:
                 generalized.applicability.problem_class,
                 "Reusable spatial reasoning route.",
             )
+         # 4. 重新扫描这个工作流到底需要哪些外部变量输入（比如是否需要 $slot.event_type）
         generalized.applicability.required_slots = self._required_slots(generalized.steps)
         return generalized
 
@@ -141,10 +155,15 @@ class WorkflowMutator:
         slot_bindings: Dict[str, str] = None,
         question: str = "",
     ) -> WorkflowSpec:
+        """
+        把参数变异原子 (mutation.selected_atoms) 植入到原有的 JSON 工作流中。
+        """
+        # 1. 先对原工作流做一次泛化清理 (把一些硬编码的东西换成占位符)
         generalized_parent = self.generalize(parent)
         steps = copy.deepcopy(generalized_parent.steps)
         hints = tool_hints or {}
         slots = slot_bindings or {}
+        # 2. 遍历大模型挑选出来的变异原子（比如选了 yolo改低阈值 和 增加裁剪工具）
         for atom in mutation.selected_atoms:
             self._apply_atom(
                 steps,
@@ -194,8 +213,13 @@ class WorkflowMutator:
         tool_hints: Dict[str, str],
         slot_bindings: Dict[str, str],
     ) -> None:
+        """
+        【手术刀核心逻辑】根据原子的类型，决定是修改现有步骤，还是插入新步骤。
+        """
+        # 在现有的步骤里找，看看有没有原子里提到的工具（比如要改 yolo 阈值，先看看当前流里有没有 yolo）
         matching = [step for step in steps if step.tool_name == atom.tool_name]
         if matching:
+            # 路线 A：工作流里已经有这个工具了，直接改参数！
             targets = matching if atom.kind == "numerical" else [matching[-1]]
             for step in targets:
                 if atom.kind == "numerical":
@@ -207,6 +231,8 @@ class WorkflowMutator:
                         applicability,
                     )
             return
+        # 路线 B：工作流里没有这个工具（这是一种 structural 结构突变），需要无中生有插一个新步骤！
+        # 调用 _steps_for_atom 生成一个全新的 WorkflowStep 塞进步骤列表里。
         steps.extend(
             WorkflowMutator._steps_for_atom(
                 atom,
@@ -305,7 +331,7 @@ class WorkflowMutator:
         elif atom.tool_name in {"crop_detections", "picRelativeCut"}:
             args = {
                 "file": "$image",
-                "detections": "",
+                "detections": "",# 注意：这里故意留空！在后面的 _order_and_wire 步骤中，会自动把上游 YOLO 的结果路径注入到这里
                 "folder": "spatialskillgrowth",
                 "score": "0.5",
                 "className": tool_hints.get(atom.tool_name, ""),
@@ -359,15 +385,18 @@ class WorkflowMutator:
             return []
         reasoning_steps = [step for step in steps if step.tool_name == "MLLM"]
         evidence_steps = [step for step in steps if step.tool_name != "MLLM"]
+        # 2. 如果整个过程根本没有用到 MLLM (说明这是一个纯判断任务，比如直接调 embeddingTool 就算出结果了)
         if not reasoning_steps:
             embedding_steps = [
                 step for step in evidence_steps if step.tool_name == "embeddingTool"
             ]
             return embedding_steps[:1] or [WorkflowMutator._default_step(problem_class)]
+        # 3. 如果用到了 MLLM，提取最后一次 MLLM 调用作为“最终判决节点”
         final_step = (
             copy.deepcopy(reasoning_steps[-1])
             if reasoning_steps else WorkflowMutator._default_step(problem_class)
         )
+        # 强制覆盖最后一步的 prompt，要求它给出最终答案 (覆盖掉大模型在探索时可能说的废话)
         final_step.args["query"] = WORKFLOW_FINAL_ANSWER_PROMPT
         final_step.purpose = "汇总已收集的视觉证据并生成最终答案。"
         return evidence_steps[:4] + [final_step]
@@ -377,6 +406,10 @@ class WorkflowMutator:
         steps: List[WorkflowStep],
         problem_class: str,
     ) -> List[WorkflowStep]:
+        """
+        AI 生成的步骤通常是散装的，这里用硬逻辑把它们的顺序排好，并把变量连起来。
+        """
+        # 1. 强行排序：先独立工具 -> 再依赖工具 -> 最后推理模型 (MLLM)
         reasoning = [step for step in steps if step.tool_name == "MLLM"]
         evidence = [step for step in steps if step.tool_name != "MLLM"]
         independent = [step for step in evidence if step.tool_name not in DEPENDENT_TOOLS]
@@ -385,6 +418,7 @@ class WorkflowMutator:
         if reasoning:
             ordered.append(reasoning[-1])
         normalized = normalize_workflow_steps(ordered)
+        # 3. 自动注入上游数据 (Dependency Injection)
         for index, step in enumerate(normalized):
             if step.tool_name not in DEPENDENT_TOOLS:
                 continue
@@ -400,6 +434,8 @@ class WorkflowMutator:
             if not producer:
                 continue
             step.depends_on = [producer.step_id]
+            # 最精妙的一步：把上游工具的结果输出路径，作为魔法变量塞给当前工具！
+            # 比如把 `$step.yolo_1.detections_json` 塞给 crop 工具的 detections 参数。
             reference = f"$step.{producer.step_id}.detections_json"
             if step.tool_name in {"crop_detections", "picRelativeCut"}:
                 step.args["detections"] = reference
@@ -409,6 +445,7 @@ class WorkflowMutator:
                 step.args["code"] = PYTHON_DETECTION_SUMMARY_CODE.replace(
                     "__DETECTIONS__", reference
                 )
+        # 4. 如果最后一步是 MLLM，让它依赖前面所有收集证据的工具
         if normalized and normalized[-1].tool_name == "MLLM":
             final_step = normalized[-1]
             final_step.depends_on = [

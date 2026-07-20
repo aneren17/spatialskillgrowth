@@ -37,7 +37,7 @@
   "is_anomaly": true,
   "answer": "是",
   "threshold": 0.66,
-  "selected_workflow_id": "banner-human-review-v1",
+  "selected_workflow_id": "<实际选中的 workflow_id>",
   "error": ""
 }
 ```
@@ -80,10 +80,57 @@ nodes/mem/spatialskillgrowth/
 
 ## 探索
 
+对 `benchmark/anomaly/skill_datasets/` 下的全部 55 个类别运行探索：
+
+```bash
+python -m agents.spatialskillgrowth.exploration_agent \
+  --dataset-root benchmark/anomaly/skill_datasets \
+  --run-id anomaly_explore_55
+```
+
+默认同时使用以下三个模型服务：
+
+```text
+http://127.0.0.1:8861/v1
+http://127.0.0.1:8862/v1
+http://127.0.0.1:8863/v1
+```
+
+类别按照 `INDEX.json` 中的固定顺序轮询分配。同一个异常类别的全部图片和视频始终由同一个模型处理；
+三个模型并行运行，各模型内部按顺序处理自己的类别。正式运行前可以只检查分配：
+
+```bash
+python -m agents.spatialskillgrowth.exploration_agent \
+  --dataset-root benchmark/anomaly/skill_datasets \
+  --run-id plan_check \
+  --plan-only
+```
+
+只探索部分异常类别：
+
+```bash
+python -m agents.spatialskillgrowth.exploration_agent \
+  --dataset-root benchmark/anomaly/skill_datasets \
+  --event-types banner,fire,fall \
+  --run-id anomaly_explore_subset
+```
+
+如需覆盖模型地址，可以使用逗号分隔的 `--base-urls`。`--base-url` 则会退化为单模型运行：
+
+```bash
+python -m agents.spatialskillgrowth.exploration_agent \
+  --dataset-root benchmark/anomaly/skill_datasets \
+  --base-urls http://127.0.0.1:8861/v1,http://127.0.0.1:8862/v1,http://127.0.0.1:8863/v1 \
+  --run-id anomaly_explore_55
+```
+
+单个数据集仍然兼容：
+
 ```bash
 python -m agents.spatialskillgrowth.exploration_agent \
   --dataset benchmark/anomaly/banner_demo/explore.json \
   --media-root benchmark/anomaly/banner_demo/images \
+  --base-url http://127.0.0.1:8861/v1 \
   --run-id banner_explore_10
 ```
 
@@ -205,6 +252,8 @@ skills/spatialskillgrowth/<event-type>/
 - 自动生成和人工编写的脚本经过同一个执行器与证据验证器。
 
 人工 Skill 说明见 [docs/spatialskillgrowth-skill-authoring.md](docs/spatialskillgrowth-skill-authoring.md)。
+从零编写一条工作流见
+[docs/nodes-spatialskillgrowth/12-manual-workflow-tutorial.md](docs/nodes-spatialskillgrowth/12-manual-workflow-tutorial.md)。
 
 ## 结果目录
 
@@ -238,9 +287,7 @@ python -m scripts.test_spatialskillgrowth_no_api
 ```bash
 python -m scripts.validate_spatialskillgrowth_skill \
   --skill-dir skills/spatialskillgrowth/banner \
-  --script skills/spatialskillgrowth/banner/scripts/banner-human-review-v1.py \
-  --media benchmark/anomaly/banner_demo/images/banner_00_00252ms.jpg \
-  --event-type banner
+  --script skills/spatialskillgrowth/banner/scripts/banner-ocr-example.py
 ```
 
 运行 10 条离线 banner 探索：

@@ -1,30 +1,19 @@
-"""人工 SpatialSkillGrowth Skill 的结构、脚本契约和执行验证。"""
+"""人工 SpatialSkillGrowth Skill 的结构、脚本契约和 mock 执行验证。"""
 
 from __future__ import annotations
 
 import ast
 import inspect
 import json
-import shutil
-import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from agents.spatialskillgrowth.online_data import (
-    build_anomaly_question,
-    detect_media_type,
-)
 from nodes.mem.spatialskillgrowth.core.models import (
     ApplicabilitySpec,
-    TaskRecord,
     WorkflowMetrics,
     WorkflowSpec,
     WorkflowStep,
 )
-from nodes.mem.spatialskillgrowth.pipeline.evidence_validator import (
-    build_evidence_validator,
-)
-from nodes.mem.spatialskillgrowth.pipeline.media_processing import MediaPreprocessor
 from nodes.mem.spatialskillgrowth.runtime.python_skill_runtime import (
     PythonSkillExecutor,
     load_skill_script,
@@ -33,6 +22,7 @@ from nodes.mem.spatialskillgrowth.runtime.tool_runtime import (
     ToolRuntime,
     normalize_workflow_steps,
 )
+from nodes.mem.spatialskillgrowth.runtime.tool_contracts import TOOL_CONTRACTS
 from nodes.mem.spatialskillgrowth.skills.skill_layout import (
     skill_metadata_path,
     standard_skill_name,
@@ -42,20 +32,19 @@ from nodes.mem.spatialskillgrowth.skills.skill_layout import (
 
 REQUIRED_SCRIPT_PARAMETERS = ("runtime", "question", "image_paths")
 ALLOWED_SKILL_ENTRIES = {"SKILL.md", "scripts", "references"}
+MOCK_MEDIA_PATH = "mock-input.mp4"
+MOCK_IMAGE_PATHS = [
+    "mock-frame-001.jpg",
+    "mock-frame-002.jpg",
+]
 
 
 def validate_human_skill(
     skill_dir: Path,
     script_path: Path,
-    media_path: Path,
-    event_type: str,
-    real_tools: bool = False,
-    install: bool = False,
-    force: bool = False,
 ) -> Dict[str, Any]:
     skill_dir = Path(skill_dir).resolve()
     script_path = Path(script_path).resolve()
-    media_path = Path(media_path).resolve()
     errors = []
     checks = {}
     frontmatter = _validate_skill_directory(skill_dir, errors)
@@ -82,43 +71,26 @@ def validate_human_skill(
         )
     checks["script_contract"] = workflow is not None and not errors
     execution = {}
-    evidence = {}
     if workflow is not None and not errors:
-        if not media_path.is_file():
-            errors.append(f"验证媒体不存在：{media_path}")
-        else:
-            execution, evidence = _execute_validation(
-                workflow,
-                script_path,
-                media_path,
-                event_type,
-                declared_tools,
-                real_tools,
+        execution = _execute_mock_validation(
+            workflow,
+            script_path,
+            declared_tools,
+        )
+        if not execution.get("success"):
+            errors.append(
+                "mock 执行失败："
+                + str(execution.get("error") or "没有产生最终答案")
             )
-            if not execution.get("success"):
-                errors.append(
-                    "脚本执行失败："
-                    + str(execution.get("error") or "没有产生最终答案")
-                )
-            if not evidence.get("accepted"):
-                errors.append(
-                    "证据验收失败："
-                    + str(evidence.get("reason") or "未知原因")
-                )
-    checks["execution"] = bool(execution.get("success"))
-    checks["evidence_contract"] = bool(evidence.get("accepted"))
-    installed = False
-    if install and workflow is not None and not errors:
-        try:
-            _install_human_script(
-                skill_dir,
-                script_path,
-                workflow,
-                force,
+        elif execution.get("final_answer") not in {"是", "否"}:
+            errors.append(
+                "mock 执行必须返回“是”或“否”，实际返回："
+                + repr(execution.get("final_answer"))
             )
-            installed = True
-        except Exception as exc:
-            errors.append(f"安装失败：{type(exc).__name__}: {exc}")
+    checks["mock_execution"] = (
+        bool(execution.get("success"))
+        and execution.get("final_answer") in {"是", "否"}
+    )
     return {
         "valid": not errors,
         "skill_dir": str(skill_dir),
@@ -130,8 +102,6 @@ def validate_human_skill(
         "declared_tools": list(declared_tools),
         "checks": checks,
         "execution": execution,
-        "evidence": evidence,
-        "installed": installed,
         "errors": errors,
     }
 
@@ -235,6 +205,12 @@ def _validate_script_contract(
         errors.append("PROBLEM_CLASS 与 Skill 目录不匹配。")
     if not declared_tools:
         errors.append("脚本必须声明非空 DECLARED_TOOLS。")
+    unknown_tools = sorted(set(declared_tools).difference(TOOL_CONTRACTS))
+    if unknown_tools:
+        errors.append(
+            "DECLARED_TOOLS 包含未注册工具："
+            + "、".join(unknown_tools)
+        )
     solve = namespace.get("solve")
     if not callable(solve):
         errors.append("脚本必须定义 solve(runtime, question, image_paths, ...) 函数。")
@@ -244,32 +220,16 @@ def _validate_script_contract(
             errors.append(
                 "solve 的前三个参数必须依次为 runtime、question、image_paths。"
             )
-    workflow_path = (
-        workflow_reference_directory(skill_dir) / f"{workflow_id}.json"
-    )
     contract = namespace.get("WORKFLOW_CONTRACT")
     workflow = None
-    if workflow_path.is_file():
-        workflow = WorkflowSpec.from_dict(
-            json.loads(workflow_path.read_text(encoding="utf-8"))
-        )
-        if isinstance(contract, dict):
-            embedded_workflow = _workflow_from_contract(contract)
-            if _stable_contract(embedded_workflow) != _stable_contract(workflow):
-                errors.append(
-                    "脚本 WORKFLOW_CONTRACT 与 references/workflows 中的契约不一致。"
-                )
-    elif isinstance(contract, dict):
+    if isinstance(contract, dict):
         workflow = _workflow_from_contract(contract)
     else:
-        errors.append(
-            "新人工脚本必须声明 WORKFLOW_CONTRACT；已有脚本也可使用"
-            " references/workflows/<WORKFLOW_ID>.json。"
-        )
+        errors.append("人工脚本必须声明 WORKFLOW_CONTRACT。")
     if workflow is None:
         return None, declared_tools
     if workflow.workflow_id != workflow_id:
-        errors.append("WORKFLOW_CONTRACT/reference 中的 workflow_id 不一致。")
+        errors.append("WORKFLOW_CONTRACT 中的 workflow_id 与 WORKFLOW_ID 不一致。")
     if workflow.applicability.problem_class != problem_class:
         errors.append("工作流契约中的 problem_class 与 PROBLEM_CLASS 不一致。")
     graph_tools = tuple(dict.fromkeys(
@@ -337,20 +297,6 @@ def _workflow_from_contract(contract: Dict[str, Any]) -> WorkflowSpec:
     )
 
 
-def _stable_contract(workflow: WorkflowSpec) -> Dict[str, Any]:
-    return {
-        "workflow_id": workflow.workflow_id,
-        "name": workflow.name,
-        "problem_class": workflow.applicability.problem_class,
-        "required_slots": list(workflow.applicability.required_slots),
-        "required_tools": list(workflow.applicability.required_tools),
-        "description": workflow.applicability.description,
-        "exclusions": workflow.applicability.exclusions,
-        "capability_boundary": workflow.applicability.capability_boundary,
-        "steps": [step.to_dict() for step in workflow.steps],
-    }
-
-
 def _runtime_calls(script_path: Path) -> List[Tuple[str, str]]:
     tree = ast.parse(
         script_path.read_text(encoding="utf-8"),
@@ -378,50 +324,27 @@ def _runtime_calls(script_path: Path) -> List[Tuple[str, str]]:
     return calls
 
 
-def _execute_validation(
+def _execute_mock_validation(
     workflow: WorkflowSpec,
     script_path: Path,
-    media_path: Path,
-    event_type: str,
     declared_tools: Tuple[str, ...],
-    real_tools: bool,
-) -> tuple[Dict[str, Any], Dict[str, Any]]:
-    media_type = detect_media_type(str(media_path))
-    task = TaskRecord(
-        task_id="human_skill_validation",
-        question=build_anomaly_question(event_type, media_type),
-        media_path=str(media_path),
-        event_type=event_type,
-        groundtruth="是",
-        media_type=media_type,
+) -> Dict[str, Any]:
+    runtime = ToolRuntime(
+        _mock_registry(declared_tools, MOCK_IMAGE_PATHS[0])
     )
-    with tempfile.TemporaryDirectory() as root:
-        task = MediaPreprocessor(Path(root)).prepare(task)
-        visual_paths = task.visual_paths
-        representative_image = (
-            visual_paths[len(visual_paths) // 2]
-            if visual_paths else task.media_path
-        )
-        runtime = ToolRuntime() if real_tools else ToolRuntime(
-            _mock_registry(declared_tools, representative_image)
-        )
-        result = PythonSkillExecutor(runtime).execute(
-            script_path,
-            workflow,
-            task.question,
-            visual_paths,
-            {"event_type": event_type},
-            media_path=task.media_path,
-        )
-    answer = str(result.get("final_answer") or "")
-    decision = build_evidence_validator().validate(
-        workflow.applicability.problem_class,
-        task.question,
-        answer,
-        result,
-        [task.media_path],
+    question = (
+        "请判断输入视频中是否发生异常事件："
+        + workflow.applicability.problem_class
+        + "。最终回答“是”或“否”。"
     )
-    return result, decision.to_dict()
+    return PythonSkillExecutor(runtime).execute(
+        script_path,
+        workflow,
+        question,
+        MOCK_IMAGE_PATHS,
+        {"event_type": workflow.applicability.problem_class},
+        media_path=MOCK_MEDIA_PATH,
+    )
 
 
 class _MockTool:
@@ -442,7 +365,7 @@ def _mock_registry(
         "file": image_path,
         "detections": [{
             "class_name": "banner",
-            "bbox": [1, 1, 10, 10],
+            "bbox": [0.1, 0.1, 0.9, 0.9],
             "score": 0.9,
         }],
     }, ensure_ascii=False)
@@ -456,7 +379,8 @@ def _mock_registry(
         "paddleHeadDetTool": detections,
         "paddlePedriderDetTool": detections,
         "crop_detections": json.dumps({
-            "status": "success", "file": image_path
+            "status": "success",
+            "files": [image_path, "mock-crop-002.jpg"],
         }, ensure_ascii=False),
         "picRelativeCut": json.dumps({
             "status": "success", "file": image_path
@@ -468,62 +392,3 @@ def _mock_registry(
         name: _MockTool(name, outputs.get(name, "是"))
         for name in declared_tools
     }
-
-
-def _install_human_script(
-    skill_dir: Path,
-    script_path: Path,
-    workflow: WorkflowSpec,
-    force: bool,
-) -> None:
-    target_script = skill_dir / "scripts" / f"{workflow.workflow_id}.py"
-    target_workflow = (
-        workflow_reference_directory(skill_dir)
-        / f"{workflow.workflow_id}.json"
-    )
-    if target_script.exists() and target_script.resolve() != script_path:
-        if not force:
-            raise FileExistsError(
-                f"目标脚本已存在：{target_script}；如需覆盖请使用 --force。"
-            )
-    target_script.parent.mkdir(parents=True, exist_ok=True)
-    target_workflow.parent.mkdir(parents=True, exist_ok=True)
-    if target_script.resolve() != script_path:
-        shutil.copy2(script_path, target_script)
-    target_workflow.write_text(
-        json.dumps(workflow.to_dict(), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    metadata_path = skill_metadata_path(skill_dir)
-    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    workflows = [
-        item for item in metadata.get("workflows", [])
-        if item.get("workflow_id") != workflow.workflow_id
-    ]
-    workflows.append({
-        "workflow_id": workflow.workflow_id,
-        "name": workflow.name,
-        "path": f"references/workflows/{workflow.workflow_id}.json",
-        "script": f"scripts/{workflow.workflow_id}.py",
-        "authorship": "human",
-    })
-    metadata.update({
-        "workflow_count": len(workflows),
-        "workflows": sorted(workflows, key=lambda item: item["workflow_id"]),
-    })
-    metadata_path.write_text(
-        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    index_path = skill_dir.parent / "SKILLS.json"
-    if index_path.exists():
-        skills = [
-            json.loads(path.read_text(encoding="utf-8"))
-            for path in sorted(
-                skill_dir.parent.glob("*/references/skill.json")
-            )
-        ]
-        index_path.write_text(
-            json.dumps({"skills": skills}, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )

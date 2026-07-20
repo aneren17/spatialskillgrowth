@@ -1,14 +1,22 @@
 # SpatialSkillGrowth 人工可编辑 Skill
 
-本目录是人工 Skill 的唯一维护位置。实习生可以修改各类别目录中的 `SKILL.md` 和
-`scripts/<WORKFLOW_ID>.py`，但不应直接维护机器生成的索引。
+人工只需要：
 
-工作流程：
+1. 修改类别目录中的 `SKILL.md`；
+2. 编写 `scripts/<WORKFLOW_ID>.py`；
+3. 运行确定性 mock 验证。
 
-1. 阅读 `docs/spatialskillgrowth-skill-authoring.md`；
-2. 修改当前类别的 `SKILL.md` 和脚本；
-3. 运行 `python -m scripts.validate_spatialskillgrowth_skill`；
-4. 验证通过后使用 `--install` 更新 `references/workflows` 和 `references/skill.json`。
+```bash
+python -m scripts.validate_spatialskillgrowth_skill \
+  --skill-dir skills/spatialskillgrowth/banner \
+  --script skills/spatialskillgrowth/banner/scripts/banner-ocr-example.py
+```
 
-不要把人工修改写到相邻的 `skills/spatialskillgrowth_whiteboard/`。whiteboard 是可重复生成的只读模板，
-运行构建命令时会被整体重置。
+验证器不会调用真实工具、生成 `references/workflows`、修改 `references/skill.json`、更新 `SKILLS.json`
+或复制脚本。mock 通过后，由负责人手动复制需要永久保存的文件。
+
+正式运行复制 Skill 后，Retriever 会读取 `SKILL.md` 选择 Top-K 工作流。Repository 会自动更新其中
+`SPATIALSKILLGROWTH_WORKFLOWS_START/END` 标记包围的工作流目录，标记外的人工说明保持不变。
+
+相邻的 `skills/spatialskillgrowth_whiteboard/` 是可重复生成的标准模板。验证器不会修改它；手动复制到该
+目录的文件会在下一次强制重建 whiteboard 时被覆盖。

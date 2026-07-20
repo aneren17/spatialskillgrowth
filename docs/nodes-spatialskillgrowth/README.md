@@ -14,7 +14,11 @@
 8. [08-symbol-index.md](08-symbol-index.md)：当前文件和主要公开符号索引；
 9. [09-tool-cookbook.md](09-tool-cookbook.md)：全部运行时工具示例；
 10. [10-runtime-and-contract-tutorial.md](10-runtime-and-contract-tutorial.md)：人工脚本运行时；
-11. [11-exploration-skill-source.md](11-exploration-skill-source.md)：模板、人工 Skill 与 run 快照。
+11. [11-exploration-skill-source.md](11-exploration-skill-source.md)：模板、人工 Skill 与 run 快照；
+12. [12-manual-workflow-tutorial.md](12-manual-workflow-tutorial.md)：从设计、编码到安装一条人工 Workflow。
+
+跨模块的写死数值和限制审计见
+[../hardcoded-numeric-constraints-audit.md](../hardcoded-numeric-constraints-audit.md)。
 
 主链路只有：
 

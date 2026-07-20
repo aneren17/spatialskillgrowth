@@ -32,16 +32,8 @@
         "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
         "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
       ],
-      "workflow_count": 1,
-      "workflows": [
-        {
-          "workflow_id": "banner-human-review-v1",
-          "name": "banner_human_review",
-          "path": "references/workflows/banner-human-review-v1.json",
-          "script": "scripts/banner-human-review-v1.py",
-          "authorship": "human"
-        }
-      ]
+      "workflow_count": 0,
+      "workflows": []
     },
     {
       "name": "billboard-fell",

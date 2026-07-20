@@ -13,6 +13,8 @@ from nodes.mem.spatialskillgrowth.core.anomaly_events import (
     ANOMALY_EVENT_TYPES,
 )
 from nodes.mem.spatialskillgrowth.skills.skill_layout import (
+    WORKFLOW_CATALOG_END,
+    WORKFLOW_CATALOG_START,
     skill_metadata_path,
     standard_skill_name,
     workflow_reference_directory,
@@ -27,7 +29,7 @@ WHITEBOARD_README = """# SpatialSkillGrowth 标准模板
 事件类别的标准 Skill 结构、元数据和空工作流目录。请勿在这里编写或保存人工脚本。
 
 人工维护位置是 `skills/spatialskillgrowth/`。实习生应在那里修改 `SKILL.md` 和 `scripts/*.py`，再运行
-项目提供的验证器生成 `references/workflows/*.json`。
+项目提供的确定性 mock 验证器。验证器不会修改 whiteboard 或生成 `references/workflows/*.json`。
 """
 
 
@@ -94,21 +96,10 @@ def _skill_metadata(
 
 
 def _skill_markdown(problem_class: str, metadata: Dict[str, Any]) -> str:
-    description = metadata["description"]
-    source_titles = {
-        "dashboard": "大屏端",
-        "rag": "RAG 检索/检测端",
-        "stream": "实时视频流检测页",
-    }
-    display_name_rows = "\n".join(
-        f"| {source_titles.get(source, source)} | {label} |"
-        for source, label in metadata["display_names"].items()
-    )
-    evidence_rows = "\n".join(
-        f"- {requirement}" for requirement in metadata["evidence_requirements"]
-    )
-    tool_template = json.dumps(
-        metadata["tool_template"], ensure_ascii=False, indent=2
+    description = (
+        "检测输入视频或图像中是否发生“"
+        + metadata["title"]
+        + "”异常事件。"
     )
     return (
         "---\n"
@@ -116,30 +107,21 @@ def _skill_markdown(problem_class: str, metadata: Dict[str, Any]) -> str:
         f"description: {json.dumps(description, ensure_ascii=False)}\n"
         "---\n\n"
         f"# {metadata['title']}\n\n"
-        "## 用途\n\n"
+        "## Skill 作用\n\n"
         f"{description}\n\n"
-        "## 事件接口\n\n"
-        f"- 精确 `event_type`：`{problem_class}`\n"
-        f"- 主检测工具：`{metadata['primary_tool']}`\n"
-        f"- 答案类型：`{metadata['answer_type']}`，输出“是”或“否”\n"
-        "- 结构化结果：必须包含 `is_anomaly` 和 `threshold`\n\n"
-        "## 各端显示名称\n\n"
-        "| 来源 | 中文显示名称 |\n"
-        "|---|---|\n"
-        f"{display_name_rows}\n\n"
-        "## 工具调用模板\n\n"
-        "```json\n"
-        f"{tool_template}\n"
-        "```\n\n"
-        "## 证据要求\n\n"
-        f"{evidence_rows}\n\n"
+        "## 工作流选择\n\n"
+        "- 先检查候选工作流的适用范围、排除条件和能力边界。\n"
+        "- 再结合当前视频或图像证据，判断其工具链是否适合当前输入。\n"
+        "- 历史准确率、证据通过率和调用成本只用于适用性相近时的排序。\n"
+        "- 不要仅根据工作流名称、ID 或工具数量选择工作流。\n\n"
+        f"{WORKFLOW_CATALOG_START}\n"
+        "## 可选工作流\n\n"
+        "当前没有可检索工作流。\n"
+        f"{WORKFLOW_CATALOG_END}\n\n"
         "## 资源\n\n"
-        "- 本 whiteboard 的 `scripts/` 只是空模板，不在这里编写人工脚本。\n"
-        "- `references/skill.json` 保存机器可读的 Skill 索引。\n"
-        "- 本 whiteboard 的 `references/workflows/` 保持为空。\n"
-        "- 人工工作请复制到 `skills/spatialskillgrowth/` 并阅读项目级编写说明。\n\n"
-        "## 已验证工作流\n\n"
-        "当前运行尚无通过验证的工作流。\n"
+        "- `references/workflows/*.json`：工作流详细机器契约。\n"
+        "- `scripts/*.py`：工作流执行脚本。\n"
+        "- `references/skill.json`：Skill 和工作流索引。\n"
     )
 
 

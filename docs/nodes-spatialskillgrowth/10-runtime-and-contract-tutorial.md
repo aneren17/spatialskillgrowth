@@ -48,7 +48,7 @@ solve(
 | 内部属性 | banner 图片例子 | 用途 |
 |---|---|---|
 | `_tool_runtime` | 含 12 个工具的 `ToolRuntime` | 真正执行 `tool.invoke` 并统一返回格式 |
-| `_workflow` | `banner-human-review-v1` 的 WorkflowSpec | 决定允许调用哪些工具、最终记录哪个 workflow ID |
+| `_workflow` | `banner-ocr-example` 的 WorkflowSpec | 决定允许调用哪些工具、最终记录哪个 workflow ID |
 | `_question` | “请检测……banner……” | `render("$question")` 和 MLLM query 的来源 |
 | `_image_paths` | `[".../banner.jpg"]` | 图片输入；视频时是按时间排序的抽样帧列表 |
 | `_media_path` | `.../banner.jpg` 或原始 `.mp4` | embedding 专用原媒体通道 |
@@ -106,8 +106,16 @@ result = runtime.call(
 runtime.require(embedding, "embedding")
 ```
 
-若 `result["ok"]` 为 false，立即抛 `SkillStepExecutionError`，当前 Workflow 失败。适合主判断或后续必须
-依赖的检测框。不适合可有可无的 OCR/MLLM。
+它不是“把工具声明为 required”，也不是“验证答案正确”。它只读取 `result["ok"]`：
+
+| `result["ok"]` | 行为 |
+|---|---|
+| `True` | 不返回新值，继续执行下一行 |
+| `False` | 抛出 `SkillStepExecutionError`，当前 Workflow 立即失败 |
+
+它不会重试、不会检查 threshold、不会检查检测框语义，也不会自动执行 fallback。适合主判断或后续必须
+依赖的检测框。不适合可有可无的 OCR/MLLM。`required_tools` 是执行前的工具白名单，
+`runtime.require` 是执行中的失败处理，两者没有替代关系。
 
 ### `runtime.value(result, field, default="")`
 
@@ -159,7 +167,18 @@ ocr [success]:
 ### `runtime.evidence_image()`
 
 从最近工具结果倒序找 `data.image`，优先返回裁剪图、相对裁剪图、SAM 掩码图或检测结果图；都没有时
-返回当前代表帧。
+返回当前代表帧。它的返回类型始终是一个字符串，即一张图片，不是图片列表。
+
+如果一个工具返回多张图，统一结果保存在 `data.image_refs`：
+
+```python
+crop_images = runtime.value(crop, "image_refs", [])
+selected = crop_images[0] if crop_images else runtime.evidence_image()
+```
+
+当前 `MLLM(file=...)` 只接受一张图片，因此不能把 `crop_images` 直接传给 `file`。视频抽样帧也无需手工
+塞给 `evidence_image`：支持逐帧的图片工具会由 Runtime 自动扩散执行并选择一张代表证据图。若业务确实
+要求逐张调用 MLLM，需要在 contract 中预先声明多个固定 MLLM step，不能运行时临时造新的 `step_id`。
 
 ### `runtime.render(value)`
 
@@ -197,6 +216,17 @@ return runtime.finish({"answer": "是"})         # "是"
 它只提取答案，不会自动补 threshold。threshold 保留在 observations，最后由
 `extract_anomaly_result` 加入执行结果。
 
+`finish` 也不会：
+
+- 检查前面工具是否成功；
+- 调用证据验证器；
+- 调用 LLM；
+- 保存 Workflow；
+- 自动选择“最可信”的工具结果。
+
+所以调用者必须明确传入真正产生异常结论的结果。通常应写 `runtime.finish(embedding)`，不能把 OCR
+文本、检测框 JSON 或裁剪图片地址传进去。人工 mock 验证还会检查最终结果必须恰好是“是”或“否”。
+
 ### `runtime.result(...)`
 
 这是 Executor 内部在 solve 结束后调用的方法，实习生通常不直接调用。它生成：
@@ -212,7 +242,7 @@ return runtime.finish({"answer": "是"})         # "是"
   "error": "",
   "script_path": ".../script.py",
   "script_traceback": "",
-  "workflow_id": "banner-human-review-v1",
+  "workflow_id": "banner-ocr-example",
   "execution_backend": "python_skill",
   "event_type": "banner",
   "is_anomaly": true,
@@ -223,7 +253,7 @@ return runtime.finish({"answer": "是"})         # "是"
 ## 4. 脚本顶部四个常量
 
 ```python
-WORKFLOW_ID = "banner-human-review-v1"
+WORKFLOW_ID = "banner-ocr-example"
 PROBLEM_CLASS = "banner"
 DECLARED_TOOLS = ("embeddingTool", "paddleOcrTool", "MLLM")
 WORKFLOW_CONTRACT = {...}
@@ -304,14 +334,28 @@ def solve(runtime, question, image_paths, *, event_type=""):
 
 ### `capability_boundary`
 
-回答“这条路线成功依赖什么，失败时如何降级”。例如：
+它回答的不是抽象的“模型能力”，而是这条 Workflow 的运行边界。至少写清：
+
+1. 哪一步必须成功；
+2. 该步骤必须返回什么；
+3. 哪些辅助步骤允许失败；
+4. 失败后是终止、跳过还是返回主判断。
+
+例如：
 
 ```text
 embedding 必须成功并返回阈值；OCR 和 MLLM 失败时可降级，不能反转 embedding 结论。
 ```
 
-这三个自然语言字段会被主线多模态 Retriever 使用；不要只写“用于 banner”，否则多条 banner 路线之间
-无法区分。
+crop 路线应写得更具体：
+
+```text
+embedding 必须成功；GroundingDINO 必须返回非空检测框后才能调用 crop。
+没有框、裁剪失败或 MLLM 失败时停止辅助链，最终返回 embedding 的判断。
+```
+
+这三个自然语言字段会被主线多模态 Retriever 使用；不要只写“用于 banner”“能力有限”，否则多条
+banner 路线之间无法区分。
 
 ### `steps`
 
@@ -424,6 +468,6 @@ MLLM 使用，但异常结论仍来自 embedding。
 | solve 调一个新工具，不改 contract 也可以 | 不可以，Runtime 和验证器会拒绝 |
 | `depends_on` 会自动跳过失败步骤 | Python 脚本不会；要用 require 或 if |
 | `runtime.image_path()` 对视频返回视频 | 不会，返回代表帧；视频用 media_path |
-| OCR/MLLM 可以替代 embedding 阈值 | 不可以，异常 evidence contract 会拒绝 |
+| `runtime.require` 等于 contract 的 `required_tools` | 不等于；前者处理一次调用失败，后者定义工具白名单 |
+| `runtime.finish` 会执行证据验收 | 不会；它只从指定值提取一个短答案 |
 | description 越长越好 | 不对，应明确适用条件和证据差异，避免样本细节 |
-| `runtime.finish` 会执行证据验收 | 不会；它只抽答案，证据验收在脚本结束后发生 |

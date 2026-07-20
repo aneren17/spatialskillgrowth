@@ -476,9 +476,13 @@ class ExplorationPipeline:
         report = {"attempted": 0, "promoted": [], "archived": [], "skipped": []}
         if not self.config.provisional_validation:
             return report
+        task_problem_classes = set()
+        for task in tasks:
+            task_problem_classes.add(task.event_type)
         eligible_candidates = [
             workflow for workflow in self.repository.list_provisional()
             if workflow.metrics.correct_count > 0
+            and workflow.applicability.problem_class in task_problem_classes
         ]
         candidates = []
         for problem_class in sorted({
@@ -762,6 +766,7 @@ class ExperimentFactory:
         self.planner = TaskPlanner()
         self.retriever = build_retriever(
             self.retrieval_repository,
+            llm,
             config.workflow_top_k,
         )
         self.workflow_executor = WorkflowExecutor(

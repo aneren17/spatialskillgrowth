@@ -41,6 +41,9 @@ Runtime 返回的不是 OCR 原始字符串，而是统一字典：
 
 读取字段时优先使用 `runtime.value(result, "字段", 默认值)`，不要自己猜字段位于顶层还是 `data`。
 
+`runtime.call` 只负责“调用并记录”。`depends_on` 只写入轨迹，不会自动判断前一步是否成功；需要停止时
+显式调用 `runtime.require`，允许降级时使用 `if result.get("ok")`。
+
 ## 1. `embeddingTool`：异常检测主判断
 
 用途：输入一张图片或一段视频，以及已经确定的精确 `event_type`，返回“是/否”和判定阈值。
@@ -76,8 +79,9 @@ is_anomaly = runtime.value(embedding, "is_anomaly")  # True
 threshold = runtime.value(embedding, "threshold")    # 0.66
 ```
 
-异常检测的最终答案必须以它为准。OCR、MLLM、检测框只能补充证据，不能在 embedding 判断“否”时擅自返回
-“是”。视频任务中它自动使用 `runtime.media_path()` 的原视频，不会被抽样帧替换。
+普通离线证据门要求最终答案与它一致。OCR、MLLM、检测框默认只补充证据。FastAPI 接入层另有明确的业务
+覆盖：成功的非 embedding 工具链判断异常时可返回 `is_anomaly=1, threshold=1.0`；该规则不改变离线
+evidence contract。视频任务中 embedding 自动使用 `runtime.media_path()` 的原视频，不会被抽样帧替换。
 
 ## 2. `MLLM`：对图像和已有证据做自然语言判断
 
@@ -91,11 +95,12 @@ threshold = runtime.value(embedding, "threshold")    # 0.66
 | `tool` | `qwen36Tool` | 当前多模态模型标识 |
 
 ```python
+evidence_image = runtime.evidence_image()
 review = runtime.call(
     "MLLM",
     {
-        "file": runtime.evidence_image(),
-        "filename": runtime.filename(),
+        "file": evidence_image,
+        "filename": runtime.filename(evidence_image),
         "query": "请结合已有定位和文字证据检查画面，但不要替代 embedding 结论。\n"
                  + runtime.evidence_text(),
         "tool": "qwen36Tool",
@@ -108,6 +113,10 @@ review = runtime.call(
 
 `content` 是模型文本。异常 Skill 通常不对 MLLM 使用 `runtime.require`，这样模型服务失败时仍能返回
 embedding 主结论。
+
+当前 MLLM 一次只接收一张图。`runtime.evidence_image()` 也只返回一张；如果 crop 返回多张图，使用
+`runtime.value(crop, "image_refs", [])` 取得列表，再按规则选择一张。视频抽样帧由 Runtime 自动分发给
+支持逐帧的图片工具，不要把图片列表直接传给 MLLM 的 `file`。
 
 ## 3. `paddleOcrTool`：读取图片文字
 
@@ -203,12 +212,8 @@ heads = runtime.call(
 )
 ```
 
-它是闭集工具，只能找人头。Planner 默认排除它，只有任务明确允许该闭集检测器时才应加入 Workflow。
-不要用它找车辆、文字或动物。
-
-当前主线 `TaskPlanner` 尚未按异常类别传入闭集允许列表，因此默认探索/推理会把它排除。下面代码说明
-工具本身的调用方法，但实习生现在不要把它写进正式 Workflow，否则 Retriever 的工具硬过滤会拒绝该
-路线。若以后为“未戴安全帽”等类别配置显式允许表，脚本调用格式不需要改变。
+它是闭集工具，只能找人头，不要用它找车辆、文字或动物。当前 `TaskPlanner` 没有默认排除该工具，但
+只有事件逻辑确实需要人头定位时才应加入 Workflow；注册可用不代表它适合所有异常类别。
 
 ## 7. `paddlePedriderDetTool`：行人、骑行者和车辆
 
@@ -228,8 +233,8 @@ traffic_subjects = runtime.call(
 
 适合非机动车逆行、车辆违停、交通事故等辅助定位。它同样是闭集工具，不能检测横幅、井盖或火焰。
 
-它当前也受上述闭集策略限制：工具已注册、验证器能执行，但主线 Planner 默认不会把它放入
-`selected_tools`。这属于当前框架限制，不应把“注册了”误解成“所有任务都可检索使用”。
+当前 `TaskPlanner` 没有默认排除该工具。是否加入 Workflow 仍应由异常事件的证据需求决定，不应仅因为
+工具已经注册就调用。
 
 ## 8. `sam3`：短英文提示分割和边界框
 
@@ -368,7 +373,7 @@ embeddingTool（原媒体，主结论）
 最终返回 embeddingTool
 ```
 
-这正是 `skills/spatialskillgrowth/banner/scripts/banner-human-review-v1.py` 的路线。
+这正是 `skills/spatialskillgrowth/banner/scripts/banner-ocr-example.py` 的路线。
 
 ## 常用组合 2：Embedding + GroundingDINO + Crop + OCR
 
@@ -495,5 +500,5 @@ embeddingTool 始终提供异常最终结论
 | OCR/MLLM 只是锦上添花 | 不 require，失败时降级返回 embedding |
 | 检测器在当前事件经常找不到目标 | 用 `if result.get("ok")` 分支，不要强制终止 |
 
-工具“调用成功”不等于“答案正确”。必须同时查看 evidence contract、ground truth 验证历史和
-conversation.md 中的具体参数与输出。
+工具“调用成功”不等于“真实检测正确”。人工验证器只用 mock 检查这些调用能否连通，不会调用真实服务、
+读取 ground truth 或评估效果。

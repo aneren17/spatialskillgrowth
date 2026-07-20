@@ -26,6 +26,7 @@ class StructuralCompatibilityChecker:
         ).hexdigest()
 
     def compatible(self, left: WorkflowSpec, right: WorkflowSpec) -> bool:
+        # 如果连解决的问题类型都不一样（一个测摔倒，一个测失火），直接判定为不像
         if left.applicability.problem_class != right.applicability.problem_class:
             return False
         return (
@@ -79,6 +80,8 @@ class ApplicabilityCompatibilityJudge:
         self.llm = llm
 
     def judge(self, left: WorkflowSpec, right: WorkflowSpec) -> Dict:
+        # 把两个技能的“适用范围描述”发给 LLM，问它：
+        # “这两个技能能合并成一个更通用的技能吗？如果能，帮我重写一份通用的适用范围描述。”
         prompt = APPLICABILITY_COMPATIBILITY_PROMPT.format(
             left=json.dumps(_semantic_payload(left), ensure_ascii=False),
             right=json.dumps(_semantic_payload(right), ensure_ascii=False),
@@ -108,6 +111,8 @@ class ParetoWorkflowPruner:
     def select_archive(self, workflows: List[WorkflowSpec]) -> List[WorkflowSpec]:
         if len(workflows) <= self.cap_per_class:
             return []
+        # 什么是被支配 (dominated)？
+        # 如果技能 A 的准确率比 B 高，证据率比 B 高，成本比 B 低，覆盖率比 B 大。
         dominated = [
             workflow for workflow in workflows
             if any(
@@ -143,9 +148,14 @@ class WorkflowConsolidator:
         self.semantic_consolidation = semantic_consolidation
 
     def consolidate(self, workflow: WorkflowSpec, task_id: str) -> Dict:
+        """
+        一个新技能(workflow)要转正了！
+        """
         if workflow.metrics.correct_count < 1:
             raise ValueError("Only a correct validated workflow can be activated")
+        # 1. 找同类：拉出当前库里所有的正式老技能
         active = self.repository.list_active(workflow.applicability.problem_class)
+        # 2. 查结构：让“结构查重员”找出所有骨架一样的老技能
         compatible = [
             item for item in active
             if item.workflow_id != workflow.workflow_id
@@ -154,6 +164,7 @@ class WorkflowConsolidator:
         comparisons = []
         representative = workflow
         merged_with = ""
+        # 3. 查语义并合并
         if self.semantic_consolidation:
             for existing in compatible:
                 decision = self.semantic_judge.judge(representative, existing)
@@ -164,8 +175,12 @@ class WorkflowConsolidator:
                 })
                 if decision["action"] != "merge":
                     continue
+                # 如果能合并，执行真正的合并逻辑！
+                # _merge 会比较两者的 KPI，保留成绩好的那个作为代表(representative)，把被合并的变成历史归档(archived)。
+                # 同时，把两个技能的历史战绩加在一起！
                 representative, archived = self._merge(representative, existing, decision)
                 merged_with = archived.workflow_id
+
                 self.repository.archive(archived, "semantic_merge")
                 self.store.record_workflow_event(
                     archived.workflow_id,
@@ -183,6 +198,7 @@ class WorkflowConsolidator:
             {"merged_with": merged_with, "comparisons": comparisons},
         )
         archived_by_cap = []
+        # 5. 容量裁剪：库里加入新代表后，让帕累托专员看看是不是超载了，超载了就杀掉弱
         refreshed = self.repository.list_active(workflow.applicability.problem_class)
         for item in self.pruner.select_archive(refreshed):
             self.repository.archive(item, "pareto_soft_cap")

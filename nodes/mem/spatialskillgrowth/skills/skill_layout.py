@@ -10,6 +10,8 @@ REFERENCES_DIR_NAME = "references"
 SCRIPTS_DIR_NAME = "scripts"
 SKILL_METADATA_FILE = "skill.json"
 WORKFLOWS_DIR_NAME = "workflows"
+WORKFLOW_CATALOG_START = "<!-- SPATIALSKILLGROWTH_WORKFLOWS_START -->"
+WORKFLOW_CATALOG_END = "<!-- SPATIALSKILLGROWTH_WORKFLOWS_END -->"
 
 
 def standard_skill_name(problem_class: str) -> str:

@@ -1,54 +1,29 @@
 ---
 name: building-collapse
-description: "检测输入视频或图像中是否发生“建筑坍塌”异常事件（相关显示名称：建筑坍塌、建筑倒塌）；调用异常检测工具时，必须使用精确类别 ID `building_collapse`。"
+description: "检测输入视频或图像中是否发生“建筑坍塌”异常事件。"
 ---
 
 # 建筑坍塌
 
-## 用途
+## Skill 作用
 
-检测输入视频或图像中是否发生“建筑坍塌”异常事件（相关显示名称：建筑坍塌、建筑倒塌）；调用异常检测工具时，必须使用精确类别 ID `building_collapse`。
+检测输入视频或图像中是否发生“建筑坍塌”异常事件。
 
-## 事件接口
+## 工作流选择
 
-- 精确 `event_type`：`building_collapse`
-- 主检测工具：`embeddingTool`
-- 答案类型：`bool`，输出“是”或“否”
-- 结构化结果：必须包含 `is_anomaly` 和 `threshold`
+- 先检查候选工作流的适用范围、排除条件和能力边界。
+- 再结合当前视频或图像证据，判断其工具链是否适合当前输入。
+- 历史准确率、证据通过率和调用成本只用于适用性相近时的排序。
+- 不要仅根据工作流名称、ID 或工具数量选择工作流。
 
-## 各端显示名称
+<!-- SPATIALSKILLGROWTH_WORKFLOWS_START -->
+## 可选工作流
 
-| 来源 | 中文显示名称 |
-|---|---|
-| 大屏端 | 建筑坍塌 |
-| RAG 检索/检测端 | 建筑倒塌 |
-| 实时视频流检测页 | 建筑倒塌 |
-
-## 工具调用模板
-
-```json
-{
-  "tool_name": "embeddingTool",
-  "args": {
-    "file_path": "$media",
-    "event_type": "building_collapse"
-  }
-}
-```
-
-## 证据要求
-
-- embeddingTool 必须使用精确 event_type `building_collapse`。
-- 工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。
-- 工具失败、event_type 不一致或缺少检测结果时不得接受答案。
+当前没有可检索工作流。
+<!-- SPATIALSKILLGROWTH_WORKFLOWS_END -->
 
 ## 资源
 
-- 本 whiteboard 的 `scripts/` 只是空模板，不在这里编写人工脚本。
-- `references/skill.json` 保存机器可读的 Skill 索引。
-- 本 whiteboard 的 `references/workflows/` 保持为空。
-- 人工工作请复制到 `skills/spatialskillgrowth/` 并阅读项目级编写说明。
-
-## 已验证工作流
-
-当前运行尚无通过验证的工作流。
+- `references/workflows/*.json`：工作流详细机器契约。
+- `scripts/*.py`：工作流执行脚本。
+- `references/skill.json`：Skill 和工作流索引。

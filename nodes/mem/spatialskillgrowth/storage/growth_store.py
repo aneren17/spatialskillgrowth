@@ -24,6 +24,8 @@ from nodes.mem.spatialskillgrowth.runtime.workflow_executor import (
     WorkflowPythonExporter,
 )
 from nodes.mem.spatialskillgrowth.skills.skill_layout import (
+    WORKFLOW_CATALOG_END,
+    WORKFLOW_CATALOG_START,
     skill_directory,
     skill_metadata_path,
     standard_skill_name,
@@ -32,6 +34,19 @@ from nodes.mem.spatialskillgrowth.skills.skill_layout import (
 from nodes.mem.spatialskillgrowth.storage.conversation_trace import (
     write_conversation_trace,
 )
+
+
+RUN_STORAGE_LOCKS = {}
+RUN_STORAGE_LOCKS_GUARD = threading.Lock()
+
+
+def run_storage_lock(path):
+    key = str(Path(path).resolve())
+    with RUN_STORAGE_LOCKS_GUARD:
+        if key not in RUN_STORAGE_LOCKS:
+            RUN_STORAGE_LOCKS[key] = threading.RLock()
+        return RUN_STORAGE_LOCKS[key]
+
 
 class ExperimentStore:
     """
@@ -42,7 +57,7 @@ class ExperimentStore:
     def __init__(self, paths: ExperimentPaths):
         self.paths = paths
         self.db_path = paths.state_dir / "spatialskillgrowth.db"
-        self._lock = threading.RLock()
+        self._lock = run_storage_lock(paths.root)
         self._init_schema()
 
     @contextmanager
@@ -393,7 +408,7 @@ class WorkflowRepository:
 
     def __init__(self, paths: ExperimentPaths):
         self.paths = paths
-        self._lock = threading.RLock()
+        self._lock = run_storage_lock(paths.root)
 
     def save(self, workflow: WorkflowSpec) -> Path:
         """
@@ -514,6 +529,27 @@ class WorkflowRepository:
             workflows.extend(self.list_provisional(problem_class))
         return workflows
 
+    def skill_guidance(
+        self,
+        problem_class: str,
+        include_provisional: bool = False,
+    ) -> str:
+        """读取与当前候选状态对应的 SKILL.md，供 Top-K 检索。"""
+        roots = [("active", self.paths.active_skill_root)]
+        if include_provisional:
+            roots.append(("provisional", self.paths.provisional_skill_root))
+        sections = []
+        for status, root in roots:
+            directory = skill_directory(root, problem_class)
+            path = directory / "SKILL.md"
+            if not path.is_file():
+                continue
+            sections.extend([
+                "===== " + status + " SKILL.md =====",
+                path.read_text(encoding="utf-8"),
+            ])
+        return "\n\n".join(sections)
+
     def transition(
         self,
         workflow: WorkflowSpec,
@@ -602,10 +638,9 @@ class WorkflowRepository:
 
     def _rebuild_docs(self, problem_class: str, status: WorkflowStatus) -> None:
         """
-        【撰写说明书】
-        每多了一个新 SOP，或者状态变了，
-        它会自动在文件夹里生成/更新一个 `SKILL.md` (Markdown说明书)，
-        以及一个 `skill.json` 索引
+        【重建 Skill 索引】
+        每多一个工作流或状态发生变化，就更新 `references/skill.json`。
+        `SKILL.md` 标记区外的人工说明保持不变，只重建自动工作流目录。
         """
         workflows = self._list(self._root_for_status(status), problem_class)
         root = self._root_for_status(status)
@@ -635,17 +670,21 @@ class WorkflowRepository:
         )
         title = str(existing_metadata.get("title") or problem_class.replace("_", " ").title())
         skill_markdown_path = directory / "SKILL.md"
-        event_type = str(existing_metadata.get("event_type") or "")
         if not skill_markdown_path.is_file():
             skill_markdown_path.write_text(
                 _default_skill_markdown(
                     standard_skill_name(problem_class),
                     title,
-                    description,
-                    event_type,
                 ),
                 encoding="utf-8",
             )
+        skill_markdown = skill_markdown_path.read_text(encoding="utf-8")
+        workflow_catalog = _workflow_catalog_markdown(workflows)
+        skill_markdown = _replace_workflow_catalog(
+            skill_markdown,
+            workflow_catalog,
+        )
+        skill_markdown_path.write_text(skill_markdown, encoding="utf-8")
         metadata = dict(existing_metadata)
         metadata.update({
             "name": standard_skill_name(problem_class),
@@ -728,24 +767,90 @@ class WorkflowRepository:
 def _default_skill_markdown(
     skill_name: str,
     title: str,
-    description: str,
-    event_type: str,
 ) -> str:
-    event_line = f"- 精确 `event_type`：`{event_type}`\n" if event_type else ""
+    description = (
+        "检测输入视频或图像中是否发生“"
+        + title
+        + "”异常事件。"
+    )
     return (
         "---\n"
         f"name: {skill_name}\n"
         f"description: {json.dumps(description, ensure_ascii=False)}\n"
         "---\n\n"
         f"# {title}\n\n"
-        "## 用途\n\n"
+        "## Skill 作用\n\n"
         f"{description}\n\n"
-        "## 执行约束\n\n"
-        f"{event_line}"
-        "- 使用 `scripts/*.py` 执行工作流。\n"
-        "- 按需读取 `references/skill.json` 和 `references/workflows/*.json`。\n"
-        "- 人工脚本必须通过项目提供的 Skill 验证程序。\n"
+        "## 工作流选择\n\n"
+        "- 先核对适用范围、排除条件和能力边界，再参考历史指标。\n"
+        "- 只选择当前输入证据条件满足的工作流。\n\n"
+        f"{WORKFLOW_CATALOG_START}\n"
+        "## 可选工作流\n\n"
+        "当前没有可检索工作流。\n"
+        f"{WORKFLOW_CATALOG_END}\n\n"
+        "## 资源\n\n"
+        "- `references/workflows/*.json`：工作流详细机器契约。\n"
+        "- `scripts/*.py`：工作流执行脚本。\n"
+        "- `references/skill.json`：Skill 和工作流索引。\n"
     )
+
+
+def _workflow_catalog_markdown(
+    workflows,
+) -> str:
+    lines = [
+        WORKFLOW_CATALOG_START,
+        "## 可选工作流",
+        "",
+        "根据当前输入选择下列工作流；详细参数按需读取对应资源。",
+        "",
+    ]
+    if not workflows:
+        lines.extend([
+            "当前没有可检索工作流。",
+            WORKFLOW_CATALOG_END,
+            "",
+        ])
+        return "\n".join(lines)
+
+    for workflow in sorted(workflows, key=lambda item: item.workflow_id):
+        applicability = workflow.applicability
+        tool_chain = " -> ".join(
+            step.tool_name for step in workflow.steps
+        )
+        lines.extend([
+            "### " + (workflow.name or workflow.workflow_id),
+            "",
+            "- ID：`" + workflow.workflow_id + "`",
+            "- 选择条件：" + (applicability.description or "未说明"),
+            "- 不选择：" + (applicability.exclusions or "未说明"),
+            "- 执行边界：" + (
+                applicability.capability_boundary or "未说明"
+            ),
+            "- 工具链：`" + (tool_chain or "无") + "`",
+            "- 资源：`references/workflows/"
+            + workflow.workflow_id
+            + ".json`；`scripts/"
+            + workflow.workflow_id
+            + ".py`",
+            "",
+        ])
+    lines.extend([WORKFLOW_CATALOG_END, ""])
+    return "\n".join(lines)
+
+
+def _replace_workflow_catalog(skill_markdown, workflow_catalog):
+    start = skill_markdown.find(WORKFLOW_CATALOG_START)
+    end = skill_markdown.find(WORKFLOW_CATALOG_END)
+    if start >= 0 and end > start:
+        end += len(WORKFLOW_CATALOG_END)
+        prefix = skill_markdown[:start].rstrip()
+        suffix = skill_markdown[end:].lstrip()
+        output = prefix + "\n\n" + workflow_catalog.rstrip() + "\n"
+        if suffix:
+            output += "\n" + suffix.rstrip() + "\n"
+        return output
+    return skill_markdown.rstrip() + "\n\n" + workflow_catalog.rstrip() + "\n"
 
 
 def _write_json(path: Path, value: Dict) -> None:

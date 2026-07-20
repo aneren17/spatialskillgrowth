@@ -14,6 +14,10 @@ from nodes.mem.spatialskillgrowth.core.anomaly_events import class_metadata_for_
 from nodes.mem.spatialskillgrowth.core.experiment_config import DEFAULT_EDITABLE_SKILL_ROOT
 from nodes.mem.spatialskillgrowth.core.experiment_config import ExperimentPaths
 from nodes.mem.spatialskillgrowth.core.experiment_config import build_experiment_config
+from nodes.mem.spatialskillgrowth.core.models import MutationSpec
+from nodes.mem.spatialskillgrowth.core.models import ParamAtom
+from nodes.mem.spatialskillgrowth.core.models import WorkflowSpec
+from nodes.mem.spatialskillgrowth.core.models import WorkflowStep
 from nodes.mem.spatialskillgrowth.growth.param_space import ParamSpace
 from nodes.mem.spatialskillgrowth.growth.workflow_mutator import (
     build_anomaly_baseline_workflow,
@@ -31,6 +35,7 @@ from nodes.mem.spatialskillgrowth.skills.human_skill_validation import (
     validate_human_skill,
 )
 from nodes.mem.spatialskillgrowth.skills.skill_retriever import (
+    build_retriever,
     workflow_structurally_eligible,
 )
 from nodes.mem.spatialskillgrowth.storage.growth_store import WorkflowRepository
@@ -44,7 +49,9 @@ BANNER_IMAGE_ROOT = PROJECT_ROOT / "benchmark/anomaly/banner_demo/images"
 BANNER_IMAGE = BANNER_IMAGE_ROOT / "banner_00_00252ms.jpg"
 BANNER_VIDEO = PROJECT_ROOT / "test/banner.mp4"
 BANNER_SKILL = PROJECT_ROOT / "skills/spatialskillgrowth/banner"
-BANNER_SCRIPT = BANNER_SKILL / "scripts/banner-human-review-v1.py"
+WHITEBOARD_SKILL_ROOT = PROJECT_ROOT / "skills/spatialskillgrowth_whiteboard"
+BANNER_SCRIPT = BANNER_SKILL / "scripts/banner-ocr-example.py"
+BANNER_CROP_SCRIPT = BANNER_SKILL / "scripts/banner-crop-example.py"
 
 
 class MockEmbeddingTool:
@@ -76,6 +83,32 @@ class DisabledLLM:
 
     def bind_tools(self, tools):
         raise RuntimeError("该测试不应进入 ReAct。")
+
+
+class SkillSelectionLLM:
+    def __init__(self, workflow_id):
+        self.workflow_id = workflow_id
+        self.messages = []
+
+    def invoke(self, messages):
+        self.messages = messages
+        return json.dumps({
+            "action": "select",
+            "ranked_workflow_ids": [self.workflow_id],
+            "reason": "SKILL.md 说明该路线适合当前画面。",
+        }, ensure_ascii=False)
+
+
+class SkillSelectionRepository:
+    def __init__(self, workflows, guidance):
+        self.workflows = workflows
+        self.guidance = guidance
+
+    def list_retrievable(self, _event_type, include_provisional=False):
+        return list(self.workflows)
+
+    def skill_guidance(self, _event_type, include_provisional=False):
+        return self.guidance
 
 
 class MockDetectionAgent:
@@ -171,8 +204,32 @@ def test_run_workspace_uses_editable_skills_only():
         ):
             target_markdown = status_root / "banner/SKILL.md"
             assert target_markdown.read_bytes() == source_markdown.read_bytes()
-        assert (paths.active_skill_root / "banner/scripts/banner-human-review-v1.py").is_file()
+        assert (paths.active_skill_root / "banner/scripts/banner-ocr-example.py").is_file()
+        assert (paths.active_skill_root / "banner/scripts/banner-crop-example.py").is_file()
         assert not list(paths.provisional_skill_root.glob("*/scripts/*.py"))
+
+
+def test_skill_markdowns_are_compact():
+    forbidden_headings = (
+        "## 用途",
+        "## 事件接口",
+        "## 各端显示名称",
+        "## 工具调用模板",
+        "## 证据要求",
+    )
+    roots = [DEFAULT_EDITABLE_SKILL_ROOT, WHITEBOARD_SKILL_ROOT]
+    checked = 0
+    for root in roots:
+        for skill_path in sorted(root.glob("*/SKILL.md")):
+            text = skill_path.read_text(encoding="utf-8")
+            assert "## Skill 作用" in text
+            assert "## 工作流选择" in text
+            assert "## 可选工作流" in text
+            assert "## 资源" in text
+            for heading in forbidden_headings:
+                assert heading not in text
+            checked += 1
+    assert checked == 110
 
 
 def test_baseline_workflow_and_embedding_result():
@@ -229,16 +286,32 @@ def test_evidence_validator_rejects_missing_threshold():
 
 
 def test_human_banner_skill_executes():
+    before = {}
+    for path in BANNER_SKILL.rglob("*"):
+        if path.is_file():
+            before[str(path.relative_to(BANNER_SKILL))] = path.read_bytes()
     report = validate_human_skill(
         BANNER_SKILL,
         BANNER_SCRIPT,
-        BANNER_IMAGE,
-        "banner",
     )
     assert report["valid"]
-    assert report["checks"]["execution"]
-    assert report["checks"]["evidence_contract"]
+    assert report["checks"]["mock_execution"]
+    assert report["execution"]["final_answer"] == "是"
     assert report["execution"]["threshold"] == 0.66
+    assert "evidence" not in report
+    assert "installed" not in report
+    after = {}
+    for path in BANNER_SKILL.rglob("*"):
+        if path.is_file():
+            after[str(path.relative_to(BANNER_SKILL))] = path.read_bytes()
+    assert after == before
+
+    crop_report = validate_human_skill(
+        BANNER_SKILL,
+        BANNER_CROP_SCRIPT,
+    )
+    assert crop_report["valid"]
+    assert crop_report["checks"]["mock_execution"]
 
 
 def test_param_space_has_no_omni_slots():
@@ -251,6 +324,157 @@ def test_param_space_has_no_omni_slots():
     assert "sam_query_a" not in serialized
     assert "reference_value" not in serialized
     assert "embeddingTool" in serialized
+
+
+def test_param_space_prioritizes_workflow_diversity():
+    parent = build_anomaly_baseline_workflow("banner")
+    ocr_atom = ParamAtom(
+        "paddleOcrTool",
+        "evidence_role",
+        "text_reading",
+        "fixed",
+    )
+    yolo_atom = ParamAtom(
+        "yoloTool",
+        "threshold",
+        "low",
+        "numerical",
+    )
+    ocr_step = WorkflowStep(
+        tool_name="paddleOcrTool",
+        step_id="ocr",
+        param_atoms=[ocr_atom],
+    )
+    yolo_step = WorkflowStep(
+        tool_name="yoloTool",
+        step_id="yolo",
+        param_atoms=[yolo_atom],
+    )
+    active_ocr = WorkflowSpec(
+        workflow_id="active_ocr",
+        name="active_ocr",
+        applicability=parent.applicability,
+        steps=[parent.steps[0], ocr_step],
+    )
+    candidate_ocr = WorkflowSpec(
+        workflow_id="candidate_ocr",
+        name="candidate_ocr",
+        applicability=parent.applicability,
+        steps=[parent.steps[0], ocr_step],
+    )
+    candidate_yolo = WorkflowSpec(
+        workflow_id="candidate_yolo",
+        name="candidate_yolo",
+        applicability=parent.applicability,
+        steps=[parent.steps[0], yolo_step],
+    )
+    ocr_mutation = MutationSpec(
+        mutation_id="mutation_ocr",
+        kind="fixed",
+        atom=ocr_atom,
+        operation="insert_tool",
+        description="加入 OCR。",
+    )
+    yolo_mutation = MutationSpec(
+        mutation_id="mutation_yolo",
+        kind="numerical",
+        atom=yolo_atom,
+        operation="set_parameter",
+        description="加入 YOLO。",
+    )
+    candidates = [
+        (ocr_mutation, candidate_ocr),
+        (yolo_mutation, candidate_yolo),
+    ]
+
+    selected = ParamSpace().select_workflow_mutations(
+        candidates,
+        parent,
+        [active_ocr],
+        {},
+        count=1,
+        allow_zero_gain=False,
+    )
+
+    assert len(selected) == 1
+    assert selected[0][0].mutation_id == "mutation_yolo"
+    score = selected[0][0].score_parts["workflow"]
+    assert score["coverage_gain"] > 0
+    assert score["feature_count"] == 3.0
+
+
+def test_top_k_retriever_reads_skill_markdown():
+    first = build_anomaly_baseline_workflow("banner")
+    first.workflow_id = "history_first"
+    first.metrics.trial_count = 10
+    first.metrics.correct_count = 10
+    second = build_anomaly_baseline_workflow("banner")
+    second.workflow_id = "skill_selected"
+    repository = SkillSelectionRepository(
+        [first, second],
+        "SKILL_GUIDANCE_SENTINEL：当前画面应选择 skill_selected。",
+    )
+    llm = SkillSelectionLLM("skill_selected")
+    retriever = build_retriever(repository, llm, top_k=1)
+
+    ranked, decision = retriever.retrieve(
+        "banner",
+        "检测当前画面是否存在横幅异常。",
+        [str(BANNER_IMAGE)],
+        {"event_type": "banner"},
+        ["embeddingTool"],
+    )
+
+    assert [workflow.workflow_id for workflow in ranked] == [
+        "skill_selected"
+    ]
+    assert decision.strategy == "skill_guided_multimodal"
+    prompt = llm.messages[0].content[0]["text"]
+    assert "同类别 SKILL.md" in prompt
+    assert "SKILL_GUIDANCE_SENTINEL" in prompt
+    assert "history_first" in prompt
+    assert "skill_selected" in prompt
+
+
+def test_repository_updates_workflow_manual_section():
+    metadata = class_metadata_for_anomaly()
+    config = build_experiment_config()
+    with tempfile.TemporaryDirectory() as root:
+        paths = ExperimentPaths(
+            "skill_manual_test",
+            root,
+            problem_classes=["banner"],
+            class_metadata=metadata,
+        )
+        paths.ensure(config, "explore")
+        repository = WorkflowRepository(paths)
+        workflow = build_anomaly_baseline_workflow("banner")
+        workflow.status = "active"
+        repository.save(workflow)
+
+        skill_path = paths.active_skill_root / "banner/SKILL.md"
+        first_text = skill_path.read_text(encoding="utf-8")
+        assert "## Skill 作用" in first_text
+        assert "## 工作流选择" in first_text
+        assert "## 可选工作流" in first_text
+        assert workflow.workflow_id in first_text
+        assert "工具链：`embeddingTool`" in first_text
+        assert "## 事件接口" not in first_text
+        assert "## 工具调用模板" not in first_text
+        assert "## 证据要求" not in first_text
+        assert "历史表现：" not in first_text
+        assert "必需运行时槽位：" not in first_text
+        assert first_text.count(
+            "SPATIALSKILLGROWTH_WORKFLOWS_START"
+        ) == 1
+
+        workflow.applicability.description = "只在目标外观清晰时选择。"
+        repository.save(workflow)
+        second_text = skill_path.read_text(encoding="utf-8")
+        assert "选择条件：只在目标外观清晰时选择。" in second_text
+        assert second_text.count(
+            "SPATIALSKILLGROWTH_WORKFLOWS_START"
+        ) == 1
 
 
 def test_inference_pipeline_returns_threshold_without_llm():
@@ -360,10 +584,14 @@ def main():
         test_media_preprocessor_keeps_video_and_samples_frames,
         test_planner_has_no_llm_classification_or_omni_slots,
         test_run_workspace_uses_editable_skills_only,
+        test_skill_markdowns_are_compact,
         test_baseline_workflow_and_embedding_result,
         test_evidence_validator_rejects_missing_threshold,
         test_human_banner_skill_executes,
         test_param_space_has_no_omni_slots,
+        test_param_space_prioritizes_workflow_diversity,
+        test_top_k_retriever_reads_skill_markdown,
+        test_repository_updates_workflow_manual_section,
         test_inference_pipeline_returns_threshold_without_llm,
         test_source_skill_snapshot,
         test_fastapi_upload_and_other_tool_override,

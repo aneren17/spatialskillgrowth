@@ -77,6 +77,12 @@ class ParamSpace:
         """
         [组装mutation方案]
         (LLM)给出了推荐(preferred)，这里负责把这些散装的推荐打包成一个完整的方案。
+        {
+            "objective": "目标太小没检测出来，需要降低 yolo 的检测阈值",
+            "preferred_atom_ids": ["yoloTool:threshold:low"],
+            "avoid_atom_ids": ["MLLM:scope:whole_image"],
+            "tool_hints": {}
+        }
         """
         # 1. 过滤：只保留被允许的、在 preferred 列表里的原子。
         allowed_tools = set(allowed_tool_names or [])
@@ -136,31 +142,125 @@ class ParamSpace:
         count=3,
         allow_zero_gain=False,
     ):
-        parent_tools = set()
-        for step in parent_workflow.steps:
-            parent_tools.add(step.tool_name)
-        ranked = []
+        """
+        [变异方案选拔]
+        因为算力有限（budget=count），不能把所有变异方案都试一遍。
+        优先选择能够补充新工具、参数轴、参数原子或工具衔接边的方案。
+        """
+        best_coverage = self._best_coverage(active_workflows)
+        parent_features = self.workflow_features(parent_workflow)
+        ranked_candidates = []
+        seen_workflows = set()
         for mutation, workflow in candidates:
+            signature = json.dumps(
+                [step.to_dict() for step in workflow.steps],
+                sort_keys=True,
+                ensure_ascii=True,
+            )
+            if signature in seen_workflows:
+                continue
+            seen_workflows.add(signature)
+
+            features = self.workflow_features(workflow)
+            features = features.difference(parent_features)
+            if not features:
+                continue
             history_score = self._history_score(mutation, atom_stats)
-            new_tool_count = 0
-            for atom in mutation.selected_atoms:
-                if atom.tool_name not in parent_tools:
-                    new_tool_count += 1
-            score = history_score + 0.1 * new_tool_count
-            ranked.append((score, mutation.mutation_id, mutation, workflow))
-        ranked.sort(key=lambda item: (-item[0], item[1]))
+            coverage_gain = self._marginal_gain(
+                features,
+                history_score,
+                best_coverage,
+            )
+            ranked_candidates.append(
+                (mutation, workflow, features, history_score, coverage_gain)
+            )
 
         output = []
-        for item in ranked[:max(1, count)]:
-            mutation = item[2]
-            mutation.score_parts["selection"] = {
-                "history_score": round(item[0], 6),
+        for _ in range(max(1, count)):
+            if not ranked_candidates:
+                break
+            ranked_candidates.sort(
+                key=lambda item: (-item[4], -item[3], item[0].mutation_id)
+            )
+            best = ranked_candidates[0]
+            if best[4] <= 0 and not allow_zero_gain:
+                break
+
+            mutation, workflow, features, history_score, coverage_gain = (
+                ranked_candidates.pop(0)
+            )
+            mutation.score_parts["workflow"] = {
+                "history_score": round(history_score, 6),
+                "coverage_gain": round(coverage_gain, 6),
+                "feature_count": float(len(features)),
             }
-            output.append((mutation, item[3]))
+            output.append((mutation, workflow))
+
+            for feature in features:
+                previous = best_coverage.get(feature, 0.0)
+                best_coverage[feature] = max(previous, history_score)
+            updated = []
+            for item in ranked_candidates:
+                new_gain = self._marginal_gain(
+                    item[2],
+                    item[3],
+                    best_coverage,
+                )
+                updated.append((item[0], item[1], item[2], item[3], new_gain))
+            ranked_candidates = updated
         return output
 
     @staticmethod
+    def workflow_features(workflow):
+        """提取用于多样性比较的工具、参数和工具衔接特征。"""
+        features = set()
+        step_tools = {}
+        for step in workflow.steps:
+            step_tools[step.step_id] = step.tool_name
+        for step in workflow.steps:
+            features.add("tool:" + step.tool_name)
+            for atom in step.param_atoms:
+                features.add("axis:" + atom.tool_name + ":" + atom.axis)
+                features.add("atom:" + atom.atom_id)
+            for dependency in step.depends_on:
+                producer = step_tools.get(dependency)
+                if producer:
+                    features.add(
+                        "edge:" + producer + "->" + step.tool_name
+                    )
+        return features
+
+    @classmethod
+    def _best_coverage(cls, workflows):
+        """记录现有工作流对每个特征已经达到的最好历史质量。"""
+        best = {}
+        for workflow in workflows:
+            quality = cls._workflow_quality(workflow)
+            for feature in cls.workflow_features(workflow):
+                previous = best.get(feature, 0.0)
+                best[feature] = max(previous, quality)
+        return best
+
+    @staticmethod
+    def _workflow_quality(workflow):
+        """使用平滑准确率衡量已有工作流质量，不重新引入旧版 UCB。"""
+        trials = max(0, int(workflow.metrics.trial_count))
+        successes = max(0, int(workflow.metrics.correct_count))
+        return (successes + 1.0) / (trials + 2.0)
+
+    @staticmethod
+    def _marginal_gain(features, quality, best_coverage):
+        gain = 0.0
+        for feature in features:
+            gain += max(0.0, quality - best_coverage.get(feature, 0.0))
+        return gain
+
+    @staticmethod
     def _add_required_producer(atom, atoms, existing_tools, limit):
+        """
+        [自动依赖注入逻辑]
+        如果一个工具需要先导数据，比如 crop 需要 bounding box，这里负责从库里找一个能产出 bounding box 的工具(如 yolo) 垫在前面。
+        """
         selected = [atom]
         final_tools = set(existing_tools)
         final_tools.add(atom.tool_name)
@@ -180,6 +280,11 @@ class ParamSpace:
 
     @staticmethod
     def _history_score(mutation, atom_stats):
+        """
+        [历史概率打分]
+        使用平滑后的成功率公式：(successes + 1) / (trials + 2)。
+        拉普拉斯平滑，能防止那种只试了1次而且成功了的原子，击败试了100次成功90次的原子。
+        """
         total = 0.0
         for atom in mutation.selected_atoms:
             stats = atom_stats.get(atom.atom_id, {})
