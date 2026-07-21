@@ -1,0 +1,80 @@
+{
+  "workflow_id": "banner-crop-example",
+  "name": "banner_crop_example",
+  "applicability": {
+    "problem_class": "banner",
+    "required_slots": [
+      "event_type"
+    ],
+    "required_tools": [
+      "groundingdino",
+      "crop_detections",
+      "MLLM"
+    ],
+    "description": "适合横幅在整图中较小的画面；先定位横幅，再裁剪目标区域供 MLLM 查看。",
+    "exclusions": "不适用于 banner 以外类别；目标没有清晰外观或定位器无法返回框时不适合裁剪路线。",
+    "capability_boundary": "不调用 embeddingTool；GroundingDINO、crop 和 MLLM 必须依次成功，最终判断来自 MLLM。"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "banner",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.35,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [],
+      "purpose": "定位画面中的横幅。",
+      "step_id": "detect",
+      "depends_on": []
+    },
+    {
+      "tool_name": "crop_detections",
+      "args": {
+        "file": "$image",
+        "detections": "$step.detect.detections",
+        "folder": "",
+        "score": "0.5",
+        "className": "banner"
+      },
+      "param_atoms": [],
+      "purpose": "裁剪检测到的横幅区域。",
+      "step_id": "crop",
+      "depends_on": [
+        "detect"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$step.crop.image",
+        "filename": "$filename",
+        "query": "$question\n$evidence",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "查看裁剪后的横幅区域并形成是或否判断。",
+      "step_id": "review",
+      "depends_on": [
+        "crop",
+        "detect"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "",
+  "mutation_mode": "manual",
+  "mutation_direction": {},
+  "metrics": {
+    "trial_count": 0,
+    "correct_count": 0,
+    "evidence_accept_count": 0,
+    "tool_failure_count": 0,
+    "total_tool_calls": 0,
+    "total_latency_ms": 0.0,
+    "structural_coverage": 6.0
+  },
+  "source_task_ids": []
+}

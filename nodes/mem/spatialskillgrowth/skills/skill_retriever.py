@@ -9,6 +9,10 @@ from prompt.spatialskillgrowth_prompts import (
 )
 
 
+MANUAL_UNOBSERVED_ACCURACY_PRIOR = 0.85
+MANUAL_UNOBSERVED_EVIDENCE_PRIOR = 1.0
+
+
 class WorkflowRetriever:
     """类别由输入给定；LLM 只依据该类别 SKILL.md 排序工作流。"""
 
@@ -184,9 +188,23 @@ def build_retriever(repository, llm, top_k=3):
 
 def _history_sort_key(workflow):
     metrics = workflow.metrics
+    manual_unobserved = (
+        workflow.mutation_mode == "manual"
+        and metrics.trial_count == 0
+    )
+    accuracy = (
+        MANUAL_UNOBSERVED_ACCURACY_PRIOR
+        if manual_unobserved
+        else metrics.accuracy
+    )
+    evidence_rate = (
+        MANUAL_UNOBSERVED_EVIDENCE_PRIOR
+        if manual_unobserved
+        else metrics.evidence_rate
+    )
     return (
-        -metrics.accuracy,
-        -metrics.evidence_rate,
+        -accuracy,
+        -evidence_rate,
         metrics.average_cost,
         -metrics.trial_count,
         workflow.workflow_id,
@@ -194,10 +212,22 @@ def _history_sort_key(workflow):
 
 
 def _workflow_payload(workflow):
+    manual_unobserved = (
+        workflow.mutation_mode == "manual"
+        and workflow.metrics.trial_count == 0
+    )
     return {
         "workflow_id": workflow.workflow_id,
         "name": workflow.name,
         "status": workflow.status,
+        "authorship": (
+            "human" if workflow.mutation_mode == "manual" else "generated"
+        ),
+        "quality_prior": (
+            MANUAL_UNOBSERVED_ACCURACY_PRIOR
+            if manual_unobserved
+            else None
+        ),
         "applicability": workflow.applicability.to_dict(),
         "tool_chain": [
             {

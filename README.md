@@ -63,8 +63,8 @@ nodes/mem/spatialskillgrowth/
 └── pipeline/                    # 媒体处理、规划、证据校验和总编排
 ```
 
-详细目录边界和依赖方向见
-[docs/nodes-spatialskillgrowth/00-package-layout.md](docs/nodes-spatialskillgrowth/00-package-layout.md)。
+面向新人的架构、工具与手工 Skill 编写入口见
+[docs/nodes-spatialskillgrowth/README.md](docs/nodes-spatialskillgrowth/README.md)。
 
 已移除的设计包括：Omni3D 数据加载与评测、其他 benchmark taxonomy、float/int/str 答案验证、动态问题
 类别、seen/heldout 评测、树检索和消融 experiment presets。
@@ -263,9 +263,10 @@ skills/spatialskillgrowth/<event-type>/
 - 新运行从人工维护区复制 `SKILL.md`，active 同时复制脚本和工作流；
 - 自动生成和人工编写的脚本经过同一个执行器与证据验证器。
 
-人工 Skill 说明见 [docs/spatialskillgrowth-skill-authoring.md](docs/spatialskillgrowth-skill-authoring.md)。
-从零编写一条工作流见
-[docs/nodes-spatialskillgrowth/12-manual-workflow-tutorial.md](docs/nodes-spatialskillgrowth/12-manual-workflow-tutorial.md)。
+全部工具和中间结果见
+[docs/nodes-spatialskillgrowth/01-tools-and-intermediate-results.md](docs/nodes-spatialskillgrowth/01-tools-and-intermediate-results.md)；
+从零手工编写工作流见
+[docs/nodes-spatialskillgrowth/02-manual-skill-authoring.md](docs/nodes-spatialskillgrowth/02-manual-skill-authoring.md)。
 
 ## 结果目录
 
@@ -301,6 +302,16 @@ python -m scripts.validate_spatialskillgrowth_skill \
   --skill-dir skills/spatialskillgrowth/banner \
   --script skills/spatialskillgrowth/banner/scripts/banner-ocr-example.py
 ```
+
+校验并部署人工 Skill，使其生成可检索 Workflow JSON 并进入 active：
+
+```bash
+python -m scripts.deploy_spatialskillgrowth_skill \
+  --skill-dir skills/spatialskillgrowth/banner \
+  --script skills/spatialskillgrowth/banner/scripts/banner-ocr-example.py
+```
+
+部署后使用新的推理 `run-id`；`--resume` 不会刷新旧 run 的 Skill 快照。
 
 运行 10 条离线 banner 探索：
 

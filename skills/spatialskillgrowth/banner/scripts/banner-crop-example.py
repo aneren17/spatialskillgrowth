@@ -92,7 +92,8 @@ def solve(runtime, question, image_paths, *, event_type=""):
     )
     runtime.require(crop, "crop")
 
-    evidence_image = runtime.evidence_image()
+    crop_images = runtime.value(crop, "image_refs", [])
+    evidence_image = crop_images[0]
     review = runtime.call(
         "MLLM",
         {

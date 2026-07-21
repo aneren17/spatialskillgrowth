@@ -26,6 +26,15 @@ description: "检测输入视频或图像中是否发生“违规横幅检测”
 
 根据当前输入选择下列工作流；详细参数按需读取对应资源。
 
+### banner_crop_example
+
+- ID：`banner-crop-example`
+- 选择条件：适合横幅在整图中较小的画面；先定位横幅，再裁剪目标区域供 MLLM 查看。
+- 不选择：不适用于 banner 以外类别；目标没有清晰外观或定位器无法返回框时不适合裁剪路线。
+- 执行边界：不调用 embeddingTool；GroundingDINO、crop 和 MLLM 必须依次成功，最终判断来自 MLLM。
+- 工具链：`groundingdino -> crop_detections -> MLLM`
+- 资源：`references/workflows/banner-crop-example.json`；`scripts/banner-crop-example.py`
+
 ### banner_detection_workflow
 
 - ID：`banner_97c96483c376`

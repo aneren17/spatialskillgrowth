@@ -1,6 +1,7 @@
 """异常检测主链路的无网络回归测试。"""
 
 import json
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -35,6 +36,9 @@ from nodes.mem.spatialskillgrowth.pipeline.orchestrator import ExperimentFactory
 from nodes.mem.spatialskillgrowth.pipeline.task_router import TaskPlanner
 from nodes.mem.spatialskillgrowth.runtime.tool_runtime import ToolRuntime
 from nodes.mem.spatialskillgrowth.runtime.tool_runtime import extract_anomaly_result
+from nodes.mem.spatialskillgrowth.skills.human_skill_deployment import (
+    deploy_human_skill,
+)
 from nodes.mem.spatialskillgrowth.skills.human_skill_validation import (
     validate_human_skill,
 )
@@ -417,6 +421,100 @@ def test_human_banner_skill_executes():
     assert crop_report["checks"]["mock_execution"]
 
 
+def test_human_skill_deployment_and_quality_prior():
+    with tempfile.TemporaryDirectory() as root:
+        skill_root = Path(root) / "skills"
+        skill_dir = skill_root / "banner"
+        shutil.copytree(BANNER_SKILL, skill_dir)
+        script_path = skill_dir / "scripts/banner-crop-example.py"
+
+        deployment = deploy_human_skill(skill_dir, script_path)
+        assert deployment["deployed"]
+        assert deployment["status"] == "active"
+        assert deployment["mutation_mode"] == "manual"
+        workflow_path = (
+            skill_dir
+            / "references/workflows/banner-crop-example.json"
+        )
+        workflow = WorkflowSpec.from_dict(
+            json.loads(workflow_path.read_text(encoding="utf-8"))
+        )
+        assert workflow.status == "active"
+        assert workflow.mutation_mode == "manual"
+        metadata = json.loads(
+            (skill_dir / "references/skill.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        entry = next(
+            item for item in metadata["workflows"]
+            if item["workflow_id"] == "banner-crop-example"
+        )
+        assert entry["authorship"] == "human"
+        assert "banner-crop-example" in (
+            skill_dir / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        assert (skill_root / "SKILLS.json").is_file()
+
+        repeated = deploy_human_skill(skill_dir, script_path)
+        assert repeated["deployed"]
+        assert repeated["preserved_metrics"]
+
+    generated = WorkflowSpec(
+        workflow_id="generated_observed",
+        name="generated_observed",
+        applicability=ApplicabilitySpec(
+            problem_class="banner",
+            required_tools=["MLLM"],
+        ),
+        steps=[WorkflowStep(
+            tool_name="MLLM",
+            args={"file": "$image", "query": "$question"},
+        )],
+    )
+    generated.metrics.trial_count = 10
+    generated.metrics.correct_count = 7
+    generated.metrics.evidence_accept_count = 7
+    manual = WorkflowSpec(
+        workflow_id="manual_unobserved",
+        name="manual_unobserved",
+        applicability=ApplicabilitySpec(
+            problem_class="banner",
+            required_tools=["MLLM"],
+        ),
+        steps=[WorkflowStep(
+            tool_name="MLLM",
+            args={"file": "$image", "query": "$question"},
+        )],
+        mutation_mode="manual",
+    )
+    retriever = build_retriever(
+        SkillSelectionRepository([generated, manual], ""),
+        SkillSelectionLLM(""),
+        top_k=1,
+    )
+    ranked, unused_decision = retriever.retrieve(
+        "banner",
+        "question",
+        [str(BANNER_IMAGE)],
+        {"event_type": "banner", "media_type": "image"},
+        ["MLLM"],
+        "image",
+    )
+    assert [item.workflow_id for item in ranked] == ["manual_unobserved"]
+
+    manual.metrics.trial_count = 1
+    ranked, unused_decision = retriever.retrieve(
+        "banner",
+        "question",
+        [str(BANNER_IMAGE)],
+        {"event_type": "banner", "media_type": "image"},
+        ["MLLM"],
+        "image",
+    )
+    assert [item.workflow_id for item in ranked] == ["generated_observed"]
+
+
 def test_param_space_has_no_omni_slots():
     param_space = ParamSpace()
     serialized = json.dumps(
@@ -664,6 +762,11 @@ def test_video_inference_parallel_or_without_llm():
             class_metadata=metadata,
         )
         paths.ensure(config, "infer")
+        for path in (
+            paths.active_skill_root
+            / "banner/references/workflows"
+        ).glob("*.json"):
+            path.unlink()
         frame_workflow = WorkflowSpec(
             workflow_id="banner_image_frame_skill",
             name="banner_image_frame_skill",
@@ -834,6 +937,7 @@ def main():
         test_embedding_parallel_channel_is_not_retrievable_skill,
         test_evidence_validator_rejects_missing_threshold,
         test_human_banner_skill_executes,
+        test_human_skill_deployment_and_quality_prior,
         test_param_space_has_no_omni_slots,
         test_param_space_prioritizes_workflow_diversity,
         test_top_k_retriever_reads_skill_markdown,

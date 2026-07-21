@@ -100,6 +100,7 @@ def validate_human_skill(
             workflow.applicability.problem_class if workflow else ""
         ),
         "declared_tools": list(declared_tools),
+        "workflow": workflow.to_dict() if workflow else {},
         "checks": checks,
         "execution": execution,
         "errors": errors,

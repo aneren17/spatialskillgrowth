@@ -39,8 +39,15 @@
         "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 2,
+      "workflow_count": 3,
       "workflows": [
+        {
+          "workflow_id": "banner-crop-example",
+          "name": "banner_crop_example",
+          "path": "references/workflows/banner-crop-example.json",
+          "script": "scripts/banner-crop-example.py",
+          "authorship": "human"
+        },
         {
           "workflow_id": "banner_97c96483c376",
           "name": "banner_detection_workflow",

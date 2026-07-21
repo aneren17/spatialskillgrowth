@@ -27,6 +27,16 @@ from nodes.mem.spatialskillgrowth.pipeline.orchestrator import (
 )
 from nodes.mem.spatialskillgrowth.storage.growth_store import WorkflowRepository
 
+"""
+  python -m agents.spatialskillgrowth.anomaly_detection_agent \
+    --input-file test/corpus/banner2/3q3LTsfxKkq.mp4 \
+    --event-type banner \
+    --run-id video_skill_banner_02
+    
+改个runid event-type input-file
+"""
+
+
 
 DEFAULT_FILE_ROOT = "benchmark/anomaly/files"
 load_dotenv()
