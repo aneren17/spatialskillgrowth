@@ -26,7 +26,7 @@
 ## 2. 检测接口
 
 ```text
-POST http://<server-host>:<18061|18062>/detect
+POST http://172.16.0.91:<18061|18062>/detect
 Content-Type: multipart/form-data
 ```
 
