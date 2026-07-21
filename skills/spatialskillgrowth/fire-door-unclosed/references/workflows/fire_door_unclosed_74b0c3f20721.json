@@ -1,0 +1,94 @@
+{
+  "workflow_id": "fire_door_unclosed_74b0c3f20721",
+  "name": "fire_door_unclosed_detector",
+  "applicability": {
+    "problem_class": "fire_door_unclosed",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "MLLM"
+    ],
+    "description": "基于 YOLO 目标检测与多模态大语言模型（MLLM）的视觉分析工作流，用于检测输入图像中是否存在消防门未关闭的异常状态。该工作流首先利用 YOLO 工具以 0.5 的置信度阈值提取关键视觉特征，随后由 MLLM 结合图像证据进行语义推理，最终判定是否发生消防门未关闭事件。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频或纯文本描述）; 需要调用 embeddingTool 进行特征嵌入的场景; 非 fire_door_unclosed 类别的其他异常事件检测任务; 缺乏清晰消防门视觉特征或图像质量过低导致无法识别门体状态的场景",
+    "capability_boundary": "仅支持对静态图像进行 fire_door_unclosed 异常事件的二元判定（是/否）。检测逻辑严格依赖于 YOLO 工具在 0.5 阈值下的检测结果以及 MLLM 对视觉证据的语义分析，不包含对门体机械故障原因的分析或对其他类型安全门（如普通防火门、逃生门）的通用未关闭检测能力，除非明确指定为 fire_door_unclosed 事件类型。"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 fire_door_unclosed 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "fire_door_unclosed_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过结构化检测与裁剪增强视觉证据，提升对消防门状态判断的鲁棒性",
+    "preferred_atom_ids": [
+      "yoloTool:threshold:medium",
+      "crop_detections:operation:insert_after_detection",
+      "MLLM:scope:local_regions",
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading",
+      "paddleHeadDetTool:target:head",
+      "paddlePedriderDetTool:target:traffic_subject",
+      "unidepth:evidence_role:metric_depth"
+    ],
+    "tool_hints": {
+      "yoloTool": "使用中等阈值检测消防门或门框结构，获取初始定位框",
+      "crop_detections": "根据检测框裁剪出消防门区域，排除背景干扰",
+      "MLLM": "聚焦于裁剪后的局部区域，明确寻找门扇开启角度、门缝或阻挡物等视觉线索"
+    },
+    "diagnosis": "当前基线工作流直接依赖 MLLM 对全图进行判断，虽然准确率尚可，但缺乏中间的结构化视觉证据支撑，容易受复杂背景或遮挡影响。引入 YOLO 进行目标定位并裁剪关键区域，可以强制模型关注“门”这一核心主体，减少无关信息干扰。随后让 MLLM 在局部区域寻找明确的开启状态线索（如门缝、角度），能形成“检测-裁剪-细粒度分析”的证据链，从而在不改变最终分类逻辑的前提下，显著提高对模糊场景的鲁棒性和解释性。",
+    "selected_atom_ids": [
+      "yoloTool:threshold:medium"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 1,
+    "evidence_accept_count": 1,
+    "tool_failure_count": 1,
+    "total_tool_calls": 3,
+    "total_latency_ms": 7033.201997168362,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "fire_door_unclosed__image_positive_02"
+  ]
+}

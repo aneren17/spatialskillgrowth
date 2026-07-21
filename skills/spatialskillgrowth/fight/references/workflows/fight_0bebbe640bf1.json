@@ -1,0 +1,153 @@
+{
+  "workflow_id": "fight_0bebbe640bf1",
+  "name": "fight_detection_image",
+  "applicability": {
+    "problem_class": "fight",
+    "required_slots": [],
+    "required_tools": [
+      "paddleHeadDetTool",
+      "yoloTool",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "基于静态图像输入，通过结合人头检测、通用目标检测及深度估计的多模态证据，判断场景中是否存在‘打架斗殴’异常事件。该工作流利用 PaddleHeadDetTool 定位人头，YoloTool 识别潜在冲突目标，Unidepth 评估空间深度关系，最终由多模态大模型综合视觉证据进行判定。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频），需使用其他适配的工作流。; 图像中完全无法检测到人头或关键目标，导致缺乏基础视觉证据的场景。; 需要语义嵌入分析（embedding）的场景，本工作流禁止调用 embeddingTool。; 非‘打架斗殴’类别的其他异常事件检测，本工作流严格限定于 event_type 为 'fight' 的场景。",
+    "capability_boundary": "仅适用于静态图像输入下的打架斗殴事件检测。检测能力依赖于工具链中人头检测、目标检测（阈值0.5）及深度估计的准确性。最终判断严格基于多模态模型对视觉证据的综合分析，输出结果为二元判定（是/否）。"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleHeadDetTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "tool": "paddleHeadDetTool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleHeadDetTool",
+          "axis": "target",
+          "value": "head",
+          "kind": "fixed",
+          "description": "检测可见人头。",
+          "args": {}
+        }
+      ],
+      "purpose": "检测可见人头。",
+      "step_id": "paddleheaddettool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.yolotool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 fight 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析完整图像。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "whole_image",
+          "kind": "world_model",
+          "description": "分析完整图像。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 fight 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleheaddettool_0",
+        "yolotool_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "fight_d0dd12ac36b0",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过深度估计验证人员间的物理接近度，以增强打架斗殴判断的空间鲁棒性",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth",
+      "MLLM:scope:whole_image",
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "unidepth": "生成深度图以量化检测到的多个人物之间的相对距离，辅助判断是否存在肢体接触的近距离聚集",
+      "MLLM": "结合深度证据和现有检测框，明确描述人物间的空间交互关系（如重叠、极近距离）作为打架的视觉线索"
+    },
+    "diagnosis": "现有工作流已通过 YOLO 和 HeadDet 确认了多个人物的存在及位置，并给出了肯定结论。然而，仅凭2D边界框的重叠或邻近不足以完全排除透视造成的假阳性。引入 metric_depth 可以补充第三维度的空间证据，验证人物是否在物理空间上真正紧密接触，从而在不改变最终“是”的判断前提下，显著增强结论的鲁棒性和证据链的完整性。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:whole_image",
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 1,
+    "evidence_accept_count": 1,
+    "tool_failure_count": 1,
+    "total_tool_calls": 5,
+    "total_latency_ms": 32570.32630685717,
+    "structural_coverage": 8.0
+  },
+  "source_task_ids": [
+    "fight__image_positive_01"
+  ]
+}

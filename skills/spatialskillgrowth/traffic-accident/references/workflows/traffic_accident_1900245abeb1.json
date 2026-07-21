@@ -1,0 +1,128 @@
+{
+  "workflow_id": "traffic_accident_1900245abeb1",
+  "name": "traffic_accident_detector",
+  "applicability": {
+    "problem_class": "traffic_accident",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "paddlePedriderDetTool",
+      "MLLM"
+    ],
+    "description": "基于图像输入，利用 YOLO 目标检测与行人/骑行者专用检测器提取视觉证据，结合多模态大模型判断是否发生交通事故。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 非交通事故类别的异常事件检测; 未包含交通参与者或车辆相关视觉元素的场景",
+    "capability_boundary": "{\"required_tools\": [\"yoloTool\", \"paddlePedriderDetTool\", \"MLLM\"], \"event_type\": \"traffic_accident\", \"media_type\": \"image\", \"evidence_requirements\": \"必须通过 yoloTool 和 paddlePedriderDetTool 获取结构化检测框及类别信息，并作为 MLLM 判断的依据\", \"limitations\": \"仅适用于静态图像分析，不支持视频流或实时动态检测；检测精度受限于底层视觉模型对遮挡、低光照等复杂环境的鲁棒性\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "paddlePedriderDetTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "tool": "paddlePedriderDetTool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddlePedriderDetTool",
+          "axis": "target",
+          "value": "traffic_subject",
+          "kind": "fixed",
+          "description": "检测交通参与者。",
+          "args": {}
+        }
+      ],
+      "purpose": "检测交通参与者。",
+      "step_id": "paddlepedriderdettool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 traffic_accident 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 traffic_accident 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0",
+        "paddlepedriderdettool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "traffic_accident_34f138c7ac64",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入细粒度交通参与者检测以增强事故主体识别能力",
+    "preferred_atom_ids": [
+      "paddlePedriderDetTool:target:traffic_subject"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "yoloTool:threshold:low"
+    ],
+    "tool_hints": {
+      "paddlePedriderDetTool": "检测行人、骑行者等易被YOLO遗漏或混淆的交通参与者，提供事故中弱势道路使用者的存在证据",
+      "MLLM": "结合YOLO的车辆检测与PaddlePedrider的行人/骑行者检测，综合判断是否存在人车冲突或异常聚集"
+    },
+    "diagnosis": "当前工作流依赖YOLO检测车辆和交通灯，但在交通事故场景中，行人、骑行者等‘交通参与者’往往是事故的核心主体或受害者。YOLO对这些小目标或特定姿态的检测可能不如专用模型敏感。引入paddlePedriderDetTool可以专门捕捉这些关键实体，补充YOLO在‘人’这一维度上的证据缺失，从而更准确地判断是否发生涉及行人的交通事故，提升对复杂混合交通场景的鲁棒性。",
+    "selected_atom_ids": [
+      "paddlePedriderDetTool:target:traffic_subject"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 6,
+    "total_latency_ms": 12367.89043713361,
+    "structural_coverage": 5.0
+  },
+  "source_task_ids": [
+    "traffic_accident__image_negative_07",
+    "traffic_accident__image_positive_00"
+  ]
+}

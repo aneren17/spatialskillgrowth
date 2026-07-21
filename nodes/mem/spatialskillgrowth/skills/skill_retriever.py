@@ -18,11 +18,13 @@ class WorkflowRetriever:
         llm,
         top_k=3,
         include_provisional=False,
+        return_all_candidates=False,
     ):
         self.repository = repository
         self.llm = llm
         self.top_k = max(1, int(top_k))
         self.include_provisional = include_provisional
+        self.return_all_candidates = return_all_candidates
 
     def retrieve(
         self,
@@ -31,6 +33,7 @@ class WorkflowRetriever:
         image_paths,
         slot_bindings,
         allowed_tool_names,
+        media_type="",
     ):
         candidates = []
         workflows = self.repository.list_retrievable(
@@ -42,6 +45,7 @@ class WorkflowRetriever:
                 workflow,
                 slot_bindings,
                 allowed_tool_names,
+                media_type,
             ):
                 candidates.append(workflow)
 
@@ -53,6 +57,17 @@ class WorkflowRetriever:
             )
 
         candidates.sort(key=_history_sort_key)
+        if self.return_all_candidates:
+            ranked_ids = [
+                workflow.workflow_id
+                for workflow in candidates
+            ]
+            return candidates, RetrievalDecision(
+                strategy="all_structurally_eligible",
+                ranked_workflow_ids=ranked_ids,
+                reason="冻结推理返回当前类别全部结构契约合格工作流。",
+            )
+
         skill_guidance = self.repository.skill_guidance(
             event_type,
             include_provisional=self.include_provisional,
@@ -63,8 +78,9 @@ class WorkflowRetriever:
                 "同类别 SKILL.md 不存在或为空，已退回历史指标排序。",
             )
 
+        result_limit = self.top_k
         prompt = SKILL_GUIDED_WORKFLOW_RETRIEVAL_PROMPT.format(
-            top_k=self.top_k,
+            top_k=result_limit,
             event_type=event_type,
             slot_bindings=json.dumps(slot_bindings, ensure_ascii=False),
             question=question,
@@ -106,7 +122,7 @@ class WorkflowRetriever:
                 if workflow_id in ranked_ids:
                     continue
                 ranked_ids.append(workflow_id)
-                if len(ranked_ids) >= self.top_k:
+                if len(ranked_ids) >= result_limit:
                     break
         if not ranked_ids:
             return self._history_fallback(
@@ -140,6 +156,7 @@ def workflow_structurally_eligible(
     workflow,
     slot_bindings,
     allowed_tool_names,
+    media_type="",
 ):
     # 结构契约检查：确保工作流的 slots 和 tools 符合要求
     applicability = workflow.applicability
@@ -152,7 +169,7 @@ def workflow_structurally_eligible(
     graph_tools = set()
     for step in workflow.steps:
         graph_tools.add(step.tool_name)
-    if "embeddingTool" not in graph_tools:
+    if "embeddingTool" in required_tools or "embeddingTool" in graph_tools:
         return False
     if not required_tools.issubset(allowed_tools):
         return False

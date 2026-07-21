@@ -1,0 +1,96 @@
+{
+  "workflow_id": "instrument_operation_1bd3fad70aa2",
+  "name": "instrument_operation_detector",
+  "applicability": {
+    "problem_class": "instrument_operation",
+    "required_slots": [],
+    "required_tools": [
+      "paddleHeadDetTool",
+      "MLLM"
+    ],
+    "description": "检测输入图像中是否发生“是否操作仪器”异常事件。该工作流首先利用 paddleHeadDetTool 检测可见人头以提供上下文证据，随后通过多模态大语言模型（MLLM）结合图像内容判断是否存在仪器操作行为。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 不包含可见人头或无法通过视觉证据判断仪器操作状态的模糊场景",
+    "capability_boundary": "{\"required_slots\": {\"event_type\": \"instrument_operation\", \"media_type\": \"image\"}, \"tool_constraints\": [\"必须使用 paddleHeadDetTool 进行人头检测\", \"必须使用 MLLM 进行最终判断\", \"禁止使用 embeddingTool\"], \"output_format\": \"仅返回“是”或“否”\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleHeadDetTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "tool": "paddleHeadDetTool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleHeadDetTool",
+          "axis": "target",
+          "value": "head",
+          "kind": "fixed",
+          "description": "检测可见人头。",
+          "args": {}
+        }
+      ],
+      "purpose": "检测可见人头。",
+      "step_id": "paddleheaddettool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 instrument_operation 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 instrument_operation 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleheaddettool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "instrument_operation_f06dd7f53eb7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入头部检测以提供操作主体的存在性证据，增强对'操作'行为的语义验证",
+    "preferred_atom_ids": [
+      "paddleHeadDetTool:target:head"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type"
+    ],
+    "tool_hints": {
+      "paddleHeadDetTool": "检测图像中是否存在人头，作为判断是否有人员在场并可能操作仪器的辅助证据。",
+      "MLLM": "结合头部检测结果与视觉线索，综合判断是否存在针对仪器的操作行为。"
+    },
+    "diagnosis": "当前工作流仅依赖 MLLM 对全图的直接判断，虽然准确但缺乏结构化主体证据。'操作仪器'隐含了'人'的存在。通过引入 paddleHeadDetTool 检测人头，可以为 MLLM 提供明确的'操作主体'存在性证据。如果检测到头部且位于仪器附近，可显著增强'是'的判断置信度；若未检测到头部，则需 MLLM 更仔细地寻找手部或其他肢体线索或判断为'否'。这种多模态证据互补（主体检测+视觉推理）能提高鲁棒性，特别是在遮挡或模糊场景下，同时不破坏已有的成功路径，仅作为补充证据链。",
+    "selected_atom_ids": [
+      "paddleHeadDetTool:target:head"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 4,
+    "total_latency_ms": 1530.434456653893,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "instrument_operation__image_negative_06",
+    "instrument_operation__image_positive_00"
+  ]
+}

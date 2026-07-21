@@ -1,0 +1,108 @@
+{
+  "workflow_id": "egress_blocked_ca7dd3800fd8",
+  "name": "egress_blocked_detector",
+  "applicability": {
+    "problem_class": "egress_blocked",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "MLLM"
+    ],
+    "description": "针对图像输入，利用目标检测工具（yoloTool）结合多模态大模型（MLLM）进行视觉证据收集与分析，专门用于判定是否存在安全出口被遮挡或堵塞的异常事件。",
+    "exclusions": "禁止对图像输入调用 embeddingTool; 不适用于非图像类型的媒体数据; 不处理非 egress_blocked 类别的异常事件; 不进行事件类别的重新分类或改写",
+    "capability_boundary": "仅支持基于图像视觉证据的 egress_blocked 事件检测，依赖 yoloTool 进行初步特征提取及 MLLM 进行最终逻辑判断，输出结果为二值化的存在性判定。"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 egress_blocked 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 egress_blocked 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "egress_blocked_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入结构化视觉证据以增强对遮挡物的定位与确认，提升鲁棒性",
+    "preferred_atom_ids": [
+      "yoloTool:threshold:medium",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading"
+    ],
+    "tool_hints": {
+      "yoloTool": "检测通用障碍物或物体，为遮挡提供物理存在证据",
+      "MLLM": "结合YOLO检测框，聚焦分析出口区域是否被检测到的物体物理阻挡"
+    },
+    "diagnosis": "当前工作流仅依赖MLLM直接判断，缺乏中间结构化证据。引入YOLO检测可明确识别出口前的物体（如箱子、家具等），MLLM随后聚焦于这些局部区域判断其是否构成“遮挡”，从而将主观视觉判断转化为“物体检测+空间关系推理”的更鲁棒证据链，减少误判。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions",
+      "yoloTool:threshold:medium"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 1,
+    "evidence_accept_count": 1,
+    "tool_failure_count": 1,
+    "total_tool_calls": 3,
+    "total_latency_ms": 33098.33934158087,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "egress_blocked__image_negative_09"
+  ]
+}

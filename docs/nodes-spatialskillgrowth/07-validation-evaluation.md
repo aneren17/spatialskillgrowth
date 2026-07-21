@@ -1,7 +1,9 @@
 # 证据和人工 Skill 验证
 
-`AnomalyEvidenceValidator.validate(event_type, question, answer, result, media_paths)` 检查：单媒体、执行成功、
-实际调用 embedding、类别一致、有布尔判断、最终答案一致、阈值为数值。任何一项失败都拒绝候选。
+`AnomalyEvidenceValidator.validate(event_type, question, answer, result, media_paths)` 先检查单媒体、执行
+成功、类别一致、有布尔判断和最终答案一致。对于视频 embedding 通道，额外要求确实调用
+`embeddingTool` 且阈值为数值；对于图片工作流或视频抽样帧工作流，要求至少一个非 embedding 视觉工具
+成功返回。任何一项失败都拒绝该通道。
 
 已删除“无证据”“纯语义”“数值题”等验证策略。
 

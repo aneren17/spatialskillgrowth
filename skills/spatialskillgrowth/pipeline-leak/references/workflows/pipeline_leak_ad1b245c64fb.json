@@ -1,0 +1,123 @@
+{
+  "workflow_id": "pipeline_leak_ad1b245c64fb",
+  "name": "pipeline_leak_detector",
+  "applicability": {
+    "problem_class": "pipeline_leak",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "python_code_sandbox",
+      "MLLM"
+    ],
+    "description": "基于图像输入，利用 GroundingDINO 进行开放词汇目标检测，结合代码沙箱计算结构化证据，最终通过多模态大语言模型判断是否发生管道泄漏异常。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 非 pipeline_leak 类别的异常检测任务; 未提供原始图像数据的请求",
+    "capability_boundary": "{\"required_evidence\": [\"GroundingDINO 检测到的管道或泄漏相关视觉对象\", \"代码沙箱生成的结构化证据摘要\"], \"detection_logic\": \"依据视觉证据判断是否存在管道泄漏，输出二值结论\", \"constraints\": \"严格限制在 pipeline_leak 事件类型，不泛化至其他泄漏或管道故障类别\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "pipeline_leak",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "python_code_sandbox",
+      "args": {
+        "code": "import json\n\ndetections = json.loads(r'''$step.groundingdino_0.detections_json''').get(\"detections\", [])\nsummary = []\nfor item in detections:\n    box = item.get(\"bbox\", [])\n    if len(box) != 4:\n        continue\n    width = max(0.0, float(box[2]) - float(box[0]))\n    height = max(0.0, float(box[3]) - float(box[1]))\n    summary.append({\n        \"class_name\": item.get(\"class_name\", \"\"),\n        \"score\": item.get(\"score\", 0.0),\n        \"area\": width * height,\n        \"center\": [(float(box[0]) + float(box[2])) / 2, (float(box[1]) + float(box[3])) / 2],\n    })\nprint(json.dumps({\"count\": len(summary), \"objects\": summary}, ensure_ascii=False))\n"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "python_code_sandbox",
+          "axis": "operation",
+          "value": "append_verification",
+          "kind": "structural",
+          "description": "计算结构化证据摘要。",
+          "args": {}
+        }
+      ],
+      "purpose": "计算结构化证据摘要。",
+      "step_id": "python_code_sandbox_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 pipeline_leak 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 pipeline_leak 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0",
+        "python_code_sandbox_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "pipeline_leak_1dbd8d95a7a7",
+  "mutation_mode": "failure_repair",
+  "mutation_direction": {
+    "mode": "failure_repair",
+    "objective": "提高检测阈值以过滤低置信度误检，并强制MLLM验证视觉特征",
+    "preferred_atom_ids": [
+      "groundingdino:box_threshold:medium",
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [
+      "groundingdino:box_threshold:low",
+      "embeddingTool:event_type:runtime_event_type"
+    ],
+    "tool_hints": {
+      "groundingdino": "将box_threshold提升至medium级别，以过滤掉低置信度的噪声检测框。",
+      "MLLM": "要求模型严格检查检测框内的像素特征是否包含目标物理证据，若仅为背景或非目标本体则判定为否。"
+    },
+    "diagnosis": "GroundingDINO在低阈值下产生了低置信度的误检框，覆盖了非目标区域。Python沙箱如实汇总了这些误检证据，导致MLLM基于错误的‘存在检测框’前提做出了肯定判断。失败根源在于检测阈值过低引入噪声，且MLLM缺乏对检测框内部视觉内容的二次验证机制。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 6,
+    "total_latency_ms": 3166.7423425242305,
+    "structural_coverage": 6.0
+  },
+  "source_task_ids": [
+    "pipeline_leak__image_negative_09",
+    "pipeline_leak__image_positive_00"
+  ]
+}

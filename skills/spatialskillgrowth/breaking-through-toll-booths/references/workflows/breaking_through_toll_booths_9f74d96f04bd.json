@@ -1,0 +1,175 @@
+{
+  "workflow_id": "breaking_through_toll_booths_9f74d96f04bd",
+  "name": "breaking_through_toll_booths_detector",
+  "applicability": {
+    "problem_class": "breaking_through_toll_booths",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "yoloTool",
+      "unidepth",
+      "python_code_sandbox",
+      "MLLM"
+    ],
+    "description": "检测输入图像中是否发生车辆或行人强行通过收费站闸机（闯收费站）的异常事件。该工作流利用 OCR 识别收费站标识文字，结合 YOLO 目标检测定位车辆或行人，并通过深度估计与结构化证据计算，由多模态大模型综合判断是否存在违规闯卡行为。",
+    "exclusions": "非收费站场景（如普通道路、停车场入口无闸机设施）; 图像中未出现收费站闸机、栏杆或相关标识文字; 目标物体未处于通过或试图通过闸机的动态过程中; 图像质量过低导致无法识别关键视觉证据（如文字模糊、目标遮挡严重）; 非图像类型的媒体输入",
+    "capability_boundary": "{\"required_evidence\": [\"OCR 识别到的收费站相关文字（如‘收费站’、‘ETC’、‘缴费’等）\", \"YOLO 检测到的车辆或行人目标及其边界框\", \"基于 YOLO 结果的深度估计信息，用于判断目标与闸机的空间关系\", \"结构化证据摘要，整合位置、深度与文本信息\"], \"tool_constraints\": [\"必须使用 paddleOcrTool 读取可见文字\", \"必须使用 yoloTool 进行目标检测（阈值 0.5）\", \"必须使用 unidepth 估计检测目标深度\", \"必须使用 python_code_sandbox 计算结构化证据摘要\", \"最终判断由 MLLM 基于上述所有工具输出完成\", \"禁止对图像输入调用 embeddingTool\"], \"event_type\": \"breaking_through_toll_booths\", \"media_type\": \"image\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.yolotool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    },
+    {
+      "tool_name": "python_code_sandbox",
+      "args": {
+        "code": "import json\n\ndetections = json.loads(r'''$step.yolotool_0.detections_json''').get(\"detections\", [])\nsummary = []\nfor item in detections:\n    box = item.get(\"bbox\", [])\n    if len(box) != 4:\n        continue\n    width = max(0.0, float(box[2]) - float(box[0]))\n    height = max(0.0, float(box[3]) - float(box[1]))\n    summary.append({\n        \"class_name\": item.get(\"class_name\", \"\"),\n        \"score\": item.get(\"score\", 0.0),\n        \"area\": width * height,\n        \"center\": [(float(box[0]) + float(box[2])) / 2, (float(box[1]) + float(box[3])) / 2],\n    })\nprint(json.dumps({\"count\": len(summary), \"objects\": summary}, ensure_ascii=False))\n"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "python_code_sandbox",
+          "axis": "operation",
+          "value": "append_verification",
+          "kind": "structural",
+          "description": "计算结构化证据摘要。",
+          "args": {}
+        }
+      ],
+      "purpose": "计算结构化证据摘要。",
+      "step_id": "python_code_sandbox_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 breaking_through_toll_booths 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 breaking_through_toll_booths 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0",
+        "yolotool_0",
+        "unidepth_0",
+        "python_code_sandbox_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "breaking_through_toll_booths_e7ed2b3b5674",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "增强空间关系推理与结构化验证，提升对'闯收费站'行为的鲁棒性判断",
+    "preferred_atom_ids": [
+      "crop_detections:operation:insert_after_detection",
+      "python_code_sandbox:operation:append_verification",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "crop_detections": "裁剪车辆与收费站关键区域，聚焦交互细节",
+      "python_code_sandbox": "计算车辆与收费站的空间重叠或距离指标，量化异常程度",
+      "MLLM": "基于裁剪后的局部区域和量化指标，给出明确的视觉线索支持最终判断"
+    },
+    "diagnosis": "现有工作流已使用YOLO检测目标、UniDepth估计深度，并调用MLLM进行最终判断，但未对关键区域（如车辆与收费站）进行精细化裁剪分析，也缺乏对空间关系的量化验证。通过插入裁剪操作和结构化计算，可补充视觉证据的局部细节和数值支撑，增强对'闯收费站'行为的空间逻辑判断，避免仅依赖全局图像或单一检测结果的误判，从而在不改变核心路线的前提下提升鲁棒性和证据完整性。",
+    "selected_atom_ids": [
+      "python_code_sandbox:operation:append_verification"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 10,
+    "total_latency_ms": 19129.246501252055,
+    "structural_coverage": 11.0
+  },
+  "source_task_ids": [
+    "breaking_through_toll_booths__image_negative_08",
+    "breaking_through_toll_booths__image_negative_09"
+  ]
+}

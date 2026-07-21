@@ -44,15 +44,16 @@ Runtime 返回的不是 OCR 原始字符串，而是统一字典：
 `runtime.call` 只负责“调用并记录”。`depends_on` 只写入轨迹，不会自动判断前一步是否成功；需要停止时
 显式调用 `runtime.require`，允许降级时使用 `if result.get("ok")`。
 
-## 1. `embeddingTool`：异常检测主判断
+## 1. `embeddingTool`：视频异常检测主判断
 
-用途：输入一张图片或一段视频，以及已经确定的精确 `event_type`，返回“是/否”和判定阈值。
+用途：输入一段原始视频以及已经确定的精确 `event_type`，返回“是/否”和判定阈值。该接口的图片
+输入会系统性返回无异常，因此图片和视频抽样帧禁止调用。
 
 参数：
 
 | 参数 | 类型 | 示例 | 注意 |
 |---|---|---|---|
-| `file_path` | str | `test/banner.mp4` | 必须是本地存在的原始媒体 |
+| `file_path` | str | `test/banner.mp4` | 必须是本地存在的原始视频 |
 | `event_type` | str | `banner` | 必须是 55 类英文 ID，不能写“横幅异常” |
 
 Skill 调用：
@@ -79,9 +80,9 @@ is_anomaly = runtime.value(embedding, "is_anomaly")  # True
 threshold = runtime.value(embedding, "threshold")    # 0.66
 ```
 
-普通离线证据门要求最终答案与它一致。OCR、MLLM、检测框默认只补充证据。FastAPI 接入层另有明确的业务
-覆盖：成功的非 embedding 工具链判断异常时可返回 `is_anomaly=1, threshold=1.0`；该规则不改变离线
-evidence contract。视频任务中 embedding 自动使用 `runtime.media_path()` 的原视频，不会被抽样帧替换。
+视频 embedding 证据门要求最终答案与它一致。图片/抽样帧 Skill 使用独立的视觉证据契约，不要求
+threshold。视频任务中 embedding 自动使用 `runtime.media_path()` 的原视频，不会被抽样帧替换；
+运行时会拒绝任何图片后缀。
 
 ## 2. `MLLM`：对图像和已有证据做自然语言判断
 
@@ -362,15 +363,14 @@ runtime.require(calculation, "count-detections")
 Skill 本身禁止 import，但传给 sandbox 的代码字符串运行在另一套受限环境，可使用其白名单模块。代码
 必须 `print()` 输出结果。异常检测中它只能做辅助计算，最终仍需要 embedding 判断和阈值。
 
-## 常用组合 1：Embedding + OCR + MLLM
+## 常用组合 1：OCR + MLLM
 
-适合 banner、车牌、仪表异常等文字有帮助，但文字不是最终判定标准的任务：
+适合 banner、车牌、仪表异常等文字能够支持最终判断的图片或视频抽样帧：
 
 ```text
-embeddingTool（原媒体，主结论）
-        ├── paddleOcrTool（代表帧，文字）
-        └── MLLM（代表帧 + 累积证据，解释）
-最终返回 embeddingTool
+paddleOcrTool（代表帧，文字）
+        -> MLLM（代表帧 + 累积证据，最终判断）
+最终返回 MLLM
 ```
 
 这正是 `skills/spatialskillgrowth/banner/scripts/banner-ocr-example.py` 的路线。
@@ -463,20 +463,19 @@ ocr = runtime.call(
 工具返回的第一张证据图。contract 用引用描述连接，solve 用 `runtime.value` 实现同一连接。两边 step ID
 必须一致。
 
-## 常用组合 3：Embedding + 检测 + 相对布局 + MLLM
+## 常用组合 3：检测 + 相对布局 + MLLM
 
 适合跨护栏、越黄线、逆行、违停：
 
 ```text
-embeddingTool ──────────────────────────────> 最终结论
 yolo / paddlePedrider / GroundingDINO
         -> picRelativeCut
-        -> MLLM 检查目标间相对位置
+        -> MLLM 检查目标间相对位置并形成结论
 ```
 
 检测器选哪个取决于目标：COCO 常见物体用 YOLO；交通主体用 Pedrider；开放类别用 GroundingDINO。
 
-## 常用组合 4：Embedding + 检测 + UniDepth + 计算
+## 常用组合 4：检测 + UniDepth + 计算
 
 适合需要距离辅助证据的场景：
 
@@ -485,8 +484,9 @@ GroundingDINO/SAM3 产生 pixel_detections
         -> UniDepth 为每个框补深度
         -> python_code_sandbox 做比较或过滤
         -> MLLM 结合图像解释
-embeddingTool 始终提供异常最终结论
 ```
+
+视频推理的 embedding 在 Skill 工作流之外并行执行，最终与 MLLM 判断取 OR。
 
 不能写成 `UniDepth -> GroundingDINO`，因为 UniDepth 的输入依赖检测框。`tool_contracts.py` 和验证器会
 阻止这种生产者/消费者顺序错误。
@@ -495,9 +495,8 @@ embeddingTool 始终提供异常最终结论
 
 | 情况 | 建议 |
 |---|---|
-| embeddingTool | 必须 require；没有主判断就不能接受异常结果 |
 | 后续步骤必须依赖该框/裁剪 | require，否则后续参数没有意义 |
-| OCR/MLLM 只是锦上添花 | 不 require，失败时降级返回 embedding |
+| OCR/MLLM 产生当前工作流最终判断 | require |
 | 检测器在当前事件经常找不到目标 | 用 `if result.get("ok")` 分支，不要强制终止 |
 
 工具“调用成功”不等于“真实检测正确”。人工验证器只用 mock 检查这些调用能否连通，不会调用真实服务、

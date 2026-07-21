@@ -6,7 +6,7 @@
       "name": "banner",
       "skill_name": "banner",
       "title": "违规横幅检测",
-      "description": "检测输入视频或图像中是否发生“违规横幅检测”异常事件（相关显示名称：违规横幅检测、横幅异常）；调用异常检测工具时，必须使用精确类别 ID `banner`。",
+      "description": "检测输入视频或图像中是否发生“违规横幅检测”异常事件（相关显示名称：违规横幅检测、横幅异常）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `banner`。",
       "aliases": [
         "违规横幅检测",
         "横幅异常"
@@ -21,7 +21,7 @@
       "name": "billboard_fell",
       "skill_name": "billboard-fell",
       "title": "广告牌倒塌",
-      "description": "检测输入视频或图像中是否发生“广告牌倒塌”异常事件（相关显示名称：广告牌倒塌）；调用异常检测工具时，必须使用精确类别 ID `billboard_fell`。",
+      "description": "检测输入视频或图像中是否发生“广告牌倒塌”异常事件（相关显示名称：广告牌倒塌）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `billboard_fell`。",
       "aliases": [
         "广告牌倒塌"
       ],
@@ -33,7 +33,7 @@
       "name": "breaking_through_toll_booths",
       "skill_name": "breaking-through-toll-booths",
       "title": "闯收费站",
-      "description": "检测输入视频或图像中是否发生“闯收费站”异常事件（相关显示名称：闯收费站）；调用异常检测工具时，必须使用精确类别 ID `breaking_through_toll_booths`。",
+      "description": "检测输入视频或图像中是否发生“闯收费站”异常事件（相关显示名称：闯收费站）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `breaking_through_toll_booths`。",
       "aliases": [
         "闯收费站"
       ],
@@ -45,7 +45,7 @@
       "name": "building_collapse",
       "skill_name": "building-collapse",
       "title": "建筑坍塌",
-      "description": "检测输入视频或图像中是否发生“建筑坍塌”异常事件（相关显示名称：建筑坍塌、建筑倒塌）；调用异常检测工具时，必须使用精确类别 ID `building_collapse`。",
+      "description": "检测输入视频或图像中是否发生“建筑坍塌”异常事件（相关显示名称：建筑坍塌、建筑倒塌）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `building_collapse`。",
       "aliases": [
         "建筑坍塌",
         "建筑倒塌"
@@ -60,7 +60,7 @@
       "name": "bus_shelter_was_vandalized",
       "skill_name": "bus-shelter-was-vandalized",
       "title": "公交站台破坏",
-      "description": "检测输入视频或图像中是否发生“公交站台破坏”异常事件（相关显示名称：公交站台破坏、公交候车亭损坏）；调用异常检测工具时，必须使用精确类别 ID `bus_shelter_was_vandalized`。",
+      "description": "检测输入视频或图像中是否发生“公交站台破坏”异常事件（相关显示名称：公交站台破坏、公交候车亭损坏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `bus_shelter_was_vandalized`。",
       "aliases": [
         "公交站台破坏",
         "公交候车亭损坏"
@@ -74,7 +74,7 @@
       "name": "charger",
       "skill_name": "charger",
       "title": "充电器未归位",
-      "description": "检测输入视频或图像中是否发生“充电器未归位”异常事件（相关显示名称：充电器未归位）；调用异常检测工具时，必须使用精确类别 ID `charger`。",
+      "description": "检测输入视频或图像中是否发生“充电器未归位”异常事件（相关显示名称：充电器未归位）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `charger`。",
       "aliases": [
         "充电器未归位"
       ],
@@ -86,7 +86,7 @@
       "name": "climbing_disconnection",
       "skill_name": "climbing-disconnection",
       "title": "攀爬脱网",
-      "description": "检测输入视频或图像中是否发生“攀爬脱网”异常事件（相关显示名称：攀爬脱网、攀爬脱离）；调用异常检测工具时，必须使用精确类别 ID `climbing_disconnection`。",
+      "description": "检测输入视频或图像中是否发生“攀爬脱网”异常事件（相关显示名称：攀爬脱网、攀爬脱离）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `climbing_disconnection`。",
       "aliases": [
         "攀爬脱网",
         "攀爬脱离"
@@ -100,7 +100,7 @@
       "name": "cold_flame",
       "skill_name": "cold-flame",
       "title": "冷焰火检测",
-      "description": "检测输入视频或图像中是否发生“冷焰火检测”异常事件（相关显示名称：冷焰火检测、冷焰）；调用异常检测工具时，必须使用精确类别 ID `cold_flame`。",
+      "description": "检测输入视频或图像中是否发生“冷焰火检测”异常事件（相关显示名称：冷焰火检测、冷焰）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `cold_flame`。",
       "aliases": [
         "冷焰火检测",
         "冷焰"
@@ -114,7 +114,7 @@
       "name": "container_dropped",
       "skill_name": "container-dropped",
       "title": "集装箱掉落",
-      "description": "检测输入视频或图像中是否发生“集装箱掉落”异常事件（相关显示名称：集装箱掉落、集装箱坠落）；调用异常检测工具时，必须使用精确类别 ID `container_dropped`。",
+      "description": "检测输入视频或图像中是否发生“集装箱掉落”异常事件（相关显示名称：集装箱掉落、集装箱坠落）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `container_dropped`。",
       "aliases": [
         "集装箱掉落",
         "集装箱坠落"
@@ -128,7 +128,7 @@
       "name": "cross_barrier",
       "skill_name": "cross-barrier",
       "title": "翻越护栏",
-      "description": "检测输入视频或图像中是否发生“翻越护栏”异常事件（相关显示名称：翻越护栏、跨越护栏）；调用异常检测工具时，必须使用精确类别 ID `cross_barrier`。",
+      "description": "检测输入视频或图像中是否发生“翻越护栏”异常事件（相关显示名称：翻越护栏、跨越护栏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `cross_barrier`。",
       "aliases": [
         "翻越护栏",
         "跨越护栏"
@@ -142,7 +142,7 @@
       "name": "doors_and_windows_are_damaged",
       "skill_name": "doors-and-windows-are-damaged",
       "title": "门窗破损",
-      "description": "检测输入视频或图像中是否发生“门窗破损”异常事件（相关显示名称：门窗破损、门窗损坏）；调用异常检测工具时，必须使用精确类别 ID `doors_and_windows_are_damaged`。",
+      "description": "检测输入视频或图像中是否发生“门窗破损”异常事件（相关显示名称：门窗破损、门窗损坏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `doors_and_windows_are_damaged`。",
       "aliases": [
         "门窗破损",
         "门窗损坏"
@@ -156,7 +156,7 @@
       "name": "ebike_reverse",
       "skill_name": "ebike-reverse",
       "title": "非机动车逆行",
-      "description": "检测输入视频或图像中是否发生“非机动车逆行”异常事件（相关显示名称：非机动车逆行、电动车逆行）；调用异常检测工具时，必须使用精确类别 ID `ebike_reverse`。",
+      "description": "检测输入视频或图像中是否发生“非机动车逆行”异常事件（相关显示名称：非机动车逆行、电动车逆行）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `ebike_reverse`。",
       "aliases": [
         "非机动车逆行",
         "电动车逆行"
@@ -170,7 +170,7 @@
       "name": "egress_blocked",
       "skill_name": "egress-blocked",
       "title": "安全出口遮挡",
-      "description": "检测输入视频或图像中是否发生“安全出口遮挡”异常事件（相关显示名称：安全出口遮挡、出口堵塞）；调用异常检测工具时，必须使用精确类别 ID `egress_blocked`。",
+      "description": "检测输入视频或图像中是否发生“安全出口遮挡”异常事件（相关显示名称：安全出口遮挡、出口堵塞）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `egress_blocked`。",
       "aliases": [
         "安全出口遮挡",
         "出口堵塞"
@@ -184,7 +184,7 @@
       "name": "emergency_lane_occupancy",
       "skill_name": "emergency-lane-occupancy",
       "title": "占用应急车道",
-      "description": "检测输入视频或图像中是否发生“占用应急车道”异常事件（相关显示名称：占用应急车道、应急车道占用）；调用异常检测工具时，必须使用精确类别 ID `emergency_lane_occupancy`。",
+      "description": "检测输入视频或图像中是否发生“占用应急车道”异常事件（相关显示名称：占用应急车道、应急车道占用）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `emergency_lane_occupancy`。",
       "aliases": [
         "占用应急车道",
         "应急车道占用"
@@ -199,7 +199,7 @@
       "name": "equipment_rust",
       "skill_name": "equipment-rust",
       "title": "设备生锈",
-      "description": "检测输入视频或图像中是否发生“设备生锈”异常事件（相关显示名称：设备生锈）；调用异常检测工具时，必须使用精确类别 ID `equipment_rust`。",
+      "description": "检测输入视频或图像中是否发生“设备生锈”异常事件（相关显示名称：设备生锈）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `equipment_rust`。",
       "aliases": [
         "设备生锈"
       ],
@@ -212,7 +212,7 @@
       "name": "explosion",
       "skill_name": "explosion",
       "title": "爆炸检测",
-      "description": "检测输入视频或图像中是否发生“爆炸检测”异常事件（相关显示名称：爆炸检测、爆炸）；调用异常检测工具时，必须使用精确类别 ID `explosion`。",
+      "description": "检测输入视频或图像中是否发生“爆炸检测”异常事件（相关显示名称：爆炸检测、爆炸）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `explosion`。",
       "aliases": [
         "爆炸检测",
         "爆炸"
@@ -227,7 +227,7 @@
       "name": "fall",
       "skill_name": "fall",
       "title": "人员摔倒",
-      "description": "检测输入视频或图像中是否发生“人员摔倒”异常事件（相关显示名称：人员摔倒、跌倒）；调用异常检测工具时，必须使用精确类别 ID `fall`。",
+      "description": "检测输入视频或图像中是否发生“人员摔倒”异常事件（相关显示名称：人员摔倒、跌倒）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fall`。",
       "aliases": [
         "人员摔倒",
         "跌倒"
@@ -242,7 +242,7 @@
       "name": "fight",
       "skill_name": "fight",
       "title": "打架斗殴",
-      "description": "检测输入视频或图像中是否发生“打架斗殴”异常事件（相关显示名称：打架斗殴、打架）；调用异常检测工具时，必须使用精确类别 ID `fight`。",
+      "description": "检测输入视频或图像中是否发生“打架斗殴”异常事件（相关显示名称：打架斗殴、打架）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fight`。",
       "aliases": [
         "打架斗殴",
         "打架"
@@ -257,7 +257,7 @@
       "name": "fire",
       "skill_name": "fire",
       "title": "起火",
-      "description": "检测输入视频或图像中是否发生“起火”异常事件（相关显示名称：起火）；调用异常检测工具时，必须使用精确类别 ID `fire`。",
+      "description": "检测输入视频或图像中是否发生“起火”异常事件（相关显示名称：起火）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fire`。",
       "aliases": [
         "起火"
       ],
@@ -269,7 +269,7 @@
       "name": "fire_door_unclosed",
       "skill_name": "fire-door-unclosed",
       "title": "消防门未关闭",
-      "description": "检测输入视频或图像中是否发生“消防门未关闭”异常事件（相关显示名称：消防门未关闭）；调用异常检测工具时，必须使用精确类别 ID `fire_door_unclosed`。",
+      "description": "检测输入视频或图像中是否发生“消防门未关闭”异常事件（相关显示名称：消防门未关闭）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fire_door_unclosed`。",
       "aliases": [
         "消防门未关闭"
       ],
@@ -283,7 +283,7 @@
       "name": "fire_hydrant_leakage",
       "skill_name": "fire-hydrant-leakage",
       "title": "消防栓泄漏",
-      "description": "检测输入视频或图像中是否发生“消防栓泄漏”异常事件（相关显示名称：消防栓泄漏）；调用异常检测工具时，必须使用精确类别 ID `fire_hydrant_leakage`。",
+      "description": "检测输入视频或图像中是否发生“消防栓泄漏”异常事件（相关显示名称：消防栓泄漏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fire_hydrant_leakage`。",
       "aliases": [
         "消防栓泄漏"
       ],
@@ -295,7 +295,7 @@
       "name": "firelane_occupied",
       "skill_name": "firelane-occupied",
       "title": "占用消防通道",
-      "description": "检测输入视频或图像中是否发生“占用消防通道”异常事件（相关显示名称：占用消防通道、消防通道占用）；调用异常检测工具时，必须使用精确类别 ID `firelane_occupied`。",
+      "description": "检测输入视频或图像中是否发生“占用消防通道”异常事件（相关显示名称：占用消防通道、消防通道占用）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `firelane_occupied`。",
       "aliases": [
         "占用消防通道",
         "消防通道占用"
@@ -309,7 +309,7 @@
       "name": "flag",
       "skill_name": "flag",
       "title": "旗帜检测",
-      "description": "检测输入视频或图像中是否发生“旗帜检测”异常事件（相关显示名称：旗帜检测、旗帜异常）；调用异常检测工具时，必须使用精确类别 ID `flag`。",
+      "description": "检测输入视频或图像中是否发生“旗帜检测”异常事件（相关显示名称：旗帜检测、旗帜异常）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `flag`。",
       "aliases": [
         "旗帜检测",
         "旗帜异常"
@@ -323,7 +323,7 @@
       "name": "foreign_objects_on_transmission_lines",
       "skill_name": "foreign-objects-on-transmission-lines",
       "title": "输电线路异物",
-      "description": "检测输入视频或图像中是否发生“输电线路异物”异常事件（相关显示名称：输电线路异物）；调用异常检测工具时，必须使用精确类别 ID `foreign_objects_on_transmission_lines`。",
+      "description": "检测输入视频或图像中是否发生“输电线路异物”异常事件（相关显示名称：输电线路异物）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `foreign_objects_on_transmission_lines`。",
       "aliases": [
         "输电线路异物"
       ],
@@ -335,7 +335,7 @@
       "name": "forest_fire",
       "skill_name": "forest-fire",
       "title": "森林火灾",
-      "description": "检测输入视频或图像中是否发生“森林火灾”异常事件（相关显示名称：森林火灾）；调用异常检测工具时，必须使用精确类别 ID `forest_fire`。",
+      "description": "检测输入视频或图像中是否发生“森林火灾”异常事件（相关显示名称：森林火灾）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `forest_fire`。",
       "aliases": [
         "森林火灾"
       ],
@@ -348,7 +348,7 @@
       "name": "garbage_bin_dumping",
       "skill_name": "garbage-bin-dumping",
       "title": "垃圾桶倾倒",
-      "description": "检测输入视频或图像中是否发生“垃圾桶倾倒”异常事件（相关显示名称：垃圾桶倾倒）；调用异常检测工具时，必须使用精确类别 ID `garbage_bin_dumping`。",
+      "description": "检测输入视频或图像中是否发生“垃圾桶倾倒”异常事件（相关显示名称：垃圾桶倾倒）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `garbage_bin_dumping`。",
       "aliases": [
         "垃圾桶倾倒"
       ],
@@ -361,7 +361,7 @@
       "name": "gas_station_smoking",
       "skill_name": "gas-station-smoking",
       "title": "加油站抽烟",
-      "description": "检测输入视频或图像中是否发生“加油站抽烟”异常事件（相关显示名称：加油站抽烟、加油站吸烟）；调用异常检测工具时，必须使用精确类别 ID `gas_station_smoking`。",
+      "description": "检测输入视频或图像中是否发生“加油站抽烟”异常事件（相关显示名称：加油站抽烟、加油站吸烟）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `gas_station_smoking`。",
       "aliases": [
         "加油站抽烟",
         "加油站吸烟"
@@ -375,7 +375,7 @@
       "name": "guardrail_damaged",
       "skill_name": "guardrail-damaged",
       "title": "护栏损坏",
-      "description": "检测输入视频或图像中是否发生“护栏损坏”异常事件（相关显示名称：护栏损坏）；调用异常检测工具时，必须使用精确类别 ID `guardrail_damaged`。",
+      "description": "检测输入视频或图像中是否发生“护栏损坏”异常事件（相关显示名称：护栏损坏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `guardrail_damaged`。",
       "aliases": [
         "护栏损坏"
       ],
@@ -388,7 +388,7 @@
       "name": "instrument_abnormality",
       "skill_name": "instrument-abnormality",
       "title": "仪表异常",
-      "description": "检测输入视频或图像中是否发生“仪表异常”异常事件（相关显示名称：仪表异常）；调用异常检测工具时，必须使用精确类别 ID `instrument_abnormality`。",
+      "description": "检测输入视频或图像中是否发生“仪表异常”异常事件（相关显示名称：仪表异常）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `instrument_abnormality`。",
       "aliases": [
         "仪表异常"
       ],
@@ -401,7 +401,7 @@
       "name": "instrument_operation",
       "skill_name": "instrument-operation",
       "title": "是否操作仪器",
-      "description": "检测输入视频或图像中是否发生“是否操作仪器”异常事件（相关显示名称：是否操作仪器）；调用异常检测工具时，必须使用精确类别 ID `instrument_operation`。",
+      "description": "检测输入视频或图像中是否发生“是否操作仪器”异常事件（相关显示名称：是否操作仪器）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `instrument_operation`。",
       "aliases": [
         "是否操作仪器"
       ],
@@ -413,7 +413,7 @@
       "name": "kitchen_infested_with_rats",
       "skill_name": "kitchen-infested-with-rats",
       "title": "厨房出现老鼠",
-      "description": "检测输入视频或图像中是否发生“厨房出现老鼠”异常事件（相关显示名称：厨房出现老鼠）；调用异常检测工具时，必须使用精确类别 ID `kitchen_infested_with_rats`。",
+      "description": "检测输入视频或图像中是否发生“厨房出现老鼠”异常事件（相关显示名称：厨房出现老鼠）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `kitchen_infested_with_rats`。",
       "aliases": [
         "厨房出现老鼠"
       ],
@@ -425,7 +425,7 @@
       "name": "license_plate_is_not_standard",
       "skill_name": "license-plate-is-not-standard",
       "title": "车牌不规范",
-      "description": "检测输入视频或图像中是否发生“车牌不规范”异常事件（相关显示名称：车牌不规范）；调用异常检测工具时，必须使用精确类别 ID `license_plate_is_not_standard`。",
+      "description": "检测输入视频或图像中是否发生“车牌不规范”异常事件（相关显示名称：车牌不规范）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `license_plate_is_not_standard`。",
       "aliases": [
         "车牌不规范"
       ],
@@ -437,7 +437,7 @@
       "name": "litter_randomly",
       "skill_name": "litter-randomly",
       "title": "随地乱扔垃圾",
-      "description": "检测输入视频或图像中是否发生“随地乱扔垃圾”异常事件（相关显示名称：随地乱扔垃圾）；调用异常检测工具时，必须使用精确类别 ID `litter_randomly`。",
+      "description": "检测输入视频或图像中是否发生“随地乱扔垃圾”异常事件（相关显示名称：随地乱扔垃圾）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `litter_randomly`。",
       "aliases": [
         "随地乱扔垃圾"
       ],
@@ -449,7 +449,7 @@
       "name": "lost_manhole_cover",
       "skill_name": "lost-manhole-cover",
       "title": "井盖丢失或井盖没盖好",
-      "description": "检测输入视频或图像中是否发生“井盖丢失或井盖没盖好”异常事件（相关显示名称：井盖丢失或井盖没盖好）；调用异常检测工具时，必须使用精确类别 ID `lost_manhole_cover`。",
+      "description": "检测输入视频或图像中是否发生“井盖丢失或井盖没盖好”异常事件（相关显示名称：井盖丢失或井盖没盖好）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `lost_manhole_cover`。",
       "aliases": [
         "井盖丢失或井盖没盖好"
       ],
@@ -461,7 +461,7 @@
       "name": "occluded_license_plate",
       "skill_name": "occluded-license-plate",
       "title": "车牌遮挡",
-      "description": "检测输入视频或图像中是否发生“车牌遮挡”异常事件（相关显示名称：车牌遮挡）；调用异常检测工具时，必须使用精确类别 ID `occluded_license_plate`。",
+      "description": "检测输入视频或图像中是否发生“车牌遮挡”异常事件（相关显示名称：车牌遮挡）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `occluded_license_plate`。",
       "aliases": [
         "车牌遮挡"
       ],
@@ -473,7 +473,7 @@
       "name": "pedestrian_queue",
       "skill_name": "pedestrian-queue",
       "title": "行人排队聚集",
-      "description": "检测输入视频或图像中是否发生“行人排队聚集”异常事件（相关显示名称：行人排队聚集、行人排队）；调用异常检测工具时，必须使用精确类别 ID `pedestrian_queue`。",
+      "description": "检测输入视频或图像中是否发生“行人排队聚集”异常事件（相关显示名称：行人排队聚集、行人排队）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `pedestrian_queue`。",
       "aliases": [
         "行人排队聚集",
         "行人排队"
@@ -487,7 +487,7 @@
       "name": "pipeline_leak",
       "skill_name": "pipeline-leak",
       "title": "管道泄漏",
-      "description": "检测输入视频或图像中是否发生“管道泄漏”异常事件（相关显示名称：管道泄漏）；调用异常检测工具时，必须使用精确类别 ID `pipeline_leak`。",
+      "description": "检测输入视频或图像中是否发生“管道泄漏”异常事件（相关显示名称：管道泄漏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `pipeline_leak`。",
       "aliases": [
         "管道泄漏"
       ],
@@ -500,7 +500,7 @@
       "name": "platform_yellowline",
       "skill_name": "platform-yellowline",
       "title": "越过站台黄线",
-      "description": "检测输入视频或图像中是否发生“越过站台黄线”异常事件（相关显示名称：越过站台黄线、站台黄线）；调用异常检测工具时，必须使用精确类别 ID `platform_yellowline`。",
+      "description": "检测输入视频或图像中是否发生“越过站台黄线”异常事件（相关显示名称：越过站台黄线、站台黄线）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `platform_yellowline`。",
       "aliases": [
         "越过站台黄线",
         "站台黄线"
@@ -514,7 +514,7 @@
       "name": "road_surface_dameged",
       "skill_name": "road-surface-dameged",
       "title": "路面破损",
-      "description": "检测输入视频或图像中是否发生“路面破损”异常事件（相关显示名称：路面破损、路面损坏）；调用异常检测工具时，必须使用精确类别 ID `road_surface_dameged`。",
+      "description": "检测输入视频或图像中是否发生“路面破损”异常事件（相关显示名称：路面破损、路面损坏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `road_surface_dameged`。",
       "aliases": [
         "路面破损",
         "路面损坏"
@@ -528,7 +528,7 @@
       "name": "roadside_booths",
       "skill_name": "roadside-booths",
       "title": "占道经营",
-      "description": "检测输入视频或图像中是否发生“占道经营”异常事件（相关显示名称：占道经营）；调用异常检测工具时，必须使用精确类别 ID `roadside_booths`。",
+      "description": "检测输入视频或图像中是否发生“占道经营”异常事件（相关显示名称：占道经营）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `roadside_booths`。",
       "aliases": [
         "占道经营"
       ],
@@ -540,7 +540,7 @@
       "name": "run_the_red_light",
       "skill_name": "run-the-red-light",
       "title": "闯红灯",
-      "description": "检测输入视频或图像中是否发生“闯红灯”异常事件（相关显示名称：闯红灯）；调用异常检测工具时，必须使用精确类别 ID `run_the_red_light`。",
+      "description": "检测输入视频或图像中是否发生“闯红灯”异常事件（相关显示名称：闯红灯）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `run_the_red_light`。",
       "aliases": [
         "闯红灯"
       ],
@@ -553,7 +553,7 @@
       "name": "screen_doors_clamp_passengers",
       "skill_name": "screen-doors-clamp-passengers",
       "title": "屏蔽门夹人",
-      "description": "检测输入视频或图像中是否发生“屏蔽门夹人”异常事件（相关显示名称：屏蔽门夹人）；调用异常检测工具时，必须使用精确类别 ID `screen_doors_clamp_passengers`。",
+      "description": "检测输入视频或图像中是否发生“屏蔽门夹人”异常事件（相关显示名称：屏蔽门夹人）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `screen_doors_clamp_passengers`。",
       "aliases": [
         "屏蔽门夹人"
       ],
@@ -566,7 +566,7 @@
       "name": "seat_damaged",
       "skill_name": "seat-damaged",
       "title": "座椅损坏",
-      "description": "检测输入视频或图像中是否发生“座椅损坏”异常事件（相关显示名称：座椅损坏、座位损坏）；调用异常检测工具时，必须使用精确类别 ID `seat_damaged`。",
+      "description": "检测输入视频或图像中是否发生“座椅损坏”异常事件（相关显示名称：座椅损坏、座位损坏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `seat_damaged`。",
       "aliases": [
         "座椅损坏",
         "座位损坏"
@@ -580,7 +580,7 @@
       "name": "standing_water",
       "skill_name": "standing-water",
       "title": "积水检测",
-      "description": "检测输入视频或图像中是否发生“积水检测”异常事件（相关显示名称：积水检测、积水）；调用异常检测工具时，必须使用精确类别 ID `standing_water`。",
+      "description": "检测输入视频或图像中是否发生“积水检测”异常事件（相关显示名称：积水检测、积水）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `standing_water`。",
       "aliases": [
         "积水检测",
         "积水"
@@ -594,7 +594,7 @@
       "name": "tank_body_landing",
       "skill_name": "tank-body-landing",
       "title": "罐体落地",
-      "description": "检测输入视频或图像中是否发生“罐体落地”异常事件（相关显示名称：罐体落地、罐体着陆）；调用异常检测工具时，必须使用精确类别 ID `tank_body_landing`。",
+      "description": "检测输入视频或图像中是否发生“罐体落地”异常事件（相关显示名称：罐体落地、罐体着陆）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tank_body_landing`。",
       "aliases": [
         "罐体落地",
         "罐体着陆"
@@ -608,7 +608,7 @@
       "name": "track_obstacle",
       "skill_name": "track-obstacle",
       "title": "轨道异物",
-      "description": "检测输入视频或图像中是否发生“轨道异物”异常事件（相关显示名称：轨道异物、轨道障碍物）；调用异常检测工具时，必须使用精确类别 ID `track_obstacle`。",
+      "description": "检测输入视频或图像中是否发生“轨道异物”异常事件（相关显示名称：轨道异物、轨道障碍物）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `track_obstacle`。",
       "aliases": [
         "轨道异物",
         "轨道障碍物"
@@ -622,7 +622,7 @@
       "name": "traffic_accident",
       "skill_name": "traffic-accident",
       "title": "交通事故",
-      "description": "检测输入视频或图像中是否发生“交通事故”异常事件（相关显示名称：交通事故）；调用异常检测工具时，必须使用精确类别 ID `traffic_accident`。",
+      "description": "检测输入视频或图像中是否发生“交通事故”异常事件（相关显示名称：交通事故）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `traffic_accident`。",
       "aliases": [
         "交通事故"
       ],
@@ -636,7 +636,7 @@
       "name": "tree_fallen",
       "skill_name": "tree-fallen",
       "title": "树木倒伏",
-      "description": "检测输入视频或图像中是否发生“树木倒伏”异常事件（相关显示名称：树木倒伏、树木倒塌）；调用异常检测工具时，必须使用精确类别 ID `tree_fallen`。",
+      "description": "检测输入视频或图像中是否发生“树木倒伏”异常事件（相关显示名称：树木倒伏、树木倒塌）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tree_fallen`。",
       "aliases": [
         "树木倒伏",
         "树木倒塌"
@@ -650,7 +650,7 @@
       "name": "tube_falls_and_breaks",
       "skill_name": "tube-falls-and-breaks",
       "title": "试管掉落破碎",
-      "description": "检测输入视频或图像中是否发生“试管掉落破碎”异常事件（相关显示名称：试管掉落破碎、管道坠落破裂）；调用异常检测工具时，必须使用精确类别 ID `tube_falls_and_breaks`。",
+      "description": "检测输入视频或图像中是否发生“试管掉落破碎”异常事件（相关显示名称：试管掉落破碎、管道坠落破裂）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tube_falls_and_breaks`。",
       "aliases": [
         "试管掉落破碎",
         "管道坠落破裂"
@@ -664,7 +664,7 @@
       "name": "vehicle_illegal_parking",
       "skill_name": "vehicle-illegal-parking",
       "title": "车辆违停",
-      "description": "检测输入视频或图像中是否发生“车辆违停”异常事件（相关显示名称：车辆违停）；调用异常检测工具时，必须使用精确类别 ID `vehicle_illegal_parking`。",
+      "description": "检测输入视频或图像中是否发生“车辆违停”异常事件（相关显示名称：车辆违停）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `vehicle_illegal_parking`。",
       "aliases": [
         "车辆违停"
       ],
@@ -676,7 +676,7 @@
       "name": "walking_a_dog_without_a_leash",
       "skill_name": "walking-a-dog-without-a-leash",
       "title": "遛狗未牵绳",
-      "description": "检测输入视频或图像中是否发生“遛狗未牵绳”异常事件（相关显示名称：遛狗未牵绳）；调用异常检测工具时，必须使用精确类别 ID `walking_a_dog_without_a_leash`。",
+      "description": "检测输入视频或图像中是否发生“遛狗未牵绳”异常事件（相关显示名称：遛狗未牵绳）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `walking_a_dog_without_a_leash`。",
       "aliases": [
         "遛狗未牵绳"
       ],
@@ -688,7 +688,7 @@
       "name": "without_wearing_a_helmet",
       "skill_name": "without-wearing-a-helmet",
       "title": "未戴安全帽",
-      "description": "检测输入视频或图像中是否发生“未戴安全帽”异常事件（相关显示名称：未戴安全帽）；调用异常检测工具时，必须使用精确类别 ID `without_wearing_a_helmet`。",
+      "description": "检测输入视频或图像中是否发生“未戴安全帽”异常事件（相关显示名称：未戴安全帽）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `without_wearing_a_helmet`。",
       "aliases": [
         "未戴安全帽"
       ],
@@ -700,7 +700,7 @@
       "name": "without_wearing_a_mask",
       "skill_name": "without-wearing-a-mask",
       "title": "未戴口罩",
-      "description": "检测输入视频或图像中是否发生“未戴口罩”异常事件（相关显示名称：未戴口罩）；调用异常检测工具时，必须使用精确类别 ID `without_wearing_a_mask`。",
+      "description": "检测输入视频或图像中是否发生“未戴口罩”异常事件（相关显示名称：未戴口罩）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `without_wearing_a_mask`。",
       "aliases": [
         "未戴口罩"
       ],
@@ -712,7 +712,7 @@
       "name": "without_wearing_clothes",
       "skill_name": "without-wearing-clothes",
       "title": "未穿防护服",
-      "description": "检测输入视频或图像中是否发生“未穿防护服”异常事件（相关显示名称：未穿防护服）；调用异常检测工具时，必须使用精确类别 ID `without_wearing_clothes`。",
+      "description": "检测输入视频或图像中是否发生“未穿防护服”异常事件（相关显示名称：未穿防护服）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `without_wearing_clothes`。",
       "aliases": [
         "未穿防护服"
       ],
@@ -724,7 +724,7 @@
       "name": "working_at_heights_without_a_safety_harness",
       "skill_name": "working-at-heights-without-a-safety-harness",
       "title": "高空作业未系安全带",
-      "description": "检测输入视频或图像中是否发生“高空作业未系安全带”异常事件（相关显示名称：高空作业未系安全带）；调用异常检测工具时，必须使用精确类别 ID `working_at_heights_without_a_safety_harness`。",
+      "description": "检测输入视频或图像中是否发生“高空作业未系安全带”异常事件（相关显示名称：高空作业未系安全带）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `working_at_heights_without_a_safety_harness`。",
       "aliases": [
         "高空作业未系安全带"
       ],

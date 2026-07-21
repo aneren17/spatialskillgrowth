@@ -129,7 +129,7 @@ raw_text = runtime.value(ocr, "content", "")
 
 ### `runtime.media_path()`
 
-返回唯一原媒体。图片任务是原图，视频任务是 `.mp4`。主要给 embedding：
+返回唯一原媒体。图片任务是原图，视频任务是 `.mp4`；只有视频任务可以把它交给 embedding：
 
 ```python
 {"file_path": runtime.media_path()}
@@ -236,17 +236,17 @@ return runtime.finish({"answer": "是"})         # "是"
   "success": true,
   "final_answer": "是",
   "observations": [],
-  "used_tools": ["embeddingTool"],
-  "valid_step_ids": ["embedding"],
+  "used_tools": ["paddleOcrTool", "MLLM"],
+  "valid_step_ids": ["ocr", "review"],
   "failed_step_ids": [],
   "error": "",
   "script_path": ".../script.py",
   "script_traceback": "",
   "workflow_id": "banner-ocr-example",
   "execution_backend": "python_skill",
-  "event_type": "banner",
+  "event_type": "",
   "is_anomaly": true,
-  "threshold": 0.66
+  "threshold": null
 }
 ```
 
@@ -255,7 +255,7 @@ return runtime.finish({"answer": "是"})         # "是"
 ```python
 WORKFLOW_ID = "banner-ocr-example"
 PROBLEM_CLASS = "banner"
-DECLARED_TOOLS = ("embeddingTool", "paddleOcrTool", "MLLM")
+DECLARED_TOOLS = ("paddleOcrTool", "MLLM")
 WORKFLOW_CONTRACT = {...}
 ```
 
@@ -321,7 +321,7 @@ def solve(runtime, question, image_paths, *, event_type=""):
 回答“什么任务适合这条路线”。应该写证据和流程，不要写某个样本答案。例如：
 
 ```text
-适合画面中的横幅文字可能影响判断，需要 embedding 主判断并用 OCR 补充可审计文字证据的 banner 任务。
+适合横幅文字清晰可见，需要 OCR 提取文字并由 MLLM 形成最终判断的图片或抽样帧任务。
 ```
 
 ### `exclusions`
@@ -344,14 +344,14 @@ def solve(runtime, question, image_paths, *, event_type=""):
 例如：
 
 ```text
-embedding 必须成功并返回阈值；OCR 和 MLLM 失败时可降级，不能反转 embedding 结论。
+不调用 embedding；OCR 和 MLLM 必须成功，最终判断来自 MLLM。
 ```
 
 crop 路线应写得更具体：
 
 ```text
-embedding 必须成功；GroundingDINO 必须返回非空检测框后才能调用 crop。
-没有框、裁剪失败或 MLLM 失败时停止辅助链，最终返回 embedding 的判断。
+不调用 embedding；GroundingDINO 必须返回非空检测框，crop 和 MLLM 必须成功，
+最终判断来自 MLLM。
 ```
 
 这三个自然语言字段会被主线多模态 Retriever 使用；不要只写“用于 banner”“能力有限”，否则多条
@@ -396,10 +396,10 @@ contract 的 `args` 与 solve 的实际参数必须表达同一件事：
 
 ```python
 # contract
-{"file_path": "$media", "event_type": "$slot.event_type"}
+{"file": "$image", "filename": "$filename", "query": "$question"}
 
 # solve
-{"file_path": runtime.media_path(), "event_type": event_type}
+{"file": runtime.image_path(), "filename": runtime.filename(), "query": question}
 ```
 
 ## 7. 一份可直接理解的完整脚本
@@ -407,24 +407,17 @@ contract 的 `args` 与 solve 的实际参数必须表达同一件事：
 ```python
 WORKFLOW_ID = "banner-simple-human-v1"
 PROBLEM_CLASS = "banner"
-DECLARED_TOOLS = ("embeddingTool", "paddleOcrTool")
+DECLARED_TOOLS = ("paddleOcrTool", "MLLM")
 WORKFLOW_CONTRACT = {
     "workflow_id": WORKFLOW_ID,
     "name": "banner_simple_human",
     "problem_class": PROBLEM_CLASS,
     "required_slots": ["event_type"],
     "required_tools": list(DECLARED_TOOLS),
-    "description": "用 embedding 判断 banner，并用 OCR 补充可见文字。",
+    "description": "读取图片中的横幅文字，并由 MLLM 判断 banner。",
     "exclusions": "不适用于 banner 以外类别。",
-    "capability_boundary": "embedding 必须成功；OCR 可以失败并降级。",
+    "capability_boundary": "OCR 和 MLLM 必须成功，最终判断来自 MLLM。",
     "steps": [
-        {
-            "tool_name": "embeddingTool",
-            "args": {"file_path": "$media", "event_type": "$slot.event_type"},
-            "step_id": "embedding",
-            "depends_on": [],
-            "purpose": "取得主判断和阈值。",
-        },
         {
             "tool_name": "paddleOcrTool",
             "args": {"file": "$image", "filename": "$filename"},
@@ -432,33 +425,49 @@ WORKFLOW_CONTRACT = {
             "depends_on": [],
             "purpose": "读取可见文字。",
         },
+        {
+            "tool_name": "MLLM",
+            "args": {
+                "file": "$evidence_image",
+                "filename": "$filename",
+                "query": "$question\n$evidence",
+                "tool": "qwen36Tool",
+            },
+            "step_id": "review",
+            "depends_on": ["ocr"],
+            "purpose": "结合图片和 OCR 形成最终判断。",
+        },
     ],
 }
 
 
 def solve(runtime, question, image_paths, *, event_type=""):
-    embedding = runtime.call(
-        "embeddingTool",
-        {"file_path": runtime.media_path(), "event_type": event_type},
-        step_id="embedding",
-        purpose="取得主判断和阈值。",
-        depends_on=[],
-    )
-    runtime.require(embedding, "embedding")
-
-    runtime.call(
+    ocr = runtime.call(
         "paddleOcrTool",
         {"file": runtime.image_path(), "filename": runtime.filename()},
         step_id="ocr",
         purpose="读取可见文字。",
         depends_on=[],
     )
+    runtime.require(ocr, "ocr")
 
-    return runtime.finish(embedding)
+    review = runtime.call(
+        "MLLM",
+        {
+            "file": runtime.evidence_image(),
+            "filename": runtime.filename(runtime.evidence_image()),
+            "query": question + "\n" + runtime.evidence_text(),
+            "tool": "qwen36Tool",
+        },
+        step_id="review",
+        purpose="结合图片和 OCR 形成最终判断。",
+        depends_on=["ocr"],
+    )
+    runtime.require(review, "review")
+    return runtime.finish(review)
 ```
 
-这里 OCR 的结果没有参与最终答案，这是有意的：它进入 observations 和 conversation，供人工审计或后续
-MLLM 使用，但异常结论仍来自 embedding。
+视频推理时框架会在工作流之外调用原视频 embedding，并把该结果与本工作流的 MLLM 判断取 OR。
 
 ## 8. 常见理解错误
 

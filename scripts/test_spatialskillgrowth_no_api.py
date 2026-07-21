@@ -14,11 +14,15 @@ from nodes.mem.spatialskillgrowth.core.anomaly_events import class_metadata_for_
 from nodes.mem.spatialskillgrowth.core.experiment_config import DEFAULT_EDITABLE_SKILL_ROOT
 from nodes.mem.spatialskillgrowth.core.experiment_config import ExperimentPaths
 from nodes.mem.spatialskillgrowth.core.experiment_config import build_experiment_config
+from nodes.mem.spatialskillgrowth.core.models import ApplicabilitySpec
 from nodes.mem.spatialskillgrowth.core.models import MutationSpec
 from nodes.mem.spatialskillgrowth.core.models import ParamAtom
 from nodes.mem.spatialskillgrowth.core.models import WorkflowSpec
 from nodes.mem.spatialskillgrowth.core.models import WorkflowStep
 from nodes.mem.spatialskillgrowth.growth.param_space import ParamSpace
+from nodes.mem.spatialskillgrowth.growth.workflow_lifecycle import (
+    WorkflowLifecycleManager,
+)
 from nodes.mem.spatialskillgrowth.growth.workflow_mutator import (
     build_anomaly_baseline_workflow,
 )
@@ -38,9 +42,11 @@ from nodes.mem.spatialskillgrowth.skills.skill_retriever import (
     build_retriever,
     workflow_structurally_eligible,
 )
+from nodes.mem.spatialskillgrowth.storage.growth_store import ExperimentStore
 from nodes.mem.spatialskillgrowth.storage.growth_store import WorkflowRepository
 from scripts.run_banner_demo_exploration import run_demo
 from server import anomaly_detection_server
+from tools.basicTools.embeddingTool import embeddingTool
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +73,30 @@ class MockEmbeddingTool:
             "decision": "是",
             "threshold": 0.66,
         }
+
+
+class MockNegativeEmbeddingTool:
+    name = "embeddingTool"
+
+    @staticmethod
+    def invoke(args):
+        event_type = str(args.get("event_type") or "")
+        return {
+            "status": "success",
+            "event_type": event_type,
+            "is_anomaly": False,
+            "decision": "否",
+            "threshold": 0.31,
+        }
+
+
+class MockAnswerTool:
+    def __init__(self, name, answer):
+        self.name = name
+        self.answer = answer
+
+    def invoke(self, args):
+        return self.answer
 
 
 class MockTool:
@@ -141,7 +171,8 @@ def test_event_taxonomy_and_bool_evaluator():
     assert not answer_matches("是", "否")
     metadata = class_metadata_for_anomaly()
     assert set(metadata) == set(ANOMALY_EVENT_TYPES)
-    assert metadata["banner"]["primary_tool"] == "embeddingTool"
+    assert metadata["banner"]["primary_tool"] == "modality_aware"
+    assert metadata["banner"]["video_primary_tool"] == "embeddingTool"
 
 
 def test_input_is_one_media_and_one_event_type():
@@ -152,9 +183,11 @@ def test_input_is_one_media_and_one_event_type():
         assert task.media_path
         assert task.media_type == "image"
         assert "event_type 为 `banner`" in task.question
+        assert "图片输入禁止调用 embeddingTool" in task.question
     direct = build_anomaly_task(str(BANNER_VIDEO), "banner")
     assert direct.media_type == "video"
     assert direct.media_path == str(BANNER_VIDEO.resolve())
+    assert "embeddingTool 只能接收原始视频" in direct.question
 
 
 def test_media_preprocessor_keeps_video_and_samples_frames():
@@ -177,10 +210,43 @@ def test_planner_has_no_llm_classification_or_omni_slots():
     }
     plan = TaskPlanner().plan("banner", [str(BANNER_IMAGE)], registry)
     assert plan["problem_class"] == "banner"
-    assert plan["slot_bindings"] == {"event_type": "banner"}
-    assert "embeddingTool" in plan["selected_tools"]
+    assert plan["slot_bindings"] == {
+        "event_type": "banner",
+        "media_type": "image",
+    }
+    assert "embeddingTool" not in plan["selected_tools"]
+    assert "embeddingTool" in plan["excluded_tools"]
     assert "paddleHeadDetTool" in plan["selected_tools"]
-    assert plan["excluded_tools"] == []
+    video_plan = TaskPlanner().plan(
+        "banner",
+        [str(BANNER_VIDEO)],
+        registry,
+    )
+    assert video_plan["media_type"] == "video"
+    assert "embeddingTool" in video_plan["selected_tools"]
+
+
+def test_image_skill_is_eligible_for_video_frame_inference():
+    workflow = WorkflowSpec(
+        workflow_id="banner_frame_skill",
+        name="banner_frame_skill",
+        applicability=ApplicabilitySpec(
+            problem_class="banner",
+            required_tools=["MLLM"],
+        ),
+        steps=[WorkflowStep(
+            tool_name="MLLM",
+            args={"file": "$image", "query": "判断横幅异常。"},
+        )],
+    )
+    allowed_tools = ["MLLM", "embeddingTool"]
+    slots = {"event_type": "banner", "media_type": "video"}
+    assert workflow_structurally_eligible(
+        workflow,
+        slots,
+        allowed_tools,
+        "video",
+    )
 
 
 def test_run_workspace_uses_editable_skills_only():
@@ -232,18 +298,19 @@ def test_skill_markdowns_are_compact():
     assert checked == 110
 
 
-def test_baseline_workflow_and_embedding_result():
+def test_embedding_parallel_channel_is_not_retrievable_skill():
     workflow = build_anomaly_baseline_workflow("banner")
     assert workflow.applicability.problem_class == "banner"
     assert workflow.steps[0].tool_name == "embeddingTool"
-    assert workflow_structurally_eligible(
+    assert not workflow_structurally_eligible(
         workflow,
-        {"event_type": "banner"},
+        {"event_type": "banner", "media_type": "video"},
         ["embeddingTool"],
+        "video",
     )
     runtime = ToolRuntime({"embeddingTool": MockEmbeddingTool()})
     result = runtime.execute("embeddingTool", {
-        "file_path": str(BANNER_IMAGE),
+        "file_path": str(BANNER_VIDEO),
         "event_type": "banner",
     })
     anomaly = extract_anomaly_result({
@@ -254,13 +321,18 @@ def test_baseline_workflow_and_embedding_result():
     assert anomaly["event_type"] == "banner"
     assert anomaly["is_anomaly"] is True
     assert anomaly["threshold"] == 0.66
+    rejected = embeddingTool.invoke({
+        "file_path": str(BANNER_IMAGE),
+        "event_type": "banner",
+    })
+    assert rejected == "Error: embeddingTool only supports original video files."
 
 
 def test_evidence_validator_rejects_missing_threshold():
     validator = build_evidence_validator()
     runtime = ToolRuntime({"embeddingTool": MockEmbeddingTool()})
     tool_result = runtime.execute("embeddingTool", {
-        "file_path": str(BANNER_IMAGE),
+        "file_path": str(BANNER_VIDEO),
         "event_type": "banner",
     })
     valid_result = {
@@ -269,7 +341,12 @@ def test_evidence_validator_rejects_missing_threshold():
         "observations": [{"tool": "embeddingTool", "result": tool_result}],
     }
     decision = validator.validate(
-        "banner", "question", "是", valid_result, [str(BANNER_IMAGE)]
+        "banner",
+        "question",
+        "是",
+        valid_result,
+        [str(BANNER_VIDEO)],
+        "video",
     )
     assert decision.accepted
     invalid_result = dict(valid_result)
@@ -280,9 +357,34 @@ def test_evidence_validator_rejects_missing_threshold():
         {"tool": "embeddingTool", "result": invalid_tool_result}
     ]
     decision = validator.validate(
-        "banner", "question", "是", invalid_result, [str(BANNER_IMAGE)]
+        "banner",
+        "question",
+        "是",
+        invalid_result,
+        [str(BANNER_VIDEO)],
+        "video",
     )
     assert not decision.accepted
+
+    visual_result = {
+        "success": True,
+        "final_answer": "是",
+        "used_tools": ["MLLM"],
+        "observations": [{
+            "tool": "MLLM",
+            "result": {"ok": True, "status": "success"},
+        }],
+    }
+    decision = validator.validate(
+        "banner",
+        "question",
+        "是",
+        visual_result,
+        [str(BANNER_IMAGE)],
+        "image",
+    )
+    assert decision.accepted
+    assert decision.contract_checks["visual_evidence_called"]
 
 
 def test_human_banner_skill_executes():
@@ -297,7 +399,8 @@ def test_human_banner_skill_executes():
     assert report["valid"]
     assert report["checks"]["mock_execution"]
     assert report["execution"]["final_answer"] == "是"
-    assert report["execution"]["threshold"] == 0.66
+    assert report["execution"]["threshold"] is None
+    assert report["declared_tools"] == ["paddleOcrTool", "MLLM"]
     assert "evidence" not in report
     assert "installed" not in report
     after = {}
@@ -404,12 +507,32 @@ def test_param_space_prioritizes_workflow_diversity():
 
 
 def test_top_k_retriever_reads_skill_markdown():
-    first = build_anomaly_baseline_workflow("banner")
-    first.workflow_id = "history_first"
+    first = WorkflowSpec(
+        workflow_id="history_first",
+        name="history_first",
+        applicability=ApplicabilitySpec(
+            problem_class="banner",
+            required_tools=["MLLM"],
+        ),
+        steps=[WorkflowStep(
+            tool_name="MLLM",
+            args={"file": "$image", "query": "判断横幅异常。"},
+        )],
+    )
     first.metrics.trial_count = 10
     first.metrics.correct_count = 10
-    second = build_anomaly_baseline_workflow("banner")
-    second.workflow_id = "skill_selected"
+    second = WorkflowSpec(
+        workflow_id="skill_selected",
+        name="skill_selected",
+        applicability=ApplicabilitySpec(
+            problem_class="banner",
+            required_tools=["MLLM"],
+        ),
+        steps=[WorkflowStep(
+            tool_name="MLLM",
+            args={"file": "$image", "query": "检查横幅是否违规。"},
+        )],
+    )
     repository = SkillSelectionRepository(
         [first, second],
         "SKILL_GUIDANCE_SENTINEL：当前画面应选择 skill_selected。",
@@ -421,8 +544,9 @@ def test_top_k_retriever_reads_skill_markdown():
         "banner",
         "检测当前画面是否存在横幅异常。",
         [str(BANNER_IMAGE)],
-        {"event_type": "banner"},
-        ["embeddingTool"],
+        {"event_type": "banner", "media_type": "image"},
+        ["MLLM"],
+        "image",
     )
 
     assert [workflow.workflow_id for workflow in ranked] == [
@@ -451,6 +575,16 @@ def test_repository_updates_workflow_manual_section():
         workflow = build_anomaly_baseline_workflow("banner")
         workflow.status = "active"
         repository.save(workflow)
+        workflow = repository.update_metrics(
+            workflow,
+            "video_metric_test",
+            True,
+            True,
+            1,
+            0,
+            10.0,
+        )
+        assert workflow.metrics.trial_count == 1
 
         skill_path = paths.active_skill_root / "banner/SKILL.md"
         first_text = skill_path.read_text(encoding="utf-8")
@@ -477,7 +611,48 @@ def test_repository_updates_workflow_manual_section():
         ) == 1
 
 
-def test_inference_pipeline_returns_threshold_without_llm():
+def test_single_success_promotes_provisional_workflow():
+    metadata = class_metadata_for_anomaly()
+    config = build_experiment_config()
+    assert config.provisional_promotion_trials == 1
+    assert config.promotion_accuracy == 0.5
+    with tempfile.TemporaryDirectory() as root:
+        paths = ExperimentPaths(
+            "single_promotion_test",
+            root,
+            problem_classes=["banner"],
+            class_metadata=metadata,
+        )
+        paths.ensure(config, "explore")
+        repository = WorkflowRepository(paths)
+        store = ExperimentStore(paths)
+        workflow = WorkflowSpec(
+            workflow_id="banner_single_success",
+            name="banner_single_success",
+            applicability=ApplicabilitySpec(
+                problem_class="banner",
+                required_tools=["MLLM"],
+            ),
+            steps=[WorkflowStep(
+                tool_name="MLLM",
+                args={"file": "$image", "query": "判断横幅异常。"},
+            )],
+            status="provisional",
+        )
+        workflow.metrics.trial_count = 1
+        workflow.metrics.correct_count = 1
+        workflow.metrics.evidence_accept_count = 1
+        repository.save(workflow)
+        lifecycle = WorkflowLifecycleManager(config, repository, store)
+
+        review = lifecycle.review(workflow, "image_positive_00")
+
+        assert review["from"] == "provisional"
+        assert review["to"] == "active"
+        assert repository.get(workflow.workflow_id).status == "active"
+
+
+def test_video_inference_parallel_or_without_llm():
     metadata = class_metadata_for_anomaly()
     config = build_experiment_config()
     config.use_react = False
@@ -489,19 +664,65 @@ def test_inference_pipeline_returns_threshold_without_llm():
             class_metadata=metadata,
         )
         paths.ensure(config, "infer")
-        runtime = ToolRuntime({"embeddingTool": MockEmbeddingTool()})
+        frame_workflow = WorkflowSpec(
+            workflow_id="banner_image_frame_skill",
+            name="banner_image_frame_skill",
+            applicability=ApplicabilitySpec(
+                problem_class="banner",
+                required_tools=["MLLM"],
+            ),
+            steps=[WorkflowStep(
+                tool_name="MLLM",
+                args={"file": "$image", "query": "判断横幅异常。"},
+            )],
+            status="active",
+        )
+        repository = WorkflowRepository(paths)
+        repository.save(frame_workflow)
+        ocr_workflow = WorkflowSpec(
+            workflow_id="banner_ocr_frame_skill",
+            name="banner_ocr_frame_skill",
+            applicability=ApplicabilitySpec(
+                problem_class="banner",
+                required_tools=["paddleOcrTool"],
+            ),
+            steps=[WorkflowStep(
+                tool_name="paddleOcrTool",
+                args={"file": "$image", "filename": "$filename"},
+            )],
+            status="active",
+        )
+        repository.save(ocr_workflow)
+        runtime = ToolRuntime({
+            "embeddingTool": MockNegativeEmbeddingTool(),
+            "MLLM": MockAnswerTool("MLLM", "是"),
+            "paddleOcrTool": MockAnswerTool("paddleOcrTool", "否"),
+        })
         pipeline = ExperimentFactory(
             config,
             paths,
             DisabledLLM(),
             runtime=runtime,
         ).build_inference()
-        task = build_anomaly_task(str(BANNER_IMAGE), "banner", groundtruth="是")
+        task = build_anomaly_task(str(BANNER_VIDEO), "banner", groundtruth="是")
         result = pipeline.ask(task, "online")
         assert result["answer"] == "是"
         assert result["is_anomaly"] is True
-        assert result["threshold"] == 0.66
+        assert result["threshold"] == 0.31
         assert result["correct"] is True
+        assert result["aggregation_strategy"] == "parallel_or"
+        assert result["retrieval"]["strategy"] == "all_structurally_eligible"
+        assert len(result["attempts"]) == 3
+        assert result["attempts"][0]["kind"] == "embedding_baseline"
+        assert result["attempts"][0]["answer"] == "否"
+        assert {
+            item["workflow_id"]
+            for item in result["attempts"][1:]
+        } == {
+            frame_workflow.workflow_id,
+            ocr_workflow.workflow_id,
+        }
+        assert result["selected_workflow_id"] == frame_workflow.workflow_id
 
 
 def test_source_skill_snapshot():
@@ -575,6 +796,30 @@ def test_ten_item_banner_demo():
             encoding="utf-8"
         ).splitlines()
         assert len(lines) == 10
+        workflow_paths = list(
+            (run_root / "skills/active/banner/references/workflows").glob(
+                "*.json"
+            )
+        )
+        workflows = [
+            json.loads(path.read_text(encoding="utf-8"))
+            for path in workflow_paths
+            if not path.name.endswith(".archive.json")
+        ]
+        assert workflows
+        assert any(
+            item["metrics"]["correct_count"] >= 2
+            for item in workflows
+        )
+        assert all(
+            "validated_media_types"
+            not in item.get("applicability", {})
+            for item in workflows
+        )
+        assert all(
+            "media_type_metrics" not in item.get("metrics", {})
+            for item in workflows
+        )
 
 
 def main():
@@ -583,16 +828,18 @@ def main():
         test_input_is_one_media_and_one_event_type,
         test_media_preprocessor_keeps_video_and_samples_frames,
         test_planner_has_no_llm_classification_or_omni_slots,
+        test_image_skill_is_eligible_for_video_frame_inference,
         test_run_workspace_uses_editable_skills_only,
         test_skill_markdowns_are_compact,
-        test_baseline_workflow_and_embedding_result,
+        test_embedding_parallel_channel_is_not_retrievable_skill,
         test_evidence_validator_rejects_missing_threshold,
         test_human_banner_skill_executes,
         test_param_space_has_no_omni_slots,
         test_param_space_prioritizes_workflow_diversity,
         test_top_k_retriever_reads_skill_markdown,
         test_repository_updates_workflow_manual_section,
-        test_inference_pipeline_returns_threshold_without_llm,
+        test_single_success_promotes_provisional_workflow,
+        test_video_inference_parallel_or_without_llm,
         test_source_skill_snapshot,
         test_fastapi_upload_and_other_tool_override,
         test_fastapi_keeps_embedding_threshold,

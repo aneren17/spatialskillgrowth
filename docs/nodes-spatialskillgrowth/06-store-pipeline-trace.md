@@ -16,6 +16,8 @@ JSON 和对话 Markdown，最终结果追加到 `per_task.jsonl`。
 `ExplorationPipeline` 负责规划、检索、执行、标注比对、变异、指标、生命周期和 provisional 二次验证；
 按 event_type 加锁避免并发写冲突。
 
-`InferencePipeline` 只执行和记录，不变异 Skill。无标签任务的 `correct` 为 `null`。
+`InferencePipeline` 只执行和记录，不变异 Skill。图片沿用普通候选执行；视频会检索全部结构合格的图片
+工作流，并行执行原视频 embedding 与这些工作流，再对证据验收通过的判断取 OR。无标签任务的
+`correct` 为 `null`。
 
 `ExperimentFactory` 集中装配所有组件，不再接收 benchmark classifier 或多答案格式配置。

@@ -1,0 +1,78 @@
+{
+  "workflow_id": "seat_damaged_1f1305676bb6",
+  "name": "seat_damaged_detector",
+  "applicability": {
+    "problem_class": "seat_damaged",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于图像输入，利用多模态大语言模型（MLLM）分析视觉证据，检测座椅结构、表面或功能部件是否存在物理损坏（如裂痕、断裂、变形、破损、撕裂、脱落、缺失等），并输出二元判断结果。",
+    "exclusions": "非图像类型的媒体输入（如视频、音频或纯文本）；需要调用 embeddingTool 的特征提取任务；非座椅损坏类别的其他异常事件检测；座椅清洁度问题（如污渍、灰尘）；座椅位置偏移、未归位或配置错误等非损坏类异常；其他非座椅类物体（如桌子、地板）的损坏检测；需要返回详细损坏程度评分或具体维修建议的场景。",
+    "capability_boundary": "严格限定于 event_type 为 'seat_damaged' 且 media_type 为 'image' 的场景。检测逻辑完全依赖 MLLM 对图像中座椅视觉特征的直接分析，不包含任何中间推理步骤、外部工具调用或向量检索，仅输出‘是’或‘否’的二元判断。"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 seat_damaged 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 seat_damaged 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "seat_damaged_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入显式视觉线索以增强 MLLM 判断的可解释性与鲁棒性",
+    "preferred_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "MLLM": "要求模型在给出最终判断前，明确列出支持‘座椅损坏’结论的具体视觉特征（如裂痕、凹陷、破损等），避免黑盒判断。"
+    },
+    "diagnosis": "当前工作流虽然准确率达标，但缺乏中间证据链。通过强制 MLLM 输出 explicit_visual_cues，可以将隐式的视觉识别转化为显式的证据描述，从而在不改变核心判断逻辑的前提下，提高对模糊案例的鲁棒性，并为后续可能的错误分析提供可复用的视觉证据。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ]
+  },
+  "metrics": {
+    "trial_count": 11,
+    "correct_count": 11,
+    "evidence_accept_count": 11,
+    "tool_failure_count": 0,
+    "total_tool_calls": 11,
+    "total_latency_ms": 164422.17754758894,
+    "structural_coverage": 2.0
+  },
+  "source_task_ids": [
+    "seat_damaged__image_positive_01",
+    "seat_damaged__image_positive_00",
+    "seat_damaged__image_positive_02",
+    "seat_damaged__image_positive_03",
+    "seat_damaged__image_positive_04",
+    "seat_damaged__image_negative_05",
+    "seat_damaged__image_negative_06",
+    "seat_damaged__image_negative_07",
+    "seat_damaged__image_negative_08",
+    "seat_damaged__image_negative_09"
+  ]
+}

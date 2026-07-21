@@ -1,0 +1,131 @@
+{
+  "workflow_id": "traffic_accident_11bc493538c6",
+  "name": "traffic_accident_detector",
+  "applicability": {
+    "problem_class": "traffic_accident",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "基于视觉证据检测图像中是否发生交通事故（traffic_accident）。工作流首先利用 YOLO 工具以 0.5 的置信度阈值检测潜在目标，随后通过 UniDepth 估计检测目标的深度信息以辅助空间理解，最后结合多模态大语言模型（MLLM）综合图像特征、目标检测结果及深度证据，判断是否存在交通事故异常。",
+    "exclusions": "非图像类型的媒体输入（如视频、音频或纯文本）。; 需要调用 embeddingTool 进行特征提取的场景。; 非交通事故类别的异常事件检测（如火灾、入侵等，除非工具图显式支持）。; 缺乏清晰视觉证据导致无法判断事故状态的模糊图像。",
+    "capability_boundary": "{\"input_media\": \"image\", \"event_type\": \"traffic_accident\", \"detection_logic\": \"YOLO目标检测(阈值0.5) -> 深度估计 -> MLLM综合判断\", \"output_format\": \"binary (是/否)\", \"constraints\": \"严格依赖工具图定义的步骤，不引入外部未定义工具；仅对交通事故类别有效。\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.yolotool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 traffic_accident 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 traffic_accident 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "traffic_accident_030a5e5c677e",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入空间深度证据以区分事故现场与正常交通拥堵，增强对复杂场景的鲁棒性",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type"
+    ],
+    "tool_hints": {
+      "unidepth": "生成深度图以分析车辆/行人之间的相对距离和空间布局，辅助判断是否存在碰撞或异常聚集",
+      "MLLM": "结合深度信息和局部区域细节，分析实体间的空间交互关系（如重叠、异常近距离）作为判断依据"
+    },
+    "diagnosis": "当前工作流通过 yoloTool 提供了准确的实体检测（车辆、行人），证明了‘存在性’。然而，交通事故的核心特征往往在于实体间的‘空间关系’（如碰撞、异常近距离、倒地等），而不仅仅是实体存在。引入 unidepth 可以提供单目深度估计，帮助 MLLM 理解场景的三维结构，从而更可靠地判断是否存在物理接触或异常空间布局，补充了纯2D视觉线索的不足，提升了在遮挡或远距离场景下的判断鲁棒性。",
+    "selected_atom_ids": [
+      "MLLM:scope:local_regions",
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 6,
+    "total_latency_ms": 11226.429763250053,
+    "structural_coverage": 6.0
+  },
+  "source_task_ids": [
+    "traffic_accident__image_positive_04",
+    "traffic_accident__image_positive_00"
+  ]
+}

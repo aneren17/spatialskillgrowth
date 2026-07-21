@@ -1,0 +1,111 @@
+{
+  "workflow_id": "breaking_through_toll_booths_53481044122a",
+  "name": "breaking_through_toll_booths_detector",
+  "applicability": {
+    "problem_class": "breaking_through_toll_booths",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "MLLM"
+    ],
+    "description": "检测输入图像中是否发生车辆或物体强行通过收费站（闯收费站）的异常事件。该工作流通过OCR提取现场可见文字信息，并结合多模态大模型对图像中的车辆行为、收费站物理状态及通行合规性进行综合视觉证据分析，以判断是否存在违规闯卡行为。",
+    "exclusions": "非收费站场景（如普通道路、停车场入口、高速匝道等无收费设施区域）; 图像质量严重受损导致无法识别车辆位置或收费站结构的情况; 仅包含静态收费站设施而无车辆或移动物体的图像; 需要视频时序分析才能判断的连续闯卡行为（本工作流仅支持单帧图像分析）",
+    "capability_boundary": "{\"event_type\": \"breaking_through_toll_booths\", \"required_evidence\": [\"收费站物理设施（栏杆、亭子、标识等）的视觉存在\", \"车辆或移动物体与收费站设施的相对位置关系\", \"OCR识别出的收费站相关文字信息（如站名、通道状态等）\", \"车辆是否处于非正常通行状态（如栏杆未升起时通过、撞击设施等）\"], \"limitations\": [\"仅支持单张静态图像分析，不支持视频流或时序数据\", \"依赖图像中收费站标识和车辆特征的清晰可见性\", \"无法判断驾驶员身份或主观意图，仅基于视觉行为判定\"]}"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 breaking_through_toll_booths 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 breaking_through_toll_booths 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "breaking_through_toll_booths_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入结构化视觉证据以增强鲁棒性",
+    "preferred_atom_ids": [
+      "yoloTool:threshold:medium",
+      "paddleOcrTool:evidence_role:text_reading",
+      "MLLM:scope:local_regions",
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "sam3:threshold:high",
+      "sam3:threshold:low"
+    ],
+    "tool_hints": {
+      "yoloTool": "检测车辆和收费站设施，提供空间定位证据",
+      "paddleOcrTool": "识别收费站标识文字，辅助确认场景上下文",
+      "MLLM": "基于局部区域和明确视觉线索进行最终判断"
+    },
+    "diagnosis": "当前工作流仅依赖 MLLM 的全局视觉判断，缺乏中间结构化证据。引入 YOLO 检测车辆/设施位置和 OCR 识别文字，可为 MLLM 提供可复用的局部证据，减少幻觉并提高对复杂场景的鲁棒性。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions",
+      "paddleOcrTool:evidence_role:text_reading"
+    ]
+  },
+  "metrics": {
+    "trial_count": 3,
+    "correct_count": 2,
+    "evidence_accept_count": 3,
+    "tool_failure_count": 0,
+    "total_tool_calls": 6,
+    "total_latency_ms": 33092.73107536137,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "breaking_through_toll_booths__image_positive_00",
+    "breaking_through_toll_booths__image_positive_02"
+  ]
+}

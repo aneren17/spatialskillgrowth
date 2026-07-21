@@ -37,12 +37,12 @@ class ExperimentConfig:
     success_candidate_budget: int = 2
     failure_candidate_budget: int = 3
     active_cap_per_class: int = 12
-    provisional_promotion_trials: int = 2
+    provisional_promotion_trials: int = 1
     provisional_validation_trials: int = 2
     provisional_validation_candidates_per_class: int = 4
     provisional_archive_trials: int = 5
     active_demotion_trials: int = 3
-    promotion_accuracy: float = 0.6
+    promotion_accuracy: float = 0.5
     demotion_accuracy: float = 0.4
     archive_accuracy: float = 0.25
     use_react: bool = True

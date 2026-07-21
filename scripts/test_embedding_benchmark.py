@@ -1,5 +1,5 @@
 """使用指定异常类别的 benchmark 样本直接测试异常检测接口。"""
-# python -m scripts.test_embedding_benchmark fall --all-images
+# python -m scripts.test_embedding_benchmark fall --all-videos
 import argparse
 import json
 import os
@@ -23,7 +23,7 @@ DEFAULT_TIMEOUT_SECONDS = 600
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="测试指定类别 benchmark 中的一条样本或全部图片、视频。"
+        description="使用 embedding 接口测试指定类别的一条或全部视频。"
     )
     parser.add_argument(
         "event_type",
@@ -42,13 +42,7 @@ def build_parser():
         default=DEFAULT_TASK_INDEX,
         help="要测试的任务序号，从 0 开始。",
     )
-    media_group = parser.add_mutually_exclusive_group()
-    media_group.add_argument(
-        "--all-images",
-        action="store_true",
-        help="测试指定类别 benchmark 中的全部图片，忽略 --task-index。",
-    )
-    media_group.add_argument(
+    parser.add_argument(
         "--all-videos",
         action="store_true",
         help="测试指定类别 benchmark 中的全部视频，忽略 --task-index。",
@@ -97,7 +91,13 @@ def load_benchmark_tasks(dataset_root, event_type):
 
 
 def load_benchmark_task(dataset_root, event_type, task_index):
-    tasks = load_benchmark_tasks(dataset_root, event_type)
+    tasks = [
+        task
+        for task in load_benchmark_tasks(dataset_root, event_type)
+        if task.media_type == "video"
+    ]
+    if not tasks:
+        raise ValueError("该类别 benchmark 中没有视频任务：" + event_type)
     if task_index < 0 or task_index >= len(tasks):
         raise IndexError(
             "task-index 超出范围："
@@ -188,11 +188,9 @@ def execute_task(api_url, timeout_seconds, task):
     return response, response_json, valid, prediction, threshold, correct
 
 
-def test_all_media(api_url, timeout_seconds, tasks, event_type, media_type):
-    media_tasks = [task for task in tasks if task.media_type == media_type]
-    media_name = "图片"
-    if media_type == "video":
-        media_name = "视频"
+def test_all_videos(api_url, timeout_seconds, tasks, event_type):
+    media_tasks = [task for task in tasks if task.media_type == "video"]
+    media_name = "视频"
     if not media_tasks:
         raise ValueError(
             "该类别 benchmark 中没有" + media_name + "任务：" + event_type
@@ -274,17 +272,13 @@ def main():
     if arguments.timeout <= 0:
         raise ValueError("timeout 必须大于 0。")
 
-    if arguments.all_images or arguments.all_videos:
+    if arguments.all_videos:
         tasks = load_benchmark_tasks(dataset_root, event_type)
-        media_type = "image"
-        if arguments.all_videos:
-            media_type = "video"
-        return test_all_media(
+        return test_all_videos(
             api_url,
             arguments.timeout,
             tasks,
             event_type,
-            media_type,
         )
 
     task, task_count = load_benchmark_task(

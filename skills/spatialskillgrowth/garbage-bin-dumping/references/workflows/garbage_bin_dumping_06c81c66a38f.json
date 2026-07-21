@@ -1,0 +1,77 @@
+{
+  "workflow_id": "garbage_bin_dumping_06c81c66a38f",
+  "name": "garbage_bin_dumping_detector",
+  "applicability": {
+    "problem_class": "garbage_bin_dumping",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于单张输入图像，利用多模态大模型（MLLM）分析视觉特征，检测是否存在垃圾桶倾倒（garbage_bin_dumping）异常事件。专注于识别垃圾桶本体发生倾覆、侧翻或内容物散落等特定物理状态，需收集确凿的视觉证据以支持最终的二元判断。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频或纯文本描述）；图像中未包含垃圾桶主体，或垃圾桶处于正常直立、静止状态；缺乏清晰视觉证据导致无法判断垃圾桶状态的情况；涉及其他类型异常事件（如火灾、入侵、打架等）的检测任务；需要调用 embeddingTool 进行特征提取的场景；需要输出详细报告、置信度分数或多分类标签的场景，仅限输出‘是’或‘否’。",
+    "capability_boundary": "输入媒体：单张图像；目标事件：垃圾桶倾倒；证据要求：必须通过 MLLM 直接分析图像像素信息，确认识别到垃圾桶及其倾倒状态（如倾斜角度异常、位置偏移或垃圾溢出），不得依赖外部元数据或历史上下文；输出格式：二分类（是/否）；允许工具：MLLM；禁止工具：embeddingTool。"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 garbage_bin_dumping 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 garbage_bin_dumping 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "garbage_bin_dumping_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入显式视觉线索提取以增强鲁棒性",
+    "preferred_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "MLLM": "在最终判断前，要求模型显式列出支持'垃圾桶倾倒'结论的具体视觉特征（如桶身倾斜角度、散落物、地面接触状态），而非直接给出是/否。"
+    },
+    "diagnosis": "当前工作流直接依赖 MLLM 给出最终答案，虽然正确但缺乏中间推理证据。通过引入 'explicit_visual_cues' 原子，强制模型输出支持判断的视觉细节，可以将黑盒判断转化为可验证的证据链，从而提高对相似场景（如正常放置但视角倾斜）的区分鲁棒性，并补充了'为什么是倾倒'的证据维度。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ]
+  },
+  "metrics": {
+    "trial_count": 13,
+    "correct_count": 13,
+    "evidence_accept_count": 13,
+    "tool_failure_count": 0,
+    "total_tool_calls": 13,
+    "total_latency_ms": 138779.52944859862,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "garbage_bin_dumping__image_positive_03",
+    "garbage_bin_dumping__image_positive_00",
+    "garbage_bin_dumping__image_positive_01",
+    "garbage_bin_dumping__image_positive_02",
+    "garbage_bin_dumping__image_positive_04",
+    "garbage_bin_dumping__image_negative_05",
+    "garbage_bin_dumping__image_negative_06",
+    "garbage_bin_dumping__image_negative_07",
+    "garbage_bin_dumping__image_negative_08",
+    "garbage_bin_dumping__image_negative_09"
+  ]
+}

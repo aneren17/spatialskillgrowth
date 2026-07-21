@@ -1,0 +1,87 @@
+{
+  "workflow_id": "charger_e209f7624e92",
+  "name": "charger_unreturned_detection",
+  "applicability": {
+    "problem_class": "charger",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于多模态大语言模型（MLLM）分析静态图像中的视觉证据，检测充电器是否处于未归位状态（即未在指定归位区域或处于非收纳状态），仅输出二值判断结果。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频、纯文本）; 需要调用 embeddingTool 进行特征提取的场景; 涉及充电器物理损坏、线路断裂、电气安全等硬件故障检测; 需要动态时序分析、连续监控或历史记录查询的场景; 需要识别充电器品牌、型号、序列号或进行个体归属/配对分析的场景; 需要输出详细异常原因、置信度分数或后续操作建议的场景。",
+    "capability_boundary": "{\"input_modality\": \"image\", \"event_type\": \"charger\", \"anomaly_definition\": \"充电器未归位\", \"reasoning_method\": \"visual_evidence_based_mllm\", \"output_format\": \"binary_classification\", \"constraint\": \"仅进行状态判定，不进行原因分析或特征提取\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 charger 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析完整图像。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "whole_image",
+          "kind": "world_model",
+          "description": "分析完整图像。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 charger 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "charger_08221b14863e",
+  "mutation_mode": "failure_repair",
+  "mutation_direction": {
+    "mode": "failure_repair",
+    "objective": "修复负样本误报，通过强制全图上下文分析消除对局部特征的过度敏感",
+    "preferred_atom_ids": [
+      "MLLM:scope:whole_image"
+    ],
+    "avoid_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ],
+    "tool_hints": {
+      "MLLM": "强制模型分析完整图像的全局上下文，明确识别目标对象与其预期存放位置/背景的空间关系，避免因局部视觉噪声或孤立特征导致的误判"
+    },
+    "diagnosis": "当前工作流在负样本上产生误报，表明模型可能过度关注了图像中的局部视觉特征，而忽略了目标对象相对于其预期位置的全局空间关系。原有的局部聚焦策略可能导致模型在没有明确异常线索时，因寻找线索的压力而强行解释局部特征为异常。切换至全图范围分析，迫使模型评估目标对象与存放区域的相对位置和状态，从而正确判断其归位状态，修复缺失的空间证据。",
+    "selected_atom_ids": [
+      "MLLM:scope:whole_image"
+    ]
+  },
+  "metrics": {
+    "trial_count": 13,
+    "correct_count": 10,
+    "evidence_accept_count": 13,
+    "tool_failure_count": 0,
+    "total_tool_calls": 13,
+    "total_latency_ms": 155640.53283911198,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "charger__image_negative_05",
+    "charger__image_positive_00",
+    "charger__image_negative_07",
+    "charger__image_negative_08",
+    "charger__image_positive_01",
+    "charger__image_positive_02",
+    "charger__image_positive_03",
+    "charger__image_positive_04",
+    "charger__image_negative_09"
+  ]
+}

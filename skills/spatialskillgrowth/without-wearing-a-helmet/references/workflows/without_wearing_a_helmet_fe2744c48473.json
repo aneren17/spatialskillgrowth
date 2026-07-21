@@ -1,0 +1,102 @@
+{
+  "workflow_id": "without_wearing_a_helmet_fe2744c48473",
+  "name": "without_wearing_a_helmet_detector",
+  "applicability": {
+    "problem_class": "without_wearing_a_helmet",
+    "required_slots": [],
+    "required_tools": [
+      "paddleHeadDetTool",
+      "MLLM"
+    ],
+    "description": "检测输入图像中是否存在人员未佩戴安全帽的异常事件。工作流首先通过目标检测工具定位可见的人头区域，随后利用多模态大语言模型结合视觉证据，判断该人员是否未佩戴符合安全规范的头盔。",
+    "exclusions": "输入媒体类型非图像（如视频流、音频或纯文本）；图像中未检测到任何可见的人头目标或人头区域被严重遮挡导致无法辨识头部特征；人员佩戴了非标准防护装备但视觉上符合头盔形态（需依赖模型对‘安全帽’定义的泛化理解）；涉及其他类型安全违规（如未穿反光衣、未系安全带等）的检测任务；需要调用 embeddingTool 进行语义嵌入的场景。",
+    "capability_boundary": "{\"event_type\": \"without_wearing_a_helmet\", \"media_type\": \"image\", \"required_evidence\": [\"paddleHeadDetTool 检测到的人头边界框坐标及置信度\", \"MLLM 基于人头区域图像内容对佩戴状态的语义判断\"], \"tool_constraints\": [\"禁止对图像输入调用 embeddingTool\", \"必须依赖 paddleHeadDetTool 的输出作为 MLLM 的视觉证据来源\"], \"output_format\": \"binary_yes_no\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleHeadDetTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "tool": "paddleHeadDetTool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleHeadDetTool",
+          "axis": "target",
+          "value": "head",
+          "kind": "fixed",
+          "description": "检测可见人头。",
+          "args": {}
+        }
+      ],
+      "purpose": "检测可见人头。",
+      "step_id": "paddleheaddettool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 without_wearing_a_helmet 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 without_wearing_a_helmet 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleheaddettool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "without_wearing_a_helmet_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过引入专用人头检测工具增强视觉证据的明确性，降低误报率",
+    "preferred_atom_ids": [
+      "paddleHeadDetTool:target:head",
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading",
+      "paddlePedriderDetTool:target:traffic_subject"
+    ],
+    "tool_hints": {
+      "paddleHeadDetTool": "检测图像中所有可见的人头区域，为后续判断提供结构化位置证据",
+      "MLLM": "结合人头检测结果与原始图像，明确区分戴安全帽与未戴安全帽的视觉特征"
+    },
+    "diagnosis": "当前工作流直接依赖 MLLM 对全图进行判断，虽然准确率尚可，但缺乏中间的结构化视觉证据（如人头位置）。引入 paddleHeadDetTool 可以明确定位‘人’的存在，随后 MLLM 聚焦于这些特定区域判断是否佩戴安全帽，这种‘检测-验证’的两步策略能显著增强鲁棒性，特别是在复杂背景或多人场景下，补充了从‘全图猜测’到‘局部证据验证’的能力边界。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "paddleHeadDetTool:target:head"
+    ]
+  },
+  "metrics": {
+    "trial_count": 7,
+    "correct_count": 5,
+    "evidence_accept_count": 5,
+    "tool_failure_count": 2,
+    "total_tool_calls": 12,
+    "total_latency_ms": 79532.60600473732,
+    "structural_coverage": 6.0
+  },
+  "source_task_ids": [
+    "without_wearing_a_helmet__image_negative_06",
+    "without_wearing_a_helmet__image_positive_03",
+    "without_wearing_a_helmet__image_positive_04",
+    "without_wearing_a_helmet__image_negative_08"
+  ]
+}

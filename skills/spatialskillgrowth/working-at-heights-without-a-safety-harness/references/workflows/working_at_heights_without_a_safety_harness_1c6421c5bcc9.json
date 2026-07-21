@@ -1,0 +1,150 @@
+{
+  "workflow_id": "working_at_heights_without_a_safety_harness_1c6421c5bcc9",
+  "name": "working_at_heights_without_a_safety_harness_detector",
+  "applicability": {
+    "problem_class": "working_at_heights_without_a_safety_harness",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "paddleHeadDetTool",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "本工作流专门用于检测静态图像中是否发生‘高空作业未系安全带’的特定安全违规事件。通过集成目标检测（YOLO）、人头检测（PaddleHeadDet）、深度估计（UniDepth）及多模态大模型（MLLM），系统定位作业区域与人员，利用深度信息辅助判断作业高度，最终由多模态模型综合分析人员是否处于高空作业状态且未佩戴安全带。该流程严格针对已定义的 event_type，不泛化至其他类型的安全违规。",
+    "exclusions": "不适用于视频流、音频或纯文本输入，仅支持静态图像；不适用于非高空作业场景（如地面作业、室内低处活动）的安全带检测，必须结合深度估计判断高度；不适用于检测其他类型的安全违规（如未戴安全帽、火灾、入侵等）；不适用于图像质量极低、严重遮挡或无法清晰辨识人员与安全带状态的输入；不包含对作业环境合规性的全面评估，仅聚焦于人员安全带佩戴状态与高空作业关联性。",
+    "capability_boundary": "支持清晰可见作业人员与潜在安全带特征的静态图像，以及包含足够深度线索以判断作业高度的图像。所需证据包括：YOLO检测到的相关作业对象或环境特征、PaddleHeadDet定位的人头位置、UniDepth估算的深度信息、以及MLLM基于上述视觉证据对‘未系安全带’状态的语义判断。局限性包括：依赖前置检测工具输出质量，目标检测失败或深度估计偏差大可能导致误判；无法区分安全带类型（如全身式 vs 半身式），仅判断是否存在有效佩戴；对‘高空’的定义依赖深度估计的相对高度判断，无绝对高度阈值；不处理动态行为分析，仅基于单帧图像进行静态快照判断；无法检测非视觉可辨或隐蔽式安全带。"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "paddleHeadDetTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "tool": "paddleHeadDetTool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleHeadDetTool",
+          "axis": "target",
+          "value": "head",
+          "kind": "fixed",
+          "description": "检测可见人头。",
+          "args": {}
+        }
+      ],
+      "purpose": "检测可见人头。",
+      "step_id": "paddleheaddettool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.paddleheaddettool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "paddleheaddettool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 working_at_heights_without_a_safety_harness 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 working_at_heights_without_a_safety_harness 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0",
+        "paddleheaddettool_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "working_at_heights_without_a_safety_harness_0f06bc037ef7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入细粒度人体部位检测以增强安全带穿戴状态的证据链，提升对复杂姿态下未系安全带判别的鲁棒性",
+    "preferred_atom_ids": [
+      "paddleHeadDetTool:target:head",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading",
+      "paddlePedriderDetTool:target:traffic_subject"
+    ],
+    "tool_hints": {
+      "paddleHeadDetTool": "精确定位人员头部，辅助判断人员姿态及安全带肩带是否经过肩部区域",
+      "MLLM": "聚焦YOLO检测框及头部检测区域，结合深度信息分析安全带穿戴细节"
+    },
+    "diagnosis": "现有工作流已具备人员定位（YOLO）和高度验证（UniDepth）能力，但在‘未系安全带’这一关键负向证据的视觉确认上，仅依赖MLLM对全图的主观判断，容易受背景干扰或人员遮挡影响。引入paddleHeadDetTool可精确定位头部，结合YOLO的全身框，MLLM可更准确地分析肩部区域是否存在安全带肩带（local_regions），从而形成‘高度达标+人员存在+肩部无安全带特征’的更强证据链，减少误判。",
+    "selected_atom_ids": [
+      "paddleHeadDetTool:target:head"
+    ]
+  },
+  "metrics": {
+    "trial_count": 6,
+    "correct_count": 6,
+    "evidence_accept_count": 6,
+    "tool_failure_count": 0,
+    "total_tool_calls": 24,
+    "total_latency_ms": 267159.18717812747,
+    "structural_coverage": 16.0
+  },
+  "source_task_ids": [
+    "working_at_heights_without_a_safety_harness__image_negative_06",
+    "working_at_heights_without_a_safety_harness__image_positive_00",
+    "working_at_heights_without_a_safety_harness__image_negative_07",
+    "working_at_heights_without_a_safety_harness__image_negative_08",
+    "working_at_heights_without_a_safety_harness__image_negative_09"
+  ]
+}

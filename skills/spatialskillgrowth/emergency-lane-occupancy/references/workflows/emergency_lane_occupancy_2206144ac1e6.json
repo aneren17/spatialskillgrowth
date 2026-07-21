@@ -1,0 +1,117 @@
+{
+  "workflow_id": "emergency_lane_occupancy_2206144ac1e6",
+  "name": "emergency_lane_occupancy_detector",
+  "applicability": {
+    "problem_class": "emergency_lane_occupancy",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "python_code_sandbox",
+      "MLLM"
+    ],
+    "description": "本工作流用于检测输入图像中是否存在车辆占用应急车道的异常行为。流程首先利用目标检测模型（yoloTool）识别图像中的车辆及道路标线，随后通过代码沙箱（python_code_sandbox）计算车辆与应急车道边界的结构化空间关系证据，最后由多模态大模型（MLLM）综合视觉特征与空间证据，判定是否发生占用应急车道事件。",
+    "exclusions": "不包含视频流或序列帧分析，仅处理单张静态图像输入。; 不检测非车辆物体（如行人、动物、掉落物）占用应急车道的情况，检测器限制为仅针对车辆目标。; 不处理模糊、严重遮挡或无法清晰辨识应急车道标线的低质量图像。; 不涉及对占用时长的统计或历史轨迹回溯，仅基于当前帧进行瞬时状态判定。",
+    "capability_boundary": "{\"event_type\": \"emergency_lane_occupancy\", \"media_type\": \"image\", \"required_evidence\": [\"车辆目标的边界框坐标\", \"应急车道边界的几何定义或检测结果\", \"车辆与应急车道区域的空间重叠度或距离指标\"], \"output_format\": \"binary_classification\", \"allowed_tools\": [\"yoloTool\", \"python_code_sandbox\", \"MLLM\"]}"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "python_code_sandbox",
+      "args": {
+        "code": "import json\n\ndetections = json.loads(r'''$step.yolotool_0.detections_json''').get(\"detections\", [])\nsummary = []\nfor item in detections:\n    box = item.get(\"bbox\", [])\n    if len(box) != 4:\n        continue\n    width = max(0.0, float(box[2]) - float(box[0]))\n    height = max(0.0, float(box[3]) - float(box[1]))\n    summary.append({\n        \"class_name\": item.get(\"class_name\", \"\"),\n        \"score\": item.get(\"score\", 0.0),\n        \"area\": width * height,\n        \"center\": [(float(box[0]) + float(box[2])) / 2, (float(box[1]) + float(box[3])) / 2],\n    })\nprint(json.dumps({\"count\": len(summary), \"objects\": summary}, ensure_ascii=False))\n"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "python_code_sandbox",
+          "axis": "operation",
+          "value": "append_verification",
+          "kind": "structural",
+          "description": "计算结构化证据摘要。",
+          "args": {}
+        }
+      ],
+      "purpose": "计算结构化证据摘要。",
+      "step_id": "python_code_sandbox_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 emergency_lane_occupancy 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 emergency_lane_occupancy 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0",
+        "python_code_sandbox_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "emergency_lane_occupancy_2fff1b65dc02",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过深度估计验证车辆与路肩的空间关系，排除误检",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth",
+      "MLLM:scope:local_regions",
+      "python_code_sandbox:operation:append_verification"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "unidepth": "生成深度图以量化车辆相对于应急车道边界的距离，确认是否真正占用"
+    },
+    "diagnosis": "当前工作流仅依赖YOLO的2D边界框和MLLM的视觉判断，缺乏几何深度证据。引入深度估计可提供车辆是否跨越车道线的物理距离证据，增强对‘占用’这一空间关系的鲁棒性判断，防止因透视或阴影导致的误判。",
+    "selected_atom_ids": [
+      "python_code_sandbox:operation:append_verification"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 1,
+    "evidence_accept_count": 1,
+    "tool_failure_count": 1,
+    "total_tool_calls": 4,
+    "total_latency_ms": 35575.2981454134,
+    "structural_coverage": 6.0
+  },
+  "source_task_ids": [
+    "emergency_lane_occupancy__image_negative_08"
+  ]
+}

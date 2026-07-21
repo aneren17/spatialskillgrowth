@@ -1,0 +1,83 @@
+{
+  "workflow_id": "forest_fire_2c91fe8e39d2",
+  "name": "forest_fire_detector",
+  "applicability": {
+    "problem_class": "forest_fire",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于单张输入图像（或视频的关键帧），利用多模态大语言模型（MLLM）分析视觉特征，检测是否存在森林火灾异常事件。专注于通过图像证据识别火灾相关的视觉信号（如烟雾、明火、焦痕等），并输出二元判断结果。",
+    "exclusions": "不支持视频流、音频或非图像类型的媒体输入（仅支持单图或视频关键帧）。; 不执行火灾原因分析、火势蔓延预测或损失评估。; 不处理非森林环境（如城市建筑火灾、工业火灾）的检测，除非视觉特征与森林火灾高度相似且无其他上下文排除。; 禁止使用 embeddingTool 进行图像嵌入处理。",
+    "capability_boundary": "{\"event_type\": \"forest_fire\", \"media_type\": \"image\", \"required_evidence\": \"视觉证据（如烟雾、火焰、燃烧痕迹）\", \"output_format\": \"binary (是/否)\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 forest_fire 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 forest_fire 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "forest_fire_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过引入显式视觉线索分析增强鲁棒性，确保判断基于火焰、烟雾等具体特征而非整体直觉，从而补充证据链并降低误报风险。",
+    "preferred_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [
+      "MLLM:scope:whole_image"
+    ],
+    "tool_hints": {
+      "MLLM": "在最终判断前，明确要求模型列举图像中支持'森林火灾'判断的具体视觉元素（如火焰颜色、烟雾形态、植被焦黑痕迹），并基于这些线索给出结论。"
+    },
+    "diagnosis": "当前工作流仅依赖 MLLM 的直接判断，虽然正确但缺乏中间推理证据。引入 'explicit_visual_cues' 原子 ID 可强制模型关注局部异常特征（如烟雾、火光），这不仅提高了对复杂背景（如夕阳、灯光）的鲁棒性，还为后续可能的多模态验证提供了可复用的细粒度证据，完善了从'感知'到'认知'的能力边界。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ]
+  },
+  "metrics": {
+    "trial_count": 6,
+    "correct_count": 5,
+    "evidence_accept_count": 6,
+    "tool_failure_count": 0,
+    "total_tool_calls": 6,
+    "total_latency_ms": 28100.917073898017,
+    "structural_coverage": 2.0
+  },
+  "source_task_ids": [
+    "forest_fire__image_positive_00",
+    "forest_fire__image_positive_01",
+    "forest_fire__image_positive_02",
+    "forest_fire__image_negative_09"
+  ]
+}

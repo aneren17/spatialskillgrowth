@@ -67,7 +67,7 @@ utils.py
 
 | ID | 当前限制 | 为什么优先 |
 |---|---|---|
-| P01 | 候选 Workflow 最多执行 3 条 | 即使 `workflow_top_k` 调大，执行器仍强制裁到 3 |
+| P01 | 图片探索/图片推理候选 Workflow 最多执行 3 条 | 即使 `workflow_top_k` 调大，串行执行器仍强制裁到 3；冻结视频推理不受此限制 |
 | P02 | 自动提取工作流最多保留 4 个证据步骤和 1 个 MLLM | 会直接丢弃探索轨迹中的其他有效工具 |
 | P03 | 每次 mutation 最多组合 3 个 atom，成功只留 2 个候选、失败只留 3 个 | 直接限制 Skill 探索空间 |
 | P04 | 每类 active Workflow 最多 12 条 | 超出后自动归档 |
@@ -95,16 +95,16 @@ utils.py
 
 | ID | 字段和值 | 实际影响 | 类型 | 建议 | 你的决定 |
 |---|---|---|---|---|---|
-| C01 | `workflow_top_k=3` | Retriever 每类只返回前三条 Workflow | 半可调 | 暴露 CLI/env；是否取消要结合延迟 | |
+| C01 | `workflow_top_k=3` | 图片探索只返回前三条 Workflow；冻结视频推理返回全部结构合格 Workflow | 半可调 | 暴露 CLI/env；是否取消要结合延迟 | |
 | C02 | `success_candidate_budget=2` | 一次成功样本最多执行 2 个增强候选 | 半可调 | 小数据下可能过窄，建议可调 | |
 | C03 | `failure_candidate_budget=3` | 一次失败样本最多执行 3 个修复候选 | 半可调 | 建议可调或允许 `None` 表示不限 | |
 | C04 | `active_cap_per_class=12` | 每类 active 超过 12 后触发 Pareto 归档 | 半可调 | 建议允许关闭 cap | |
-| C05 | `provisional_promotion_trials=2` | 至少 2 次试验、2 次正确、2 次证据通过才晋升 | 半可调 | 10 条数据下影响大，建议可调 | |
+| C05 | `provisional_promotion_trials=1` | 至少 1 次试验、1 次正确、1 次证据通过即可晋升 | 半可调 | 当前针对每类 10 条图片的小样本探索放宽 | |
 | C06 | `provisional_validation_trials=2` | 每条 provisional 最多拿 2 条未见样本验证 | 半可调 | 可考虑使用全部可用未见样本 | |
 | C07 | `provisional_validation_candidates_per_class=4` | 每类只验证前 4 条 provisional | 半可调 | 建议可调或不限 | |
 | C08 | `provisional_archive_trials=5` | provisional 至少试 5 次才可能归档 | 半可调 | 需要结合总样本数 | |
 | C09 | `active_demotion_trials=3` | active 至少试 3 次才可能降级 | 半可调 | 建议可调 | |
-| C10 | `promotion_accuracy=0.6` | 晋升要求准确率和证据率都不低于 0.6 | 半可调 | 不建议直接删除，建议按类别配置 | |
+| C10 | `promotion_accuracy=0.5` | 晋升要求准确率和证据率都不低于 0.5 | 半可调 | 当前针对小样本探索略微放宽 | |
 | C11 | `demotion_accuracy=0.4` | active 低于 0.4 会降回 provisional | 半可调 | 建议与样本数一起设计 | |
 | C12 | `archive_accuracy=0.25` | provisional 低于 0.25 会归档 | 半可调 | 建议与置信区间或最小样本数结合 | |
 
@@ -126,7 +126,7 @@ provisional_promotion_trials
 
 | ID | 位置 | 写死值 | 影响 | 建议 | 你的决定 |
 |---|---|---:|---|---|---|
-| A01 | `runtime/workflow_executor.py:249` | 最大 3 | `min(3, max_workflow_attempts)` 强制最多执行 3 条，覆盖 `workflow_top_k` 的更大值 | 优先取消第二层硬 cap，统一由配置决定 | |
+| A01 | `runtime/workflow_executor.py:251` | 最大 3 | 图片串行执行的 `min(3, max_workflow_attempts)` 覆盖更大的 `workflow_top_k`；冻结视频并行 OR 会执行全部检索 Workflow | 优先取消图片路径的第二层硬 cap，统一由配置决定 | |
 | A02 | `growth/workflow_mutator.py:402` | 4+1 | 只保留前 4 个非 MLLM 证据步骤和最后一个 MLLM | 建议改为配置或根据依赖图保留，不应按位置盲截断 | |
 | A03 | `growth/workflow_mutator.py:393` | 1 | 没有 MLLM 时只保留第一条 embedding，其他证据步骤全部丢弃 | 很可能可以取消 | |
 | A04 | `growth/mutation.py:326` | 3 | 每个 mutation portfolio 最多 3 个 atom | 建议可调；完全取消可能组合爆炸 | |
@@ -149,7 +149,8 @@ ExperimentConfig.workflow_top_k
     -> min(3, max_workflow_attempts)
 ```
 
-因此把 `workflow_top_k` 改成 10，只会让 Retriever 返回 10 条，但实际仍最多执行 3 条。
+因此在图片探索/图片推理中，把 `workflow_top_k` 改成 10，只会让 Retriever 返回 10 条，但实际仍最多
+执行 3 条。冻结视频推理单独返回并执行全部结构合格工作流，不经过这个串行上限。
 
 ## 6. 文本、提示词和轨迹截断
 

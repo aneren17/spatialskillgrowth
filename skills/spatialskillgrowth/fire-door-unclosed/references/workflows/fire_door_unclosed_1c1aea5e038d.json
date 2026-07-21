@@ -1,0 +1,107 @@
+{
+  "workflow_id": "fire_door_unclosed_1c1aea5e038d",
+  "name": "fire_door_unclosed_detector",
+  "applicability": {
+    "problem_class": "fire_door_unclosed",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "MLLM"
+    ],
+    "description": "基于视觉证据检测消防门是否处于未关闭状态。工作流程首先使用开放词汇检测模型（GroundingDINO）定位消防门及其状态特征，随后结合多模态大语言模型（MLLM）分析图像上下文，综合判断是否存在消防门未关闭的异常事件。",
+    "exclusions": "非图像类型的媒体输入; 图像中未包含消防门主体或其状态无法被视觉证据明确识别的场景; 需要调用 embeddingTool 进行特征提取的任务; 涉及其他类型异常事件（如火灾、入侵等）的检测需求",
+    "capability_boundary": "{\"event_type\": \"fire_door_unclosed\", \"media_type\": \"image\", \"required_evidence\": [\"通过 GroundingDINO 检测到的消防门实例及其边界框\", \"多模态模型基于视觉上下文对门状态（开启/关闭）的语义判断\"], \"constraints\": [\"仅支持静态图像输入\", \"检测阈值固定为 0.5\", \"最终输出仅为二元判断（是/否）\", \"不执行物体名称的运行时替换，严格限定于消防门类别\"]}"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "使用中等阈值检测'fire door'和'door frame'以获取结构化边界框证据",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.5,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 fire_door_unclosed 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 fire_door_unclosed 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "fire_door_unclosed_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入结构化视觉证据以增强鲁棒性",
+    "preferred_atom_ids": [
+      "groundingdino:box_threshold:medium",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "groundingdino": "使用中等阈值检测'fire door'和'door frame'以获取结构化边界框证据",
+      "MLLM": "结合边界框证据，明确描述门扇与门框的相对位置及缝隙状态，再给出最终判断"
+    },
+    "diagnosis": "当前工作流完全依赖 MLLM 的端到端视觉理解，虽然准确率完美，但缺乏中间结构化证据（如边界框）。引入 groundingdino 检测门和门框，可以为 MLLM 提供明确的视觉锚点，防止在复杂背景或遮挡情况下产生幻觉，同时通过要求 MLLM 输出明确视觉线索（explicit_visual_cues），增强推理过程的可解释性和鲁棒性。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions",
+      "groundingdino:box_threshold:medium"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 1,
+    "evidence_accept_count": 1,
+    "tool_failure_count": 1,
+    "total_tool_calls": 3,
+    "total_latency_ms": 4103.009972721338,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "fire_door_unclosed__image_negative_05"
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "workflow_id": "foreign_objects_on_transmission_lines_31a8b0597407",
+  "name": "foreign_objects_on_transmission_lines",
+  "applicability": {
+    "problem_class": "foreign_objects_on_transmission_lines",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "MLLM"
+    ],
+    "description": "基于图像输入，利用开放词汇目标检测（GroundingDINO）定位潜在异物，并结合多模态大模型（MLLM）分析视觉证据，判断输电线路是否存在异物附着异常。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 非输电线路场景（如配电线路、通信光缆等，除非工具图槽位明确支持泛化）; 未包含 groundingdino 和 MLLM 工具依赖的运行环境",
+    "capability_boundary": "{\"event_type\": \"foreign_objects_on_transmission_lines\", \"media_type\": \"image\", \"detection_threshold\": 0.3, \"evidence_requirement\": \"必须通过 groundingdino 检测到的目标框及 MLLM 对图像内容的语义分析作为判断依据\", \"output_format\": \"二元分类（是/否）\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "使用 'foreign object', 'plastic bag', 'balloon', 'debris' 等关键词检测输电线路上的异物",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 foreign_objects_on_transmission_lines 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 foreign_objects_on_transmission_lines 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "foreign_objects_on_transmission_lines_0ae31cd350f4",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入开放词汇检测以提供结构化视觉证据，增强异物定位的鲁棒性",
+    "preferred_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "groundingdino:box_threshold:low",
+      "crop_detections:operation:insert_after_detection"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "groundingdino": "使用 'foreign object', 'plastic bag', 'balloon', 'debris' 等关键词检测输电线路上的异物",
+      "MLLM": "结合 GroundingDINO 的检测框和裁剪图，确认异物是否存在于导线或绝缘子上"
+    },
+    "diagnosis": "当前工作流仅依赖 MLLM 的全局视觉判断，缺乏结构化证据。引入 GroundingDINO 可在不破坏现有正确率的前提下，提供具体的异物位置证据（bbox），并通过 MLLM 的 explicit_visual_cues 原子强化对检测结果的验证，从而提升对微小或隐蔽异物的检测鲁棒性，形成“检测-验证”的双重证据链。",
+    "selected_atom_ids": [
+      "groundingdino:box_threshold:low"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 4,
+    "total_latency_ms": 4908.766465261579,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "foreign_objects_on_transmission_lines__image_positive_04",
+    "foreign_objects_on_transmission_lines__image_positive_00"
+  ]
+}

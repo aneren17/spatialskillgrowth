@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import hashlib
 import re
@@ -16,6 +17,7 @@ from nodes.mem.spatialskillgrowth.core.llm_utils import invoke_json, parse_json
 from nodes.mem.spatialskillgrowth.core.models import WorkflowSpec
 from nodes.mem.spatialskillgrowth.growth.workflow_mutator import (
     build_anomaly_baseline_workflow,
+    build_anomaly_image_baseline_workflow,
 )
 from nodes.mem.spatialskillgrowth.growth.workflow_slots import (
     python_slot_parameters,
@@ -158,8 +160,8 @@ class ReactSolver:
         tools = [
             tool for name, tool in self.runtime.registry.items()
             if name in allowed
-        ] or list(self.runtime.registry.values())
-        bound = self.llm.bind_tools(tools)
+        ]
+        bound = self.llm.bind_tools(tools) if tools else self.llm
         observations = []
         answer = ""
         raw_answer = ""
@@ -232,7 +234,7 @@ class ReactSolver:
 
 
 class CandidateExecutionCoordinator:
-    """依次尝试最多三个检索工作流，全部拒绝后才进入 ReAct。"""
+    """按运行模式尝试静态候选，全部拒绝后才进入 ReAct。"""
 
     def __init__(
         self,
@@ -258,10 +260,17 @@ class CandidateExecutionCoordinator:
         slot_bindings: Dict[str, str],
         allowed_tool_names: List[str],
         media_path: str = "",
+        media_type: str = "",
     ) -> Dict:
         attempts = []
         repair_contexts = []
-         # 1. 尝试执行检索命中的历史工作流 (Top-K)
+        baseline = None
+        if media_type == "video":
+            raise ValueError(
+                "视频必须使用 run_video_parallel_or，不能走串行候选执行。"
+            )
+        if media_type == "image" and "MLLM" in set(allowed_tool_names):
+            baseline = build_anomaly_image_baseline_workflow(problem_class)
         for workflow in workflows[: self.max_workflow_attempts]:
             result = _execute_workflow_with_media(
                 # execute 
@@ -279,6 +288,7 @@ class CandidateExecutionCoordinator:
                 answer,
                 result,
                 _validation_paths(media_path, image_paths),
+                media_type,
             )
             attempt = {
                 "kind": "workflow",
@@ -299,7 +309,7 @@ class CandidateExecutionCoordinator:
                     "accepted": True,
                     "attempts": attempts,
                     "error": "",
-                    **extract_anomaly_result(result),
+                    **extract_anomaly_result(result, problem_class),
                 }
             # 如果失败，收集该工作流的失败原因，留作 ReAct 的先验上下文    
             repair_contexts.append(
@@ -309,26 +319,11 @@ class CandidateExecutionCoordinator:
                     answer=answer or "空",
                 )
             )
-        if "embeddingTool" not in set(allowed_tool_names):
-            return {
-                "answer": "",
-                "selected_workflow_id": "",
-                "fallback_react": False,
-                "accepted": False,
-                "attempts": attempts,
-                "error": "异常检测任务缺少必需的 embeddingTool。",
-                "event_type": problem_class,
-                "is_anomaly": None,
-                "decision": "",
-                "threshold": None,
-            }
-            
-        # 2. 如果存在 baseline（基线算法），作为最后一道静态兜底尝试运行
-        baseline = build_anomaly_baseline_workflow(problem_class)
+        # 运行尚未尝试的媒体基线。
         attempted_ids = set()
         for attempt in attempts:
             attempted_ids.add(attempt.get("workflow_id"))
-        if baseline.workflow_id not in attempted_ids:
+        if baseline is not None and baseline.workflow_id not in attempted_ids:
             result = _execute_workflow_with_media(
                 self.workflow_executor,
                 baseline,
@@ -344,9 +339,10 @@ class CandidateExecutionCoordinator:
                 answer,
                 result,
                 _validation_paths(media_path, image_paths),
+                media_type,
             )
             attempts.append({
-                "kind": "embedding_baseline",
+                "kind": "image_baseline",
                 "workflow": baseline,
                 "workflow_id": baseline.workflow_id,
                 "answer": answer,
@@ -362,7 +358,7 @@ class CandidateExecutionCoordinator:
                     "accepted": True,
                     "attempts": attempts,
                     "error": "",
-                    **extract_anomaly_result(result),
+                    **extract_anomaly_result(result, problem_class),
                 }
             repair_contexts.append(
                 WORKFLOW_REJECTION_CONTEXT_PROMPT.format(
@@ -382,7 +378,7 @@ class CandidateExecutionCoordinator:
                 "accepted": False,
                 "attempts": attempts,
                 "error": "No workflow passed evidence validation and ReAct is disabled.",
-                **extract_anomaly_result(last_result),
+                **extract_anomaly_result(last_result, problem_class),
             }
         result = self.react_solver.solve(
             task_id,
@@ -399,6 +395,7 @@ class CandidateExecutionCoordinator:
             answer,
             result,
             _validation_paths(media_path, image_paths),
+            media_type,
         )
         attempts.append({
             "kind": "react",
@@ -415,7 +412,152 @@ class CandidateExecutionCoordinator:
             "accepted": evidence.accepted,
             "attempts": attempts,
             "error": "" if evidence.accepted else evidence.reason or result.get("error", ""),
-            **extract_anomaly_result(result),
+            **extract_anomaly_result(result, problem_class),
+        }
+
+    def run_video_parallel_or(
+        self,
+        task_id: str,
+        problem_class: str,
+        question: str,
+        image_paths: List[str],
+        workflows: List[WorkflowSpec],
+        slot_bindings: Dict[str, str],
+        allowed_tool_names: List[str],
+        media_path: str,
+    ) -> Dict:
+        """并行执行原视频 embedding 和图片工作流，再用 OR 规则合并。"""
+        if "embeddingTool" not in set(allowed_tool_names):
+            return {
+                "answer": "",
+                "selected_workflow_id": "",
+                "fallback_react": False,
+                "accepted": False,
+                "attempts": [],
+                "aggregation_strategy": "parallel_or",
+                "error": "视频异常检测任务缺少 embeddingTool。",
+                "event_type": problem_class,
+                "is_anomaly": None,
+                "decision": "",
+                "threshold": None,
+            }
+
+        embedding = build_anomaly_baseline_workflow(problem_class)
+        candidates = [("embedding_baseline", embedding)]
+        seen = {embedding.workflow_id}
+        for workflow in workflows:
+            graph_tools = {step.tool_name for step in workflow.steps}
+            if "embeddingTool" in graph_tools:
+                continue
+            if workflow.workflow_id in seen:
+                continue
+            seen.add(workflow.workflow_id)
+            candidates.append(("workflow", workflow))
+
+        def execute_candidate(kind, workflow):
+            try:
+                result = _execute_workflow_with_media(
+                    self.workflow_executor,
+                    workflow,
+                    question,
+                    image_paths,
+                    slot_bindings,
+                    media_path,
+                )
+            except Exception as exc:
+                result = {
+                    "success": False,
+                    "final_answer": "",
+                    "used_tools": [],
+                    "observations": [],
+                    "error": type(exc).__name__ + ": " + str(exc),
+                }
+            answer = str(result.get("final_answer") or "").strip()
+            evidence = self.evidence_validator.validate(
+                problem_class,
+                question,
+                answer,
+                result,
+                [media_path],
+                "video",
+            )
+            return {
+                "kind": kind,
+                "workflow": workflow,
+                "workflow_id": workflow.workflow_id,
+                "answer": answer,
+                "accepted": evidence.accepted,
+                "evidence": evidence,
+                "result": result,
+            }
+
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=min(32, len(candidates))
+        ) as executor:
+            futures = [
+                executor.submit(execute_candidate, kind, workflow)
+                for kind, workflow in candidates
+            ]
+            attempts = [future.result() for future in futures]
+
+        accepted_attempts = [
+            attempt for attempt in attempts
+            if attempt["accepted"]
+        ]
+        decisions = []
+        for attempt in accepted_attempts:
+            anomaly = extract_anomaly_result(
+                attempt["result"],
+                problem_class,
+            )
+            if anomaly["is_anomaly"] is not None:
+                decisions.append((attempt, anomaly))
+
+        if not decisions:
+            return {
+                "answer": "",
+                "selected_workflow_id": "",
+                "fallback_react": False,
+                "accepted": False,
+                "attempts": attempts,
+                "aggregation_strategy": "parallel_or",
+                "error": "embedding 和检索工作流均未返回可接受判断。",
+                "event_type": problem_class,
+                "is_anomaly": None,
+                "decision": "",
+                "threshold": None,
+            }
+
+        is_anomaly = any(
+            bool(anomaly["is_anomaly"])
+            for unused_attempt, anomaly in decisions
+        )
+        selected_attempt = next(
+            (
+                attempt
+                for attempt, anomaly in decisions
+                if bool(anomaly["is_anomaly"]) == is_anomaly
+            ),
+            decisions[0][0],
+        )
+        embedding_attempt = attempts[0]
+        embedding_result = extract_anomaly_result(
+            embedding_attempt["result"],
+            problem_class,
+        )
+        answer = "是" if is_anomaly else "否"
+        return {
+            "answer": answer,
+            "selected_workflow_id": selected_attempt["workflow_id"],
+            "fallback_react": False,
+            "accepted": True,
+            "attempts": attempts,
+            "aggregation_strategy": "parallel_or",
+            "error": "",
+            "event_type": problem_class,
+            "is_anomaly": is_anomaly,
+            "decision": answer,
+            "threshold": embedding_result["threshold"],
         }
 
 

@@ -1,0 +1,54 @@
+{
+  "workflow_id": "litter_randomly_96c9e72153f7",
+  "name": "litter_randomly_detector",
+  "applicability": {
+    "problem_class": "litter_randomly",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于静态图像输入，利用多模态大语言模型（MLLM）分析视觉证据，检测是否存在‘随地乱扔垃圾’异常事件。专注于识别非指定丢弃点处的垃圾遗留行为，通过图像特征直接判断事件发生与否，不涉及文本嵌入或外部知识检索。",
+    "exclusions": "禁止使用 embeddingTool 处理图像输入；不适用于视频流、音频或纯文本输入，仅支持静态图像；不处理垃圾清理、分类、回收或放置在指定垃圾桶/合法堆放点的正常行为场景；不泛化至其他类型的公共秩序违规或异常事件（如打架、喧哗、火灾、入侵等）；不依赖人工标注的 benchmark 数据或奖励机制；不输出详细分类概率或中间推理步骤。",
+    "capability_boundary": "事件类型限定为‘随地乱扔垃圾’；输入模态限定为静态图像；要求视觉图像中显示物体被随意丢弃在非垃圾收集设施处；输出格式为二元布尔判断（是/否）；工具约束为仅使用 MLLM 工具进行端到端视觉分析与判断，禁止使用 embeddingTool。"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 litter_randomly 异常事件。",
+      "step_id": "",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "",
+  "mutation_mode": "extracted",
+  "mutation_direction": {},
+  "metrics": {
+    "trial_count": 16,
+    "correct_count": 16,
+    "evidence_accept_count": 16,
+    "tool_failure_count": 0,
+    "total_tool_calls": 16,
+    "total_latency_ms": 213868.247596547,
+    "structural_coverage": 4.0
+  },
+  "source_task_ids": [
+    "litter_randomly__image_negative_06",
+    "litter_randomly__image_positive_00",
+    "litter_randomly__image_positive_03",
+    "litter_randomly__image_positive_01",
+    "litter_randomly__image_positive_02",
+    "litter_randomly__image_positive_04",
+    "litter_randomly__image_negative_05",
+    "litter_randomly__image_negative_07",
+    "litter_randomly__image_negative_08",
+    "litter_randomly__image_negative_09"
+  ]
+}

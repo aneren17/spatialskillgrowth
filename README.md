@@ -2,8 +2,8 @@
 
 本项目只解决一个问题：给定一个短视频或图片，以及调用方已经确定的异常事件类别，判断该异常是否发生。
 
-框架保留原来的核心思路：探索阶段用少量有标签样本执行 ReAct、提取/修复工作流并形成 Skill；推理阶段冻结
-探索结果，优先执行通过验证的 Skill，失败时使用 embedding 基线，最后才回退 ReAct。
+框架保留原来的核心思路：探索阶段只用少量有标签图片执行 ReAct、提取/修复工作流并形成 Skill；视频
+推理阶段冻结探索结果，并行执行原视频 embedding 与全部检索图片工作流，再用确定性 OR 规则汇总。
 
 ## 输入和输出
 
@@ -42,8 +42,9 @@
 }
 ```
 
-`embeddingTool` 是强制工具。结果只有同时包含匹配的 `event_type`、明确判断和数值 `threshold` 才能通过
-证据契约。
+`embeddingTool` 只用于原始视频，图片输入和视频抽样帧不会调用它。视频 embedding 结果必须包含匹配
+的 `event_type`、明确判断和数值 `threshold`；图片/抽样帧工作流则必须有成功的图像工具或 MLLM
+证据以及明确的“是/否”结论。
 
 ## 当前架构
 
@@ -73,12 +74,24 @@ nodes/mem/spatialskillgrowth/
 图片会直接成为唯一视觉帧。视频采用双通道：
 
 1. 原视频路径传给可处理视频的 `embeddingTool`；
-2. 按默认 1 fps 抽取最多 12 帧，提供给只能处理图片的辅助工具；
+2. 按默认 1 fps 抽取最多 12 帧，提供给图片探索积累的帧级 Skill；
 3. 抽帧结果按源文件大小、修改时间和采样参数缓存。
+
+探索阶段只加载图片，工具计划直接排除 `embeddingTool`；工作流生命周期仍只依据统一的
+trial、correct、evidence 和成本指标。冻结视频推理会先检索同类全部结构合格工作流，然后并行执行：
+
+1. 原视频 `embeddingTool`；
+2. 抽样帧上的全部检索工作流。
+
+汇总不调用 LLM，而是使用确定性 OR：任一证据验收通过的通道判断为“是”，最终结果即为“是”；
+所有有效通道均为“否”时才返回“否”。工作流内仍禁止调用 embedding，避免把图片或抽样帧传给视频接口。
 
 检测窗口由上游传入。框架不再实现流式窗口增长/缩短状态机，收到多长视频就把它视为本次检测窗口。
 
 ## 探索
+
+旧运行中已经包含图片调用 embedding 或跨媒体生命周期字段的轨迹，不能通过 `--resume` 修复。切换到
+本版本后应使用新的 `--run-id` 重新进行纯图片探索。
 
 对 `benchmark/anomaly/skill_datasets/` 下的全部 55 个类别运行探索：
 
@@ -96,7 +109,7 @@ http://127.0.0.1:8862/v1
 http://127.0.0.1:8863/v1
 ```
 
-类别按照 `INDEX.json` 中的固定顺序轮询分配。同一个异常类别的全部图片和视频始终由同一个模型处理；
+类别按照 `INDEX.json` 中的固定顺序轮询分配。同一个异常类别的全部图片始终由同一个模型处理；
 三个模型并行运行，各模型内部按顺序处理自己的类别。正式运行前可以只检查分配：
 
 ```bash
@@ -137,19 +150,18 @@ python -m agents.spatialskillgrowth.exploration_agent \
 探索顺序：
 
 ```text
-解析任务
-  → 视频抽帧
+解析图片任务
   → 按 event_type 检索同类 Skill
   → 执行候选 Skill
-  → 未通过则执行 embedding 基线
-  → 仍未通过才进入 ReAct
+  → 未通过才进入 ReAct
   → 与 answer 比对
   → 成功增强或失败修复
   → 生命周期与去重
 ```
 
-类别由输入确定，所以规划器不会再调用 LLM 做分类或槽位抽取。Retriever 也不再调用 LLM：同一事件类别
-里的工作流按准确率、证据通过率、调用成本和验证次数排序。
+类别由输入确定，所以规划器不会再调用 LLM 做分类或槽位抽取。探索 Retriever 可依据同类
+`SKILL.md` 和图片证据选择 Top-K，失败时按历史指标排序；冻结推理不调用该语义淘汰逻辑，直接返回
+同类全部结构合格工作流。
 
 ## 冻结推理
 
@@ -173,8 +185,8 @@ python -m agents.spatialskillgrowth.anomaly_detection_agent \
   --source-run-id anomaly_explore_10
 ```
 
-如果不提供 `--source-run-id`，推理只使用 `skills/spatialskillgrowth/` 中的人工 Skill 和确定性 embedding
-基线。
+如果不提供 `--source-run-id`，推理使用 `skills/spatialskillgrowth/` 中的人工 Skill。视频输入仍会额外并行
+执行确定性 embedding 通道，并与全部结构合格的图片工作流取 OR。
 
 ## FastAPI 接口
 

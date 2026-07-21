@@ -4,6 +4,8 @@ import requests
 from langchain_core.tools import tool
 
 
+VIDEO_SUFFIXES = {".avi", ".m4v", ".mkv", ".mov", ".mp4", ".mpeg", ".mpg", ".webm"}
+
 # event_type 是后端接口的稳定标识，不能翻译或改写。三份映射分别保留各前端的原始显示名称。
 DASHBOARD_EVENT_LABELS = {
     "banner": "违规横幅检测",
@@ -147,15 +149,16 @@ EVENT_TYPE_LABELS = {
 
 def _embedding_tool_description() -> str:
     lines = [
-        "异常事件检测工具。输入本地视频或图像路径以及精确的英文 event_type，",
+        "视频异常事件检测工具。输入本地原始视频路径以及精确的英文 event_type，",
         "将文件上传到后端检测服务，并返回该异常事件是否发生及对应的判定阈值。",
+        "该工具不支持图片或视频抽样帧，图片输入必须使用其他视觉工具。",
         "event_type 不能翻译、改写或自行创造。支持的类别及中文显示名称如下：",
     ]
     for event_type in sorted(VALID_EVENT_TYPES):
         aliases = "；".join(EVENT_TYPE_ALIASES[event_type])
         lines.append(f"- {event_type}：{aliases}")
     lines.extend([
-        "参数 file_path：本地视频或图像文件路径。",
+        "参数 file_path：本地原始视频文件路径。",
         "参数 event_type：上面列表中的精确英文类别 ID。",
         "返回：检测到该异常事件时返回‘是’（并附带阈值），否则返回‘否’（并附带阈值）。",
     ])
@@ -164,13 +167,13 @@ def _embedding_tool_description() -> str:
 @tool
 def embeddingTool(file_path: str, event_type: str) -> str:
     """
-    异常事件检测工具。输入本地视频或图像路径以及异常事件类别，工具会将文件上传到
+    视频异常事件检测工具。输入本地原始视频路径以及异常事件类别，工具会将文件上传到
     后端检测服务，并返回该类别的异常事件是否发生以及检测阈值。
 
     event_type 必须严格使用工具描述列出的英文类别 ID，不能翻译、改写或自行创造。
 
     Args:
-        file_path: 本地视频或图像文件路径。
+        file_path: 本地原始视频文件路径。
         event_type: 要检测的异常事件类别，必须是工具描述中的精确英文 ID。
     """
     
@@ -182,6 +185,9 @@ def embeddingTool(file_path: str, event_type: str) -> str:
     # 2. 校验文件是否存在
     if not isinstance(file_path, str) or not os.path.exists(file_path):
         return f"Error: File does not exist at path: {file_path}"
+    suffix = os.path.splitext(file_path)[1].lower()
+    if suffix not in VIDEO_SUFFIXES:
+        return "Error: embeddingTool only supports original video files."
 
     url = "http://172.16.0.91:8080/api/detect" 
     

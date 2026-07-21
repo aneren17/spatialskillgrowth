@@ -6,6 +6,7 @@ import os
 import re
 
 from nodes.mem.spatialskillgrowth.core.models import TaskRecord
+from prompt.spatialskillgrowth_prompts import ANOMALY_MEDIA_TOOL_INSTRUCTIONS
 from prompt.spatialskillgrowth_prompts import ANOMALY_INPUT_QUESTION_PROMPT
 from tools.basicTools.embeddingTool import EVENT_TYPE_ALIASES
 from tools.basicTools.embeddingTool import EVENT_TYPE_LABELS
@@ -129,6 +130,7 @@ def build_anomaly_question(event_type, media_type):
         event_name=EVENT_TYPE_LABELS[event_type],
         event_type=event_type,
         aliases="、".join(EVENT_TYPE_ALIASES[event_type]),
+        media_tool_instruction=ANOMALY_MEDIA_TOOL_INSTRUCTIONS[media_type],
     )
 
 

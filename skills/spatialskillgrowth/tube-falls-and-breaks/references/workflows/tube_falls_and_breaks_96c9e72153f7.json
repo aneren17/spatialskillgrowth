@@ -1,0 +1,54 @@
+{
+  "workflow_id": "tube_falls_and_breaks_96c9e72153f7",
+  "name": "tube_falls_and_breaks_detector",
+  "applicability": {
+    "problem_class": "tube_falls_and_breaks",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于单张静态图像输入，利用多模态大模型（MLLM）检测是否发生试管掉落并破碎的异常事件。通过视觉证据分析，确认场景中是否存在试管坠落及物理破裂状态，适用于实验室或工业环境下的特定物体异常监控。",
+    "exclusions": "非图像类型的媒体输入（如视频、音频、纯文本或视频流）；非试管类物体（如玻璃杯、烧瓶、管道等）的掉落或破碎事件；试管未发生物理破碎或仅发生位移、摆放不稳、轻微晃动、表面污渍的情况；需要调用 embeddingTool 进行特征提取的场景；其他类型的异常事件（如液体泄漏、设备过热、人员入侵等）。",
+    "capability_boundary": "仅针对静态图像中已发生的试管掉落破碎瞬间或结果状态进行检测，不包含预测性分析、视频时序追踪或动态过程分析。必须基于单张图像证据，由MLLM对试管实体及其破碎状态（如碎片、裂纹、内容物溅出、非正常放置位置）进行明确判断。输出为二元结果（是/否）。不支持视频时序分析；禁止使用embeddingTool；仅限试管对象的坠落与破碎状态联合检测。"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 tube_falls_and_breaks 异常事件。",
+      "step_id": "",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "",
+  "mutation_mode": "extracted",
+  "mutation_direction": {},
+  "metrics": {
+    "trial_count": 15,
+    "correct_count": 15,
+    "evidence_accept_count": 15,
+    "tool_failure_count": 0,
+    "total_tool_calls": 15,
+    "total_latency_ms": 160491.20814260095,
+    "structural_coverage": 4.0
+  },
+  "source_task_ids": [
+    "tube_falls_and_breaks__image_positive_04",
+    "tube_falls_and_breaks__image_positive_00",
+    "tube_falls_and_breaks__image_negative_09",
+    "tube_falls_and_breaks__image_positive_01",
+    "tube_falls_and_breaks__image_positive_02",
+    "tube_falls_and_breaks__image_positive_03",
+    "tube_falls_and_breaks__image_negative_05",
+    "tube_falls_and_breaks__image_negative_06",
+    "tube_falls_and_breaks__image_negative_07",
+    "tube_falls_and_breaks__image_negative_08"
+  ]
+}

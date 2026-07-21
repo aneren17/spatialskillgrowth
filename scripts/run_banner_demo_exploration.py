@@ -1,10 +1,9 @@
-"""使用模拟 embedding 后端运行 banner 演示数据集的离线探索流程。"""
+"""使用模拟图片 MLLM 运行 banner 演示数据集的离线探索流程。"""
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
 import shutil
 from pathlib import Path
 
@@ -28,16 +27,12 @@ DEFAULT_RUN_ID = "banner_demo_mock_explore"
 DEFAULT_SPLIT = "explore10_demo"
 
 
-class DemoEmbeddingTool:
-    name = "embeddingTool"
+class DemoImageMLLM:
+    name = "MLLM"
 
     @staticmethod
     def invoke(args):
-        filename = Path(str(args.get("file_path") or "")).stem
-        match = re.search(r"banner_(\d+)_", filename)
-        index = int(match.group(1)) if match else 0
-        threshold = min(0.95, 0.55 + index * 0.01)
-        return f"是 (判定阈值: {threshold:.2f})"
+        return "是"
 
 
 class DisabledDemoLLM:
@@ -59,7 +54,7 @@ def run_demo(
     config.failure_repair = False
     config.extra = {
         "demo_mode": True,
-        "embedding_backend": "deterministic_mock",
+        "image_backend": "deterministic_mllm_mock",
         "warning": "该 run 只用于展示框架流程，不代表真实模型效果。",
     }
     metadata = class_metadata_for_anomaly()
@@ -85,7 +80,7 @@ def run_demo(
         config,
         paths,
         DisabledDemoLLM(),
-        runtime=ToolRuntime({"embeddingTool": DemoEmbeddingTool()}),
+        runtime=ToolRuntime({"MLLM": DemoImageMLLM()}),
         exploration_split_name=DEFAULT_SPLIT,
     ).build_exploration()
     summaries = [pipeline.ask(task) for task in tasks]

@@ -1,0 +1,132 @@
+{
+  "workflow_id": "road_surface_dameged_b399a8ddd311",
+  "name": "road_surface_dameged_detector",
+  "applicability": {
+    "problem_class": "road_surface_dameged",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "基于YOLO目标检测、UniDepth深度估计及多模态大语言模型（MLLM）的联合推理工作流，用于在图像输入中检测路面破损异常。该流程首先利用YOLO以0.3阈值识别潜在破损区域，随后通过UniDepth获取空间深度信息，最后由MLLM综合视觉特征与深度证据判定是否发生road_surface_dameged事件。",
+    "exclusions": "非图像类型的媒体输入; 需要调用embeddingTool的场景; 非road_surface_dameged类别的异常检测任务; 缺乏YOLO检测目标或无法进行深度估计的图像场景",
+    "capability_boundary": "仅支持静态图像输入下的road_surface_dameged事件检测，依赖yoloTool进行初步定位、unidepth进行深度辅助以及MLLM进行最终语义判断，不包含视频流处理或实时动态检测能力。"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.3
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.yolotool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 road_surface_dameged 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析完整图像。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "whole_image",
+          "kind": "world_model",
+          "description": "分析完整图像。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 road_surface_dameged 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "road_surface_dameged_a073eff56c6a",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入深度感知以增强路面破损检测的空间鲁棒性",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth",
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading",
+      "paddleHeadDetTool:target:head"
+    ],
+    "tool_hints": {
+      "unidepth": "生成单目深度图，帮助MLLM区分路面破损与背景阴影或纹理干扰，提供空间结构证据。",
+      "MLLM": "结合YOLO检测框、原始图像及深度图，分析破损区域的几何特征（如凹陷、不平整）以支持最终判断。"
+    },
+    "diagnosis": "当前工作流依赖YOLO和MLLM进行2D视觉分析，但在复杂光照或纹理背景下，2D线索可能不足以区分破损与阴影/污渍。引入unidepth工具可生成深度估计，为MLLM提供额外的空间结构证据（如路面凹陷），从而增强对真实物理破损的识别鲁棒性，同时保持现有成功路径的核心逻辑。",
+    "selected_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 6,
+    "total_latency_ms": 18356.703767552972,
+    "structural_coverage": 6.0
+  },
+  "source_task_ids": [
+    "road_surface_dameged__image_positive_03",
+    "road_surface_dameged__image_negative_09"
+  ]
+}

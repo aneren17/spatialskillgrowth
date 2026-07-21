@@ -3,7 +3,7 @@
   "title": "人员摔倒",
   "problem_class": "fall",
   "event_type": "fall",
-  "description": "检测输入视频或图像中是否发生“人员摔倒”异常事件（相关显示名称：人员摔倒、跌倒）；调用异常检测工具时，必须使用精确类别 ID `fall`。",
+  "description": "检测输入视频或图像中是否发生“人员摔倒”异常事件（相关显示名称：人员摔倒、跌倒）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fall`。",
   "aliases": [
     "人员摔倒",
     "跌倒"
@@ -13,23 +13,53 @@
     "rag": "跌倒",
     "stream": "跌倒"
   },
-  "primary_tool": "embeddingTool",
+  "primary_tool": "modality_aware",
+  "video_primary_tool": "embeddingTool",
+  "image_primary_tool": "MLLM",
+  "exploration_media_type": "image",
+  "video_inference_strategy": "parallel_or",
   "answer_type": "bool",
   "required_slots": [
     "event_type"
   ],
   "tool_template": {
     "tool_name": "embeddingTool",
+    "media_type": "video",
     "args": {
       "file_path": "$media",
       "event_type": "fall"
     }
   },
   "evidence_requirements": [
-    "embeddingTool 必须使用精确 event_type `fall`。",
-    "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-    "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+    "视频 embeddingTool 必须使用精确 event_type `fall`。",
+    "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+    "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+    "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+    "工具失败、类别不一致或缺少有效证据时不得接受答案。"
   ],
-  "workflow_count": 0,
-  "workflows": []
+  "workflow_count": 3,
+  "workflows": [
+    {
+      "workflow_id": "fall_68edd8ec2f06",
+      "name": "fall_detection_workflow",
+      "path": "references/workflows/fall_68edd8ec2f06.json",
+      "script": "scripts/fall_68edd8ec2f06.py",
+      "authorship": "generated"
+    },
+    {
+      "workflow_id": "fall_96c9e72153f7",
+      "name": "fall_image_baseline",
+      "path": "references/workflows/fall_96c9e72153f7.json",
+      "script": "scripts/fall_96c9e72153f7.py",
+      "authorship": "generated"
+    },
+    {
+      "workflow_id": "fall_c6c5bc199599",
+      "name": "fall_detection_image",
+      "path": "references/workflows/fall_c6c5bc199599.json",
+      "script": "scripts/fall_c6c5bc199599.py",
+      "authorship": "generated"
+    }
+  ],
+  "status": "active"
 }

@@ -8,7 +8,7 @@ from typing import Dict, Iterable, Set
 TOOL_CONTRACTS: Dict[str, Dict[str, object]] = {
     "embeddingTool": {
         "output": "anomaly_decision",
-        "requires": {"image", "event_type"},
+        "requires": {"video", "event_type"},
         "output_fields": {
             "event_type": "string",
             "is_anomaly": "boolean",

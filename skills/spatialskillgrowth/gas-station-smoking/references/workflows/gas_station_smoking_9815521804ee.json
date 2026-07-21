@@ -1,0 +1,81 @@
+{
+  "workflow_id": "gas_station_smoking_9815521804ee",
+  "name": "gas_station_smoking_detector",
+  "applicability": {
+    "problem_class": "gas_station_smoking",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于多模态大语言模型（MLLM）的视觉分析工作流，专门用于检测静态图像（含视频单帧）中是否发生‘加油站抽烟’异常事件。通过解析图像中的环境特征（如加油机、油枪、加油站标识等）与人物行为特征（如手持香烟、吸烟动作、烟雾等），综合判断是否存在违反安全规定的吸烟行为。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频、纯文本描述）; 非加油站场景的吸烟行为检测（如办公室、公园、家中吸烟，除非明确包含加油站设施）; 加油站场景中的其他违规行为（如打电话、使用明火非香烟类、车辆违规停放等）; 需要调用 embeddingTool 进行特征提取的任务; 模糊不清、无法识别关键视觉证据（如人物面部、手部动作、环境背景、香烟或烟雾）的图像; 极端光照、严重遮挡或低分辨率导致无法清晰呈现加油站环境特征及人物吸烟动作的图像。",
+    "capability_boundary": "仅支持静态图像分析（含视频单帧），不支持动态视频流实时监测；依赖多模态模型对吸烟行为和加油站场景的识别准确率，极端光照、遮挡或低分辨率可能影响判断；不区分吸烟者身份或具体违规程度，仅输出是否存在该异常事件；需图像中清晰呈现加油站环境特征及人物吸烟动作视觉证据，且两者在同一画面关联；输出结果仅为布尔值判断（是/否），不包含额外解释或置信度分数；必须使用 MLLM 工具进行端到端视觉理解与推理，禁止使用 embeddingTool。"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 gas_station_smoking 分析局部区域，并同时遵守以下推理和证据要求：分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 gas_station_smoking 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "gas_station_smoking_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过结构化视觉证据增强鲁棒性",
+    "preferred_atom_ids": [
+      "paddleHeadDetTool:target:head",
+      "groundingdino:box_threshold:medium",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "paddleHeadDetTool": "定位潜在吸烟者的人头位置",
+      "groundingdino": "使用中等阈值检测香烟、烟雾或打火机",
+      "MLLM": "基于局部区域和明确视觉线索进行最终判断"
+    },
+    "diagnosis": "当前工作流直接依赖 MLLM 的全局判断，虽然准确但缺乏可解释的中间证据。引入人头检测（paddleHeadDetTool）和开放词汇检测（groundingdino）可以显式定位“人”和“吸烟相关物体”，并将这些局部证据（local_regions）和明确视觉线索（explicit_visual_cues）提供给 MLLM，从而在不改变最终答案的前提下，增强对遮挡、小目标或复杂背景下的鲁棒性，并补充结构化证据链。",
+    "selected_atom_ids": [
+      "MLLM:scope:local_regions"
+    ]
+  },
+  "metrics": {
+    "trial_count": 13,
+    "correct_count": 13,
+    "evidence_accept_count": 13,
+    "tool_failure_count": 0,
+    "total_tool_calls": 13,
+    "total_latency_ms": 83394.85479425639,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "gas_station_smoking__image_positive_02",
+    "gas_station_smoking__image_positive_00",
+    "gas_station_smoking__image_positive_01",
+    "gas_station_smoking__image_positive_03",
+    "gas_station_smoking__image_positive_04",
+    "gas_station_smoking__image_negative_05",
+    "gas_station_smoking__image_negative_06",
+    "gas_station_smoking__image_negative_07",
+    "gas_station_smoking__image_negative_08",
+    "gas_station_smoking__image_negative_09"
+  ]
+}

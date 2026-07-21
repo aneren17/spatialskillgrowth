@@ -1,0 +1,77 @@
+{
+  "workflow_id": "without_wearing_clothes_198c1989b348",
+  "name": "without_wearing_clothes",
+  "applicability": {
+    "problem_class": "without_wearing_clothes",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于静态图像输入，利用多模态大模型（MLLM）分析视觉特征，检测场景中人员是否完全未穿着规定防护服（如防尘服、无菌服等），并输出二分类判断结果。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频）；需要调用 embeddingTool 的场景；防护服穿戴不规范（如穿戴错误但已穿戴）的情况；模糊不清导致无法辨识衣着状态的图像；其他类型的异常检测任务（如未戴安全帽等）。",
+    "capability_boundary": "仅支持对静态图像进行视觉分析，通过多模态模型识别衣着特征以判定是否违反防护服穿戴规范（完全未穿戴），不生成中间嵌入向量，不执行代码脚本，不进行人工规则硬编码匹配，不处理事件重分类或类别改写。"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 without_wearing_clothes 分析完整图像，并同时遵守以下推理和证据要求：分析完整图像。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "whole_image",
+          "kind": "world_model",
+          "description": "分析完整图像。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 without_wearing_clothes 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "without_wearing_clothes_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过引入结构化视觉证据（人体检测）增强 MLLM 判断的鲁棒性，减少纯视觉推理的幻觉风险",
+    "preferred_atom_ids": [
+      "MLLM:scope:whole_image",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "yoloTool:threshold:medium"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading",
+      "paddlePedriderDetTool:target:traffic_subject"
+    ],
+    "tool_hints": {
+      "yoloTool": "使用中等阈值检测图像中的人体或躯干区域，为 MLLM 提供存在性证据",
+      "MLLM": "结合 YOLO 检测的人体区域与全图视觉线索，明确判断是否缺失防护服，输出最终答案"
+    },
+    "diagnosis": "现有工作流仅依赖 MLLM 直接判断，虽然准确率高但缺乏中间证据链。引入 yoloTool 进行人体检测可作为前置证据，确认画面中是否存在人员及大致位置。若检测到人体但 MLLM 判断为“未穿防护服”，则证据链更完整；若未检测到人体，则可直接排除或标记为负例。这种“检测-验证”模式比纯端到端推理更具鲁棒性，且符合“补充证据”的增强方向，不破坏原有成功路线。",
+    "selected_atom_ids": [
+      "MLLM:scope:whole_image"
+    ]
+  },
+  "metrics": {
+    "trial_count": 4,
+    "correct_count": 3,
+    "evidence_accept_count": 4,
+    "tool_failure_count": 0,
+    "total_tool_calls": 4,
+    "total_latency_ms": 7025.786763057113,
+    "structural_coverage": 2.0
+  },
+  "source_task_ids": [
+    "without_wearing_clothes__image_negative_08",
+    "without_wearing_clothes__image_negative_07",
+    "without_wearing_clothes__image_positive_00"
+  ]
+}

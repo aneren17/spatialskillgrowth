@@ -8,6 +8,9 @@
 不要求实习生调用真实工具、准备真实媒体、验证检测效果、生成 Workflow JSON、更新索引或安装工作流。
 mock 通过后，由负责人手动复制需要长期保留的 `SKILL.md` 和脚本。
 
+下面含 `embeddingTool` 的示例全部是视频专用路线。图片路线必须删除 embedding 步骤，以 MLLM 或
+其他图像工具处理原图；视频抽样帧也不能传给 embedding。
+
 ## 1. 人工负责哪些文件
 
 ```text
@@ -45,22 +48,21 @@ skills/spatialskillgrowth/banner/
 OCR 示例：
 
 ```text
-原视频或图片
-    ├── embeddingTool ----------> 最终“是/否”和 threshold
-    └── paddleOcrTool ----------> 可见文字
-               └── MLLM -------> 辅助查看文字与画面
+图片/视频抽样帧
+    -> paddleOcrTool -----------> 可见文字
+    -> MLLM --------------------> 最终“是/否”
 ```
 
 crop 示例：
 
 ```text
-原视频或图片
-    ├── embeddingTool ------------------------> 最终“是/否”和 threshold
-    └── groundingdino -> crop_detections
-                              └── MLLM -------> 查看裁剪区域
+图片/视频抽样帧
+    -> groundingdino -> crop_detections
+                         -> MLLM -------------> 最终“是/否”
 ```
 
-这两条路线的最终答案都来自 embedding。区别是辅助证据不同。
+这两条示例路线都不调用 embedding，最终答案来自 MLLM。视频推理时框架会把它们应用到抽样帧，
+并与原视频 embedding 并行执行，最后按 OR 规则汇总。
 
 ## 3. 编写 `SKILL.md`
 
@@ -69,7 +71,7 @@ frontmatter 只能包含 `name` 和 `description`：
 ```markdown
 ---
 name: banner
-description: "检测视频或图像中的违规横幅；当 event_type 为 banner 时使用。"
+description: "检测视频中的违规横幅；当 event_type 为 banner 时使用。"
 ---
 ```
 
@@ -88,7 +90,7 @@ description: "检测视频或图像中的违规横幅；当 event_type 为 banne
 ```python
 WORKFLOW_ID = "banner-ocr-example"
 PROBLEM_CLASS = "banner"
-DECLARED_TOOLS = ("embeddingTool", "paddleOcrTool", "MLLM")
+DECLARED_TOOLS = ("paddleOcrTool", "MLLM")
 WORKFLOW_CONTRACT = {...}
 ```
 
@@ -133,8 +135,7 @@ WORKFLOW_CONTRACT = {
     "description": "适合横幅文字清晰可见的画面。",
     "exclusions": "不适用于 banner 以外类别；文字不可见时 OCR 无收益。",
     "capability_boundary": (
-        "embeddingTool 必须成功并返回是或否；OCR 和 MLLM 可以失败，"
-        "失败时仍返回 embeddingTool 的判断。"
+        "不调用 embeddingTool；OCR 和 MLLM 必须成功，最终判断来自 MLLM。"
     ),
     "steps": [],
 }
@@ -163,15 +164,14 @@ WORKFLOW_CONTRACT = {
 OCR 路线的具体写法：
 
 ```text
-embeddingTool 必须成功并返回是或否和 threshold；OCR 与 MLLM 是可选证据，
-文字不可见或辅助工具失败时仍返回 embeddingTool 的判断。
+不调用 embeddingTool；OCR 与 MLLM 必须成功，最终判断来自 MLLM。
 ```
 
 crop 路线的具体写法：
 
 ```text
-embeddingTool 必须成功；GroundingDINO 必须返回非空检测框后才能执行 crop。
-没有框、crop 失败或 MLLM 失败时停止辅助链，返回 embeddingTool 的判断。
+不调用 embeddingTool；GroundingDINO 必须返回检测框，crop 与 MLLM 必须成功，
+最终判断来自 MLLM。
 ```
 
 ## 6. step 字段
@@ -383,16 +383,14 @@ skills/spatialskillgrowth/banner/scripts/banner-ocr-example.py
 核心控制流：
 
 ```python
-embedding = runtime.call(...)
-runtime.require(embedding, "embedding")
-
-runtime.call(
+ocr = runtime.call(
     "paddleOcrTool",
     ...,
     step_id="ocr",
 )
+runtime.require(ocr, "ocr")
 
-runtime.call(
+review = runtime.call(
     "MLLM",
     {
         "file": runtime.evidence_image(),
@@ -401,11 +399,12 @@ runtime.call(
     },
     step_id="review",
 )
+runtime.require(review, "review")
 
-return runtime.finish(embedding)
+return runtime.finish(review)
 ```
 
-OCR 和 MLLM 失败不会阻止返回 embedding。
+OCR 和 MLLM 都是必要步骤；任一步失败时整条工作流失败。
 
 ## 13. crop 示例的关键逻辑
 
@@ -418,28 +417,17 @@ skills/spatialskillgrowth/banner/scripts/banner-crop-example.py
 核心控制流：
 
 ```python
-embedding = runtime.call(...)
-runtime.require(embedding, "embedding")
-
 detect = runtime.call("groundingdino", ...)
-if detect.get("ok"):
-    crop = runtime.call(
-        "crop_detections",
-        {
-            "file": runtime.image_path(),
-            "detections": runtime.value(detect, "detections", []),
-            ...
-        },
-        step_id="crop",
-        depends_on=["detect"],
-    )
-    if crop.get("ok"):
-        runtime.call("MLLM", ...)
+runtime.require(detect, "detect")
+crop = runtime.call("crop_detections", ...)
+runtime.require(crop, "crop")
+review = runtime.call("MLLM", ...)
+runtime.require(review, "review")
 
-return runtime.finish(embedding)
+return runtime.finish(review)
 ```
 
-这个例子没有对 detect/crop 使用 `require`，所以辅助链可以降级。
+这条路线没有 embedding 兜底，因此 detect、crop 和 MLLM 都必须成功。
 
 ## 14. 运行 mock 验证
 

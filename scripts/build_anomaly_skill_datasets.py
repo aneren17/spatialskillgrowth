@@ -2,7 +2,6 @@
 
 import argparse
 import json
-import os
 import shutil
 from pathlib import Path
 
@@ -18,7 +17,7 @@ from nodes.mem.spatialskillgrowth.skills.skill_layout import standard_skill_name
 DEFAULT_SOURCE_ROOT = "test/corpus"
 DEFAULT_OUTPUT_ROOT = "benchmark/anomaly/skill_datasets"
 DEFAULT_IMAGE_COUNT = 10
-DEFAULT_VIDEO_COUNT = 2
+DEFAULT_VIDEO_COUNT = 0
 IMAGE_SUFFIXES = {".bmp", ".jpeg", ".jpg", ".png", ".webp"}
 VIDEO_SUFFIXES = {".avi", ".m4v", ".mkv", ".mov", ".mp4", ".mpeg", ".mpg", ".webm"}
 POSITIVE_ANSWER = "是"
@@ -51,7 +50,7 @@ def parse_arguments():
         "--video-count",
         type=int,
         default=DEFAULT_VIDEO_COUNT,
-        help="每个类别保留的视频总数。",
+        help="每个类别额外保留的视频总数；默认 0，探索阶段只读取图片。",
     )
     parser.add_argument(
         "--force",

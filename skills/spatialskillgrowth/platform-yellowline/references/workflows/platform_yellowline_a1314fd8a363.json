@@ -1,0 +1,109 @@
+{
+  "workflow_id": "platform_yellowline_a1314fd8a363",
+  "name": "platform_yellowline_detector",
+  "applicability": {
+    "problem_class": "platform_yellowline",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "MLLM"
+    ],
+    "description": "基于 YOLO 目标检测与多模态大语言模型（MLLM）的视觉证据链，检测图像中是否存在人员或物体越过站台安全黄线的异常行为。",
+    "exclusions": "非站台场景（如普通道路、室内走廊无黄线区域）; 未包含清晰站台黄线视觉特征的低分辨率或模糊图像; 非图像类型的媒体输入",
+    "capability_boundary": "{\"event_type\": \"platform_yellowline\", \"media_type\": \"image\", \"detection_logic\": \"通过 yoloTool 定位关键视觉元素，结合 MLLM 分析空间位置关系以判定是否越线\", \"evidence_requirement\": \"必须包含站台黄线及潜在越线主体的视觉证据\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 platform_yellowline 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析完整图像。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "whole_image",
+          "kind": "world_model",
+          "description": "分析完整图像。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 platform_yellowline 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "platform_yellowline_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过结构化视觉证据增强鲁棒性",
+    "preferred_atom_ids": [
+      "yoloTool:threshold:medium",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:whole_image"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "yoloTool": "检测行人及站台边缘区域，提供结构化边界框证据",
+      "MLLM": "结合YOLO检测结果与全图上下文，明确描述黄线位置及人员相对位置"
+    },
+    "diagnosis": "当前基线工作流仅依赖MLLM直接判断，缺乏中间结构化证据。引入yoloTool（中等阈值）可显式检测行人和潜在的危险区域边界，为MLLM提供明确的视觉锚点（explicit_visual_cues）。这能将“黑盒”判断转化为基于检测证据的推理，提高在复杂背景或模糊黄线情况下的鲁棒性，同时保持对全图（whole_image）上下文的感知以确认相对位置关系。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:whole_image",
+      "yoloTool:threshold:medium"
+    ]
+  },
+  "metrics": {
+    "trial_count": 9,
+    "correct_count": 5,
+    "evidence_accept_count": 8,
+    "tool_failure_count": 1,
+    "total_tool_calls": 17,
+    "total_latency_ms": 169341.31358005106,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "platform_yellowline__image_positive_00",
+    "platform_yellowline__image_positive_01",
+    "platform_yellowline__image_negative_05",
+    "platform_yellowline__image_negative_07",
+    "platform_yellowline__image_negative_09"
+  ]
+}

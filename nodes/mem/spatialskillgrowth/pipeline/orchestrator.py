@@ -98,6 +98,10 @@ class ExplorationPipeline:
         self.media_preprocessor = media_preprocessor
 
     def ask(self, task: TaskRecord, resume: bool = False) -> Dict:
+        if task.media_type != "image":
+            raise ValueError(
+                "探索阶段只接受图片；视频只用于冻结推理。"
+            )
         state_task_id = f"explore__{task.task_id}"
         if resume and self.store.is_complete(state_task_id):
             summary = self.store.get_summary(state_task_id) or {}
@@ -108,7 +112,10 @@ class ExplorationPipeline:
         try:
             # {
             #     "problem_class": event_type,
-            #     "slot_bindings": {"event_type": event_type},
+            #     "slot_bindings": {
+            #         "event_type": event_type,
+            #         "media_type": media_type,
+            #     },
             #     "selected_tools": selected_tools,
             #     "excluded_tools": excluded_tools,
             #     "tool_decisions": tool_decisions,
@@ -117,6 +124,7 @@ class ExplorationPipeline:
                 task.event_type,
                 [task.media_path],
                 self.workflow_executor.runtime.registry,
+                task.media_type,
             )
             problem_class = plan["problem_class"]
             with problem_class_lock(problem_class):
@@ -149,6 +157,7 @@ class ExplorationPipeline:
             task.visual_paths,
             plan["slot_bindings"],
             plan["selected_tools"],
+            task.media_type,
         )
         self.store.save_retrieval(state_task_id, retrieval)
         execution = self.coordinator.run(
@@ -160,6 +169,7 @@ class ExplorationPipeline:
             plan["slot_bindings"],
             plan["selected_tools"],
             media_path=task.media_path,
+            media_type=task.media_type,
         )
         lifecycle_results = self._persist_execution_attempts(
             state_task_id, task, execution, update_metrics=True
@@ -419,6 +429,7 @@ class ExplorationPipeline:
             answer,
             result,
             [task.media_path],
+            task.media_type,
         )
         self.store.save_trial(
             state_task_id,
@@ -521,6 +532,7 @@ class ExplorationPipeline:
                     candidate,
                     dict(plan.get("slot_bindings") or {}),
                     list(plan.get("selected_tools") or []),
+                    task.media_type,
                 ):
                     continue
                 validation_tasks.append((task, plan))
@@ -553,6 +565,7 @@ class ExplorationPipeline:
                     answer,
                     result,
                     [task.media_path],
+                    task.media_type,
                 )
                 state_task_id = f"explore__{task.task_id}"
                 self.store.save_trial(
@@ -654,6 +667,7 @@ class InferencePipeline:
             task.event_type,
             [task.media_path],
             self.runtime.registry,
+            task.media_type,
         )
         self.store.begin_task(
             state_task_id,
@@ -669,18 +683,32 @@ class InferencePipeline:
             task.visual_paths,
             plan["slot_bindings"],
             plan["selected_tools"],
+            task.media_type,
         )
         self.store.save_retrieval(state_task_id, retrieval)
-        execution = self.coordinator.run(
-            state_task_id,
-            plan["problem_class"],
-            task.question,
-            task.visual_paths,
-            workflows,
-            plan["slot_bindings"],
-            plan["selected_tools"],
-            media_path=task.media_path,
-        )
+        if task.media_type == "video":
+            execution = self.coordinator.run_video_parallel_or(
+                state_task_id,
+                plan["problem_class"],
+                task.question,
+                task.visual_paths,
+                workflows,
+                plan["slot_bindings"],
+                plan["selected_tools"],
+                media_path=task.media_path,
+            )
+        else:
+            execution = self.coordinator.run(
+                state_task_id,
+                plan["problem_class"],
+                task.question,
+                task.visual_paths,
+                workflows,
+                plan["slot_bindings"],
+                plan["selected_tools"],
+                media_path=task.media_path,
+                media_type=task.media_type,
+            )
         for index, attempt in enumerate(execution["attempts"]):
             answer = str(attempt.get("answer") or "")
             correct = bool(task.groundtruth) and answer_matches(
@@ -726,6 +754,9 @@ class InferencePipeline:
             "selected_workflow_id": execution["selected_workflow_id"],
             "fallback_react": execution["fallback_react"],
             "accepted": execution["accepted"],
+            "aggregation_strategy": execution.get(
+                "aggregation_strategy", ""
+            ),
             "retrieval": retrieval.to_dict(),
             "attempts": [_serializable_attempt(item) for item in execution["attempts"]],
             "tool_plan": plan,
@@ -787,6 +818,7 @@ class ExperimentFactory:
         self.coordinator.use_react = self.config.use_react
         # 在探索阶段，允许检索到 provisional workflow，以便进行 mutation 和 consolidation。
         self.retriever.include_provisional = True
+        self.retriever.return_all_candidates = False
         mutation_engine = WorkflowMutationEngine(
             SuccessEnhancementDirector(self.llm),
             FailureRepairDirector(self.llm),
@@ -827,6 +859,7 @@ class ExperimentFactory:
     def build_inference(self) -> InferencePipeline:
         self.coordinator.use_react = self.config.use_react
         self.retriever.include_provisional = False
+        self.retriever.return_all_candidates = True
         return InferencePipeline(
             self.config,
             self.paths,

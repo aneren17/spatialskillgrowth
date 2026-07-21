@@ -1,0 +1,110 @@
+{
+  "workflow_id": "cold_flame_8525e5d8e629",
+  "name": "cold_flame_detector",
+  "applicability": {
+    "problem_class": "cold_flame",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "MLLM"
+    ],
+    "description": "基于视觉证据检测图像中是否存在冷焰火（cold_flame）异常事件。工作流首先使用 GroundingDINO 以 0.3 的开放词汇检测阈值定位潜在目标，随后利用多模态大语言模型（MLLM）结合图像上下文进行最终判定。该流程专用于静态图像输入，旨在通过可复用的视觉证据链确认冷焰火的存在与否。",
+    "exclusions": "非图像类型的媒体输入（如视频、音频或纯文本）; 需要调用 embeddingTool 的场景; 其他类型的火焰或燃烧事件（非冷焰火类别）; 动态实时流媒体检测场景",
+    "capability_boundary": "{\"input_media\": \"image\", \"event_type\": \"cold_flame\", \"detection_threshold\": 0.3, \"evidence_chain\": [\"groundingdino_object_localization\", \"mllm_contextual_reasoning\"], \"output_format\": \"binary_yes_no\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "使用低阈值检测潜在的光源、烟雾或异常物体，为MLLM提供具体的空间位置证据",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 cold_flame 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析完整图像。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "whole_image",
+          "kind": "world_model",
+          "description": "分析完整图像。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 cold_flame 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "cold_flame_28c34ddb458d",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入视觉定位工具以提供结构化证据，增强冷焰火检测的可解释性与鲁棒性",
+    "preferred_atom_ids": [
+      "groundingdino:box_threshold:low",
+      "MLLM:scope:whole_image"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading",
+      "paddleHeadDetTool:target:head"
+    ],
+    "tool_hints": {
+      "groundingdino": "使用低阈值检测潜在的光源、烟雾或异常物体，为MLLM提供具体的空间位置证据",
+      "MLLM": "结合GroundingDINO提供的检测框，在全图语境下综合判断是否存在冷焰火特征"
+    },
+    "diagnosis": "现有工作流仅依赖MLLM的主观视觉判断，缺乏客观的结构化证据（如边界框）。引入GroundingDINO（低阈值）可以捕捉微弱的冷焰火特征（如光点、烟雾），即使置信度不高也能作为线索。随后MLLM在全图（whole_image）语境下结合这些定位证据进行推理，既保留了整体场景理解，又增加了基于定位的客观证据链，从而在不破坏现有成功路径的前提下，显著提升对微弱或复杂背景信号的检测鲁棒性。",
+    "selected_atom_ids": [
+      "MLLM:scope:whole_image",
+      "groundingdino:box_threshold:low"
+    ]
+  },
+  "metrics": {
+    "trial_count": 3,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 1,
+    "total_tool_calls": 5,
+    "total_latency_ms": 2954.427644610405,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "cold_flame__image_positive_01",
+    "cold_flame__image_positive_02"
+  ]
+}

@@ -1,5 +1,7 @@
 """使用少量有标签异常样本探索并生成 Skill。"""
-
+# python -m agents.spatialskillgrowth.exploration_agent \
+#     --dataset-root benchmark/anomaly/skill_datasets \
+#     --run-id anomaly_explore_subset_relaxed
 import argparse
 import concurrent.futures
 import json
@@ -115,6 +117,7 @@ def main():
             base_url=worker_spec["base_url"],
             model_name=args.engine,
             api_key=DEFAULT_API_KEY,
+            max_retries=0,
             timeout=SPATIAL_SKILL_GROWTH_LLM_TIMEOUT_SECONDS,
             temperature=SPATIAL_SKILL_GROWTH_LLM_TEMPERATURE,
         )
@@ -185,16 +188,24 @@ def _load_tasks(args):
         media_root = str(args.media_root or "").strip()
         if not media_root:
             media_root = str(dataset_path.parent)
-        return load_online_tasks(
+        tasks = load_online_tasks(
             str(dataset_path),
             media_root,
             args.limit,
         )
-    return _load_tasks_from_dataset_root(
-        Path(args.dataset_root).resolve(),
-        args.event_types,
-        args.limit,
-    )
+    else:
+        tasks = _load_tasks_from_dataset_root(
+            Path(args.dataset_root).resolve(),
+            args.event_types,
+            args.limit,
+        )
+    image_tasks = [
+        task for task in tasks
+        if task.media_type == "image"
+    ]
+    if not image_tasks:
+        raise ValueError("探索数据中没有图片任务；视频只用于冻结推理。")
+    return image_tasks
 
 
 def _load_tasks_from_dataset_root(dataset_root, event_types_value, limit):

@@ -103,12 +103,13 @@ skills/active/<event_type>/SKILL.md
 然后把以下内容一起交给多模态 LLM：
 
 - `SKILL.md` 中的 Skill 作用、工作流选择规则和可选工作流；
-- 当前视频抽帧或输入图像；
+- 当前输入图像；冻结视频推理时则使用抽样帧；
 - 候选 `references/workflows/*.json` 的机器契约；
 - 工作流历史准确率、证据通过率和调用成本。
 
-LLM 返回最多 Top-K 个工作流 ID。LLM 失败、`SKILL.md` 缺失或返回非法 ID 时，系统退回历史指标
-排序。人工示例如果没有对应 Workflow JSON，仍然不会成为候选。
+探索时 LLM 返回最多 Top-K 个工作流 ID；LLM 失败、`SKILL.md` 缺失或返回非法 ID 时，系统退回历史
+指标排序。冻结推理不再让 LLM 淘汰候选，而是返回同类别全部结构合格工作流。人工示例如果没有对应
+Workflow JSON，仍然不会成为候选。
 
 ## 5. `SKILLSET.json` 怎样证明来源
 

@@ -1,0 +1,94 @@
+{
+  "workflow_id": "bus_shelter_was_vandalized_74b0c3f20721",
+  "name": "bus_shelter_vandalism_detector",
+  "applicability": {
+    "problem_class": "bus_shelter_was_vandalized",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "MLLM"
+    ],
+    "description": "检测输入图像中公交站台（候车亭）是否存在人为破坏、涂鸦、结构损毁等异常事件。通过目标检测定位站台，结合多模态大模型分析视觉证据进行判断。",
+    "exclusions": "非图像输入；图像中无公交站台；站台处于正常维护、施工、临时遮挡或仅存在自然老化、轻微污渍、天气影响而无破坏迹象；其他类型公共设施破坏；图像模糊或遮挡严重导致无法识别；需调用embeddingTool的场景。",
+    "capability_boundary": "仅适用于bus_shelter_was_vandalized事件；依赖yoloTool检测（置信度>=0.5）及MLLM语义判断；输出布尔值；禁止使用embeddingTool；不泛化至其他设施或通用异常分类；严格遵循先检测后推理的顺序。"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 bus_shelter_was_vandalized 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "bus_shelter_was_vandalized_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入结构化视觉证据以增强鲁棒性",
+    "preferred_atom_ids": [
+      "groundingdino:box_threshold:medium",
+      "sam3:threshold:medium",
+      "yoloTool:threshold:medium"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "yoloTool": "检测公交站台主体及常见破坏物（如涂鸦、破损部件）",
+      "groundingdino": "定位特定破坏迹象（如'broken glass', 'graffiti', 'damaged shelter'）",
+      "sam3": "对检测到的异常区域进行精细分割，提供几何证据"
+    },
+    "diagnosis": "当前工作流仅依赖 MLLM 的直接判断，缺乏中间结构化证据。引入 YOLO 和 GroundingDINO 可提供目标存在的客观检测框，SAM 可提供破坏区域的精确掩码。这些结构化证据可作为 MLLM 的强有力补充，减少纯视觉推理的幻觉，提高在复杂背景下的鲁棒性。",
+    "selected_atom_ids": [
+      "yoloTool:threshold:medium"
+    ]
+  },
+  "metrics": {
+    "trial_count": 13,
+    "correct_count": 9,
+    "evidence_accept_count": 11,
+    "tool_failure_count": 2,
+    "total_tool_calls": 24,
+    "total_latency_ms": 233420.22444307804,
+    "structural_coverage": 9.0
+  },
+  "source_task_ids": [
+    "bus_shelter_was_vandalized__image_positive_03",
+    "bus_shelter_was_vandalized__image_positive_02",
+    "bus_shelter_was_vandalized__image_positive_00",
+    "bus_shelter_was_vandalized__image_positive_01",
+    "bus_shelter_was_vandalized__image_positive_04",
+    "bus_shelter_was_vandalized__image_negative_06",
+    "bus_shelter_was_vandalized__image_negative_08",
+    "bus_shelter_was_vandalized__image_negative_09"
+  ]
+}

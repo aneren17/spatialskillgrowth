@@ -278,7 +278,11 @@ def _semantic_payload(workflow: WorkflowSpec) -> Dict:
 def _merge_metrics(left: WorkflowSpec, right: WorkflowSpec):
     merged = left.metrics.__class__()
     for name in merged.__dataclass_fields__:
-        setattr(merged, name, getattr(left.metrics, name) + getattr(right.metrics, name))
+        setattr(
+            merged,
+            name,
+            getattr(left.metrics, name) + getattr(right.metrics, name),
+        )
     return merged
 
 

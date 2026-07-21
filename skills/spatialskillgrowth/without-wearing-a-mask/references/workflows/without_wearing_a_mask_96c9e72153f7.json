@@ -1,0 +1,49 @@
+{
+  "workflow_id": "without_wearing_a_mask_96c9e72153f7",
+  "name": "without_wearing_a_mask_detector",
+  "applicability": {
+    "problem_class": "without_wearing_a_mask",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于多模态大语言模型（MLLM）分析输入图像，检测是否存在人员未佩戴口罩的异常行为。适用于需要验证合规性口罩佩戴情况的静态图像场景。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频或纯文本描述）；图像中未包含清晰可见的人脸区域，或人脸被严重遮挡、模糊导致无法识别面部特征；需要实时流式处理或动态行为分析的场景；涉及其他类型异常事件（如未穿安全帽、违规操作等）的检测任务。",
+    "capability_boundary": "仅支持单帧图像分析，不支持跨帧时序推理；检测精度依赖于图像中面部的清晰度和分辨率；不包含对口罩佩戴规范性（如是否遮住口鼻）的细粒度合规性评分，仅判断是否佩戴；必须取得MLLM基于可见画面的明确判断。"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 without_wearing_a_mask 异常事件。",
+      "step_id": "",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "",
+  "mutation_mode": "extracted",
+  "mutation_direction": {},
+  "metrics": {
+    "trial_count": 6,
+    "correct_count": 6,
+    "evidence_accept_count": 6,
+    "tool_failure_count": 0,
+    "total_tool_calls": 6,
+    "total_latency_ms": 134452.6340374723,
+    "structural_coverage": 2.0
+  },
+  "source_task_ids": [
+    "without_wearing_a_mask__image_positive_01",
+    "without_wearing_a_mask__image_negative_07",
+    "without_wearing_a_mask__image_positive_00",
+    "without_wearing_a_mask__image_negative_08",
+    "without_wearing_a_mask__image_negative_09"
+  ]
+}

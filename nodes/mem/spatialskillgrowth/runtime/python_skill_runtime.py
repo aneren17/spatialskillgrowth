@@ -23,6 +23,8 @@ from nodes.mem.spatialskillgrowth.runtime.tool_contracts import (
 )
 
 
+VIDEO_SUFFIXES = {".avi", ".m4v", ".mkv", ".mov", ".mp4", ".mpeg", ".mpg", ".webm"}
+
 SAFE_BUILTINS = {
     "abs": abs,
     "all": all,
@@ -138,9 +140,19 @@ class SkillExecutionContext:
         # 2. 视频帧扩散 (Fan-out) 处理
         # 如果当前输入是视频 (多帧)，且请求的工具只支持单张图片，
         # 则调用 _call_sampled_frames 将该工具并发运行在所有帧上，并选出结果最好的一帧。
-        if tool_name == "embeddingTool" and self._media_path:
+        embedding_media_is_video = (
+            tool_name == "embeddingTool"
+            and Path(self._media_path).suffix.lower() in VIDEO_SUFFIXES
+        )
+        if tool_name == "embeddingTool" and not embedding_media_is_video:
+            result = ToolRuntime.skipped(
+                tool_name,
+                "embeddingTool 只支持原始视频，禁止传入图片或抽样帧。",
+            )
+        elif embedding_media_is_video:
             prepared_args["file_path"] = self._media_path
-        if self._should_fan_out(tool_name, prepared_args):
+            result = self._tool_runtime.execute(tool_name, prepared_args)
+        elif self._should_fan_out(tool_name, prepared_args):
             result = self._call_sampled_frames(tool_name, prepared_args)
         else:
             result = self._tool_runtime.execute(tool_name, prepared_args)

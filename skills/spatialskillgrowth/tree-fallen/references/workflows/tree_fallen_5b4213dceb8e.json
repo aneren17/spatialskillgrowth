@@ -1,0 +1,135 @@
+{
+  "workflow_id": "tree_fallen_5b4213dceb8e",
+  "name": "tree_fallen_detector",
+  "applicability": {
+    "problem_class": "tree_fallen",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "基于图像输入检测树木倒伏异常事件。工作流首先利用 YOLO 工具检测潜在目标，随后通过 UniDepth 估计检测目标的深度信息，最后结合多模态大语言模型（MLLM）综合视觉证据与深度线索判断是否发生树木倒伏。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 非 tree_fallen 类别的异常事件检测; 未提供有效图像数据的请求",
+    "capability_boundary": "{\"input_media\": \"image\", \"event_type\": \"tree_fallen\", \"detection_logic\": \"依赖 YOLO 目标检测、UniDepth 深度估计及 MLLM 语义推理的串联工作流\", \"output_format\": \"布尔值（是/否）\", \"detection_scope\": \"仅针对图像中已检测到的树木对象进行倒伏状态判断，不泛化至其他植被或物体倒塌事件\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.yolotool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 tree_fallen 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 tree_fallen 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "tree_fallen_7d8bbbc1de24",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入语义分割以量化倒伏树木的空间范围，增强视觉证据的几何完整性。",
+    "preferred_atom_ids": [
+      "sam3:threshold:medium",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "sam3": "使用中等阈值分割图像中的树木主体，以区分倒伏树干与背景植被，提供比边界框更精细的形状证据。"
+    },
+    "diagnosis": "现有工作流已通过 YOLO 检测车辆/行人和 UniDepth 估计深度，但缺乏对‘树木’这一核心异常主体的直接视觉分割证据。引入 SAM3 分割可以明确勾勒出倒伏树木的轮廓，排除背景干扰，为 MLLM 提供更确凿的形态学证据，从而在不改变现有逻辑的前提下提高判断的鲁棒性。",
+    "selected_atom_ids": [
+      "MLLM:scope:local_regions"
+    ]
+  },
+  "metrics": {
+    "trial_count": 12,
+    "correct_count": 10,
+    "evidence_accept_count": 10,
+    "tool_failure_count": 2,
+    "total_tool_calls": 32,
+    "total_latency_ms": 223102.83332318068,
+    "structural_coverage": 12.0
+  },
+  "source_task_ids": [
+    "tree_fallen__image_positive_02",
+    "tree_fallen__image_negative_07",
+    "tree_fallen__image_positive_00",
+    "tree_fallen__image_positive_01",
+    "tree_fallen__image_positive_03",
+    "tree_fallen__image_positive_04",
+    "tree_fallen__image_negative_05",
+    "tree_fallen__image_negative_06",
+    "tree_fallen__image_negative_08"
+  ]
+}

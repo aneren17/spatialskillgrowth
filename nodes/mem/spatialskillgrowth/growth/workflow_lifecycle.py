@@ -17,7 +17,7 @@ from nodes.mem.spatialskillgrowth.storage.growth_store import (
 
 
 class WorkflowLifecycleManager:
-    """失败修复先作为局部候选，只有重复验证后才进入冻结技能库。"""
+    """失败修复先作为局部候选，达到配置质量门槛后进入冻结技能库。"""
 
     def __init__(
         self,

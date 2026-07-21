@@ -1,0 +1,133 @@
+{
+  "workflow_id": "egress_blocked_5edebbe1dfe0",
+  "name": "egress_blocked_detector",
+  "applicability": {
+    "problem_class": "egress_blocked",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "paddleOcrTool",
+      "MLLM"
+    ],
+    "description": "针对静态图像输入，检测安全出口是否被物体遮挡或堵塞。通过 GroundingDINO 定位潜在障碍物，结合 PaddleOCR 提取出口标识等文字信息，由多模态大模型综合视觉与文本证据判定异常。",
+    "exclusions": "非图像类型的媒体输入；动态视频流或实时视频帧序列；需要调用 embeddingTool 的场景；非 'egress_blocked' 类别的其他异常检测任务；未包含可见出口标识或相关遮挡物的场景",
+    "capability_boundary": "仅适用于检测图像中安全出口被物理遮挡或堵塞的情况。依赖 GroundingDINO 检测到的物体边界框及置信度（阈值 >= 0.3）和 PaddleOCR 提取的场景文字内容作为必要证据。严禁使用 embeddingTool。不处理其他类型的设施故障或安全违规。"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "使用低阈值检测潜在遮挡物（如箱子、家具），确保不遗漏低置信度目标",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 egress_blocked 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析完整图像。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "whole_image",
+          "kind": "world_model",
+          "description": "分析完整图像。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 egress_blocked 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0",
+        "paddleocrtool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "egress_blocked_88a7f37845ff",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入空间深度证据以增强遮挡判断的鲁棒性",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth",
+      "MLLM:scope:whole_image"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleHeadDetTool:target:head",
+      "paddlePedriderDetTool:target:traffic_subject"
+    ],
+    "tool_hints": {
+      "unidepth": "生成单目深度图，量化障碍物与出口的空间距离关系",
+      "MLLM": "结合深度图与原始图像，综合判断障碍物是否实质性阻挡通行路径"
+    },
+    "diagnosis": "现有工作流依赖2D边界框和OCR文本，缺乏深度信息，难以区分背景物体与前景遮挡物。引入 unidepth 提供 metric_depth 证据，可帮助 MLLM 在 whole_image 范围内更准确地评估物体与出口的相对位置关系，从而提升对复杂透视或远距离遮挡场景的判断鲁棒性，且不破坏现有的检测-OCR-推理链路。",
+    "selected_atom_ids": [
+      "MLLM:scope:whole_image"
+    ]
+  },
+  "metrics": {
+    "trial_count": 12,
+    "correct_count": 5,
+    "evidence_accept_count": 7,
+    "tool_failure_count": 5,
+    "total_tool_calls": 26,
+    "total_latency_ms": 91697.19993043691,
+    "structural_coverage": 15.0
+  },
+  "source_task_ids": [
+    "egress_blocked__image_positive_04",
+    "egress_blocked__image_positive_01",
+    "egress_blocked__image_positive_00",
+    "egress_blocked__image_positive_02"
+  ]
+}

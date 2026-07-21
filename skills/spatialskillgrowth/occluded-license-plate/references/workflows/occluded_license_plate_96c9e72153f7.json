@@ -1,0 +1,54 @@
+{
+  "workflow_id": "occluded_license_plate_96c9e72153f7",
+  "name": "occluded_license_plate_image_detector",
+  "applicability": {
+    "problem_class": "occluded_license_plate",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于多模态大语言模型（MLLM）分析单张图像，检测是否存在车牌遮挡异常事件。通过视觉证据判断车牌区域是否被物体、污渍、角度或人为手段部分或完全遮挡。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频、纯文本或原始视频时序）; 图像中未包含车辆或车牌区域的情况; 车牌清晰可见且无任何遮挡物的正常场景; 需要调用 embeddingTool 进行特征提取的场景; 涉及其他类型异常（如车辆碰撞、行人闯入等）的检测任务",
+    "capability_boundary": "支持事件类型：occluded_license_plate；支持媒体类型：单张图像（不支持视频时序分析）；证据要求：必须通过 MLLM 工具获取基于可见画面的明确视觉证据；输出格式：二元判断（是/否）；工具约束：仅使用 MLLM 工具，禁止使用 embeddingTool 或其他未列出的工具"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 occluded_license_plate 异常事件。",
+      "step_id": "",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "",
+  "mutation_mode": "extracted",
+  "mutation_direction": {},
+  "metrics": {
+    "trial_count": 12,
+    "correct_count": 12,
+    "evidence_accept_count": 12,
+    "tool_failure_count": 0,
+    "total_tool_calls": 12,
+    "total_latency_ms": 43007.10471626371,
+    "structural_coverage": 2.0
+  },
+  "source_task_ids": [
+    "occluded_license_plate__image_positive_03",
+    "occluded_license_plate__image_positive_00",
+    "occluded_license_plate__image_positive_01",
+    "occluded_license_plate__image_positive_02",
+    "occluded_license_plate__image_positive_04",
+    "occluded_license_plate__image_negative_05",
+    "occluded_license_plate__image_negative_06",
+    "occluded_license_plate__image_negative_07",
+    "occluded_license_plate__image_negative_08",
+    "occluded_license_plate__image_negative_09"
+  ]
+}

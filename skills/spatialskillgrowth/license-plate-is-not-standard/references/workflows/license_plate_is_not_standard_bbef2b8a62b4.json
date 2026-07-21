@@ -1,0 +1,76 @@
+{
+  "workflow_id": "license_plate_is_not_standard_bbef2b8a62b4",
+  "name": "license_plate_is_not_standard",
+  "applicability": {
+    "problem_class": "license_plate_is_not_standard",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "检测输入图像中车辆车牌是否存在不规范情况（如模糊、遮挡、污损、角度严重倾斜或字符缺失等），依据视觉证据判断是否构成 license_plate_is_not_standard 异常事件。",
+    "exclusions": "非图像类型的媒体输入; 图像中未包含车辆或车牌区域; 需要调用 embeddingTool 进行特征提取的场景; 涉及其他类型异常（如违章停车、超速等）的检测任务",
+    "capability_boundary": "{\"event_type\": \"license_plate_is_not_standard\", \"media_type\": \"image\", \"required_tools\": [\"MLLM\"], \"forbidden_tools\": [\"embeddingTool\"], \"evidence_requirement\": \"必须基于图像中的视觉特征（如车牌清晰度、完整性、规范性）提供判断依据\", \"output_format\": \"是/否\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 license_plate_is_not_standard 分析局部区域，并同时遵守以下推理和证据要求：分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 license_plate_is_not_standard 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "license_plate_is_not_standard_96c9e72153f7",
+  "mutation_mode": "failure_repair",
+  "mutation_direction": {
+    "mode": "failure_repair",
+    "objective": "引入OCR工具提取目标区域文本，以弥补纯视觉判断缺失的规范性证据",
+    "preferred_atom_ids": [
+      "paddleOcrTool:evidence_role:text_reading",
+      "MLLM:scope:local_regions",
+      "crop_detections:operation:insert_after_detection"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "paddleOcrTool": "提取图像中所有可见文字，特别是目标区域的字符内容，用于后续规范性校验",
+      "MLLM": "结合OCR提取的文字内容与视觉特征，判断目标是否符合标准格式（如位数、字符类型、颜色对比等）"
+    },
+    "diagnosis": "当前工作流仅依赖MLLM对全图进行视觉判断，缺乏对目标具体文字内容的结构化提取。'不规范'往往涉及字符缺失、模糊、非标准字体或格式错误等细节，纯视觉模型在无明确OCR证据支持下容易忽略细微违规或产生误判（False Negative）。通过引入paddleOcrTool读取文字，可为MLLM提供明确的文本证据，从而修复因证据缺失导致的漏检。",
+    "selected_atom_ids": [
+      "MLLM:scope:local_regions"
+    ]
+  },
+  "metrics": {
+    "trial_count": 8,
+    "correct_count": 7,
+    "evidence_accept_count": 8,
+    "tool_failure_count": 0,
+    "total_tool_calls": 8,
+    "total_latency_ms": 17982.04167187214,
+    "structural_coverage": 2.0
+  },
+  "source_task_ids": [
+    "license_plate_is_not_standard__image_negative_06",
+    "license_plate_is_not_standard__image_positive_04",
+    "license_plate_is_not_standard__image_negative_05",
+    "license_plate_is_not_standard__image_negative_07",
+    "license_plate_is_not_standard__image_negative_08",
+    "license_plate_is_not_standard__image_negative_09"
+  ]
+}

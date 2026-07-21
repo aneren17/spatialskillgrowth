@@ -1,0 +1,152 @@
+{
+  "workflow_id": "egress_blocked_bf89f2a3b4ab",
+  "name": "egress_blocked_detector",
+  "applicability": {
+    "problem_class": "egress_blocked",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "groundingdino",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "基于多模态视觉证据检测安全出口遮挡异常。工作流首先通过 OCR 识别场景中的文字标识以确认出口属性，利用开放词汇检测模型（阈值 0.3）定位潜在遮挡物，并结合深度估计分析空间关系，最终由多模态大模型综合判断是否存在 egress_blocked 事件。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 非 egress_blocked 类别的异常检测任务; 无法通过视觉证据直接判断遮挡关系的抽象场景",
+    "capability_boundary": "仅支持针对 egress_blocked 事件的图像检测，依赖 paddleOcrTool、groundingdino、unidepth 和 MLLM 的协同推理，不泛化至其他异常类别或非视觉模态。"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "egress_blocked",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.groundingdino_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 egress_blocked 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 egress_blocked 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0",
+        "groundingdino_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "egress_blocked_8fb801c3fd73",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入空间深度感知以区分物理遮挡与视觉重叠，提升对'安全出口遮挡'判定的鲁棒性",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type"
+    ],
+    "tool_hints": {
+      "unidepth": "生成深度图以量化障碍物与出口标识的空间距离，辅助MLLM判断是否存在物理层面的通道阻断。"
+    },
+    "diagnosis": "当前工作流依赖OCR和MLLM的2D视觉语义，虽然能识别'出口'文字和'遮挡'表象，但缺乏对空间关系的定量证据。在复杂场景中（如前景物体与背景出口在2D投影上重叠但实际无物理接触），仅靠2D图像易产生误判。引入unidepth提供深度信息，可以明确障碍物是否真正位于出口通道的物理路径上，从而补充'物理阻断'这一关键证据维度，增强工作流在深度歧义场景下的鲁棒性。",
+    "selected_atom_ids": [
+      "groundingdino:box_threshold:low",
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 1,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 8,
+    "total_latency_ms": 12066.435795277357,
+    "structural_coverage": 8.0
+  },
+  "source_task_ids": [
+    "egress_blocked__image_negative_08"
+  ]
+}

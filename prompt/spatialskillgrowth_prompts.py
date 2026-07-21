@@ -2,13 +2,23 @@
 
 ANOMALY_INPUT_QUESTION_PROMPT = """请检测输入{media_name}中是否发生“{event_name}”异常事件。
 该类别已经由调用方确定，精确 event_type 为 `{event_type}`，不要重新分类或改写类别。
-相关中文名称：{aliases}。必须调用 embeddingTool 获取异常判断和判定阈值。
-最终判断只使用“是”或“否”，同时在结构化结果中保留 event_type、is_anomaly 和 threshold。"""
+相关中文名称：{aliases}。{media_tool_instruction}
+最终判断只使用“是”或“否”。"""
+
+ANOMALY_MEDIA_TOOL_INSTRUCTIONS = {
+    "image": (
+        "图片输入禁止调用 embeddingTool；请使用图像工具和多模态模型收集可复用视觉证据。"
+    ),
+    "video": (
+        "embeddingTool 只能接收原始视频；图像工具只能处理按时间抽取的视频帧。"
+    ),
+}
 
 FREE_REACT_SYSTEM_PROMPT = """你是一个多模态异常事件检测智能体。请使用可用工具判断当前视频或
-图像中是否发生问题指定的异常事件。优先调用 embeddingTool，并使用当前任务类别对应的精确英文
-event_type；不得翻译、改写或编造 event_type。仅构造足以回答问题的最短证据链，不要重复无信息量
-的调用；工具失败时才改用相关工具补充证据。证据充分后，只返回 JSON：
+图像中是否发生问题指定的异常事件。embeddingTool 只允许接收原始视频，禁止向它传入图片或视频
+抽样帧；图片任务应使用图像工具和 MLLM，视频任务可同时使用原视频 embeddingTool 与抽样帧工具。
+event_type 必须使用当前任务类别对应的精确英文 ID，不得翻译、改写或编造。仅构造足以回答问题的
+最短证据链，不要重复无信息量的调用；工具失败时才改用相关工具补充证据。证据充分后，只返回 JSON：
 {"answer": "用户要求的最终答案"}。不要在 answer 字段之外输出推理过程或单位。"""
 
 REACT_FINALIZATION_PROMPT = """工具调用预算已经耗尽，不要再请求工具。请只依据当前对话中的

@@ -1,0 +1,153 @@
+{
+  "workflow_id": "breaking_through_toll_booths_e7ed2b3b5674",
+  "name": "breaking_through_toll_booths_detector",
+  "applicability": {
+    "problem_class": "breaking_through_toll_booths",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "yoloTool",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "检测输入图像中是否发生车辆或物体强行通过收费站（Toll Booth）的异常事件。该工作流通过 OCR 识别收费站标识文字、YOLO 检测车辆及收费站结构、UniDepth 估计空间深度关系，结合多模态大模型综合判断是否存在‘闯收费站’行为。",
+    "exclusions": "非收费站场景（如普通路口、停车场入口、无收费设施的通道）; 车辆正常排队缴费或通过已抬起栏杆的收费站; 图像中未包含收费站关键结构（栏杆、亭子、标识牌）或车辆; 模糊、遮挡严重导致无法识别收费站状态或车辆行为的图像; 非图像媒体类型（本工作流仅支持 image 类型输入）",
+    "capability_boundary": "{\"required_evidence\": [\"OCR 识别到收费站相关文字（如‘收费’、‘ETC’、‘收费站’等）\", \"YOLO 检测到车辆与收费站栏杆/亭子的空间共存\", \"UniDepth 估计显示车辆处于栏杆未抬起或应停止区域\", \"多模态模型确认车辆行为符合‘强行通过’而非正常通行\"], \"tool_constraints\": [\"paddleOcrTool 必须成功读取收费站标识文字\", \"yoloTool 必须使用 0.5 检测阈值定位车辆与收费站结构\", \"unidepth 必须基于 yoloTool 输出估计目标深度\", \"MLLM 必须综合上述三项证据进行最终判断\"], \"event_type_lock\": \"breaking_through_toll_booths\", \"media_type_lock\": \"image\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.yolotool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 breaking_through_toll_booths 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 breaking_through_toll_booths 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0",
+        "yolotool_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "breaking_through_toll_booths_5a401c0b68f1",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入空间深度证据以增强对‘闯’这一动态行为的几何约束判断",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "sam3:threshold:high",
+      "sam3:threshold:low"
+    ],
+    "tool_hints": {
+      "unidepth": "生成深度图，辅助 MLLM 判断车辆与收费站设施（栏杆/亭子）的相对前后位置关系，验证是否发生物理穿越",
+      "MLLM": "结合 YOLO 检测框、OCR 文字及深度图，综合判断车辆是否处于栏杆前方且处于运动穿越状态"
+    },
+    "diagnosis": "当前工作流依赖 YOLO 提供 2D 空间定位，但在单帧图像中，仅凭 2D 重叠难以区分‘车辆紧贴栏杆’与‘车辆已穿过栏杆’。引入 unidepth 可提供相对深度信息，帮助 MLLM 构建更准确的 3D 空间理解，从而更鲁棒地判定‘闯’这一涉及空间穿越的异常行为，减少因透视或遮挡导致的误判。",
+    "selected_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 8,
+    "total_latency_ms": 24708.945294842124,
+    "structural_coverage": 8.0
+  },
+  "source_task_ids": [
+    "breaking_through_toll_booths__image_negative_06",
+    "breaking_through_toll_booths__image_negative_08"
+  ]
+}

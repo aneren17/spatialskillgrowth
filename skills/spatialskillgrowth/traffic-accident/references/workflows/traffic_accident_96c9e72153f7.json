@@ -1,0 +1,47 @@
+{
+  "workflow_id": "traffic_accident_96c9e72153f7",
+  "name": "traffic_accident_image_detector",
+  "applicability": {
+    "problem_class": "traffic_accident",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于多模态大语言模型（MLLM）对输入图像（包括视频提取的静态帧）进行视觉分析，检测是否存在交通事故异常事件。通过识别车辆碰撞、散落物、交通停滞等视觉特征来判断事故状态。",
+    "exclusions": "非图像类型的媒体输入（如纯文本、音频或未转换的视频流）; 需要调用 embeddingTool 进行特征提取的场景; 非交通事故类的其他异常事件（如火灾、洪水、设备故障等）; 模糊、严重遮挡或分辨率过低导致无法辨识车辆及道路状态的图像; 需要处理原始视频时序动态变化的场景。",
+    "capability_boundary": "{\"event_type\": \"traffic_accident\", \"media_type\": \"image\", \"evidence_requirement\": \"必须包含可被多模态模型直接感知的视觉证据，如受损车辆、事故现场布局、交通标志异常或紧急车辆出现等\", \"tool_constraint\": \"仅使用 MLLM 进行端到端图像理解与判断，禁止使用 embeddingTool\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 traffic_accident 异常事件。",
+      "step_id": "",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "",
+  "mutation_mode": "extracted",
+  "mutation_direction": {},
+  "metrics": {
+    "trial_count": 5,
+    "correct_count": 5,
+    "evidence_accept_count": 5,
+    "tool_failure_count": 0,
+    "total_tool_calls": 5,
+    "total_latency_ms": 32475.494642741978,
+    "structural_coverage": 2.0
+  },
+  "source_task_ids": [
+    "traffic_accident__image_positive_02",
+    "traffic_accident__image_positive_00",
+    "traffic_accident__image_positive_01"
+  ]
+}

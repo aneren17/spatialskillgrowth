@@ -1,0 +1,145 @@
+{
+  "workflow_id": "run_the_red_light_ed990c3cbf1e",
+  "name": "run_the_red_light",
+  "applicability": {
+    "problem_class": "run_the_red_light",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "paddlePedriderDetTool",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "检测输入图像中是否存在车辆或交通参与者在红灯亮起时越过停止线或进入路口的闯红灯行为。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频或纯文本描述）；无法识别交通信号灯状态、缺乏清晰视觉特征或关键交通参与者被严重遮挡的场景；非闯红灯类别的其他交通异常事件；需要时序逻辑分析以判断信号相位变化的复杂动态场景（单帧无法确定）。",
+    "capability_boundary": "依赖 paddleOcrTool 读取可见文字/信号灯状态、paddlePedriderDetTool 检测交通参与者位置、unidepth 估计检测目标深度，最终由 MLLM 依据上述视觉证据判断是否发生 run_the_red_light 异常事件。必须严格依赖工具图定义步骤，禁止调用 embeddingTool，最终判断仅基于视觉证据输出是或否。"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "paddlePedriderDetTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "tool": "paddlePedriderDetTool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddlePedriderDetTool",
+          "axis": "target",
+          "value": "traffic_subject",
+          "kind": "fixed",
+          "description": "检测交通参与者。",
+          "args": {}
+        }
+      ],
+      "purpose": "检测交通参与者。",
+      "step_id": "paddlepedriderdettool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.paddlepedriderdettool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "paddlepedriderdettool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 run_the_red_light 分析局部区域，并同时遵守以下推理和证据要求：分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 run_the_red_light 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0",
+        "paddlepedriderdettool_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "run_the_red_light_5a1750356a9e",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入深度感知以验证空间违规，增强对远距离或遮挡场景的鲁棒性",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "yoloTool:threshold:low"
+    ],
+    "tool_hints": {
+      "unidepth": "估计车辆/行人与停止线或信号灯的空间深度关系，提供几何层面的违规证据",
+      "MLLM": "结合深度信息与现有检测框，判断主体是否确实越过停止线进入路口",
+      "paddlePedriderDetTool": "继续提供交通参与者的位置基础证据"
+    },
+    "diagnosis": "现有工作流依赖2D图像平面上的位置关系判断，在透视变形或远距离场景下可能存在误判。引入 unidepth 可获取场景的深度信息，帮助 MLLM 更准确地理解‘越过停止线’这一3D空间行为，从而在不改变现有成功路径的前提下，补充几何证据，提升对复杂视角的鲁棒性。",
+    "selected_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 4,
+    "correct_count": 2,
+    "evidence_accept_count": 4,
+    "tool_failure_count": 0,
+    "total_tool_calls": 16,
+    "total_latency_ms": 52848.31967763603,
+    "structural_coverage": 16.0
+  },
+  "source_task_ids": [
+    "run_the_red_light__image_negative_09",
+    "run_the_red_light__image_negative_05"
+  ]
+}

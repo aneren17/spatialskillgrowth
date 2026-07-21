@@ -1,0 +1,96 @@
+{
+  "workflow_id": "track_obstacle_87fbd3cbd1af",
+  "name": "track_obstacle_detector",
+  "applicability": {
+    "problem_class": "track_obstacle",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "MLLM"
+    ],
+    "description": "基于图像输入，利用 GroundingDINO 进行开放词汇目标检测，并结合多模态大语言模型（MLLM）分析视觉证据，以判定是否存在轨道异物异常事件。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 非 track_obstacle 类别的异常检测任务",
+    "capability_boundary": "仅针对 event_type 为 track_obstacle 且 media_type 为 image 的场景有效；依赖 GroundingDINO 0.3 阈值检测结果作为 MLLM 判断的前置证据。"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "使用较低阈值以召回更多潜在异物候选框，即使置信度不高，也为后续 MLLM 提供审查机会。",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 track_obstacle 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "track_obstacle_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入显式视觉线索以增强轨道异物检测的鲁棒性",
+    "preferred_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "groundingdino:box_threshold:low",
+      "sam3:threshold:medium"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "MLLM": "在判断前，要求模型先列出图像中支持或反对'轨道异物'结论的具体视觉特征（如物体形状、位置、与轨道的相对关系），再给出最终是/否判断。",
+      "groundingdino": "使用较低阈值以召回更多潜在异物候选框，即使置信度不高，也为后续 MLLM 提供审查机会。",
+      "sam3": "对 groundingdino 检测出的候选区域进行精细化分割，去除背景噪声，为 MLLM 提供更纯净的视觉证据。"
+    },
+    "diagnosis": "当前工作流直接依赖 MLLM 进行端到端判断，虽然准确率达标，但缺乏中间推理证据。通过引入 explicit_visual_cues，强制模型关注具体的视觉异常特征（如非轨道结构的物体），可以提高对模糊案例的鲁棒性，并为错误分析提供可解释的证据链，而不改变现有的成功判断逻辑。结合 groundingdino 的低阈值召回和 sam3 的精细化分割，可以确保 MLLM 接收到足够且高质量的视觉线索进行证据聚焦。",
+    "selected_atom_ids": [
+      "groundingdino:box_threshold:low"
+    ]
+  },
+  "metrics": {
+    "trial_count": 9,
+    "correct_count": 8,
+    "evidence_accept_count": 8,
+    "tool_failure_count": 1,
+    "total_tool_calls": 17,
+    "total_latency_ms": 33385.98546292633,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "track_obstacle__image_positive_01",
+    "track_obstacle__image_positive_02",
+    "track_obstacle__image_positive_03",
+    "track_obstacle__image_negative_05",
+    "track_obstacle__image_negative_06",
+    "track_obstacle__image_negative_07",
+    "track_obstacle__image_negative_08",
+    "track_obstacle__image_negative_09"
+  ]
+}

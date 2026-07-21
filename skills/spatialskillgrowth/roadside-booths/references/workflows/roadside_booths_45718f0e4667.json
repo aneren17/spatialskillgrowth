@@ -1,0 +1,121 @@
+{
+  "workflow_id": "roadside_booths_45718f0e4667",
+  "name": "roadside_booths_detector",
+  "applicability": {
+    "problem_class": "roadside_booths",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "yoloTool",
+      "MLLM"
+    ],
+    "description": "基于图像输入，通过 OCR 文本识别与目标检测（YOLO）收集视觉证据，利用多模态大模型判断是否存在占道经营（roadside_booths）异常事件。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 其他非 roadside_booths 类别的异常事件检测; 未包含可见文字或特定目标结构的纯背景图像",
+    "capability_boundary": "{\"required_tools\": [\"paddleOcrTool\", \"yoloTool\", \"MLLM\"], \"evidence_requirements\": [\"通过 paddleOcrTool 获取图像中的可见文字信息\", \"通过 yoloTool 以 0.5 阈值检测相关目标物体\", \"结合上述视觉证据由 MLLM 进行综合逻辑判断\"], \"output_format\": \"布尔值（是/否）\", \"constraints\": \"严格限定于 roadside_booths 事件类型，不泛化至其他占道或经营类异常\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 roadside_booths 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 roadside_booths 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0",
+        "yolotool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "roadside_booths_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入结构化视觉证据以增强鲁棒性",
+    "preferred_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "yoloTool:threshold:medium",
+      "paddleOcrTool:evidence_role:text_reading"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "yoloTool": "检测摊位、帐篷或车辆等潜在占道物体",
+      "paddleOcrTool": "识别招牌或文字以确认经营性",
+      "MLLM": "基于检测框和OCR结果综合判断占道经营"
+    },
+    "diagnosis": "当前工作流仅依赖 MLLM 的全局视觉判断，虽准确率100%但缺乏可解释的结构化证据。引入 YOLO 检测潜在物体和 OCR 识别文字，可为 MLLM 提供明确的视觉线索（explicit_visual_cues），从而在复杂场景下提高鲁棒性并补充证据链，防止因视觉遗漏导致的误判。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "paddleOcrTool:evidence_role:text_reading",
+      "yoloTool:threshold:medium"
+    ]
+  },
+  "metrics": {
+    "trial_count": 3,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 1,
+    "total_tool_calls": 8,
+    "total_latency_ms": 102035.93681100756,
+    "structural_coverage": 5.0
+  },
+  "source_task_ids": [
+    "roadside_booths__image_negative_05",
+    "roadside_booths__image_negative_08"
+  ]
+}

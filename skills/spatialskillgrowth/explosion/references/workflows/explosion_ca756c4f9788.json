@@ -1,0 +1,132 @@
+{
+  "workflow_id": "explosion_ca756c4f9788",
+  "name": "explosion_detection_workflow",
+  "applicability": {
+    "problem_class": "explosion",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "基于开放词汇目标检测、深度估计及多模态大模型推理的爆炸事件检测工作流。该流程首先使用 GroundingDINO 以 0.3 阈值检测潜在爆炸相关视觉特征，随后通过 UniDepth 估计目标深度信息，最后由多模态大模型综合视觉证据判断是否发生爆炸异常。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 非 explosion 类别的异常检测任务; 不包含爆炸相关视觉特征（如火焰、烟雾、冲击波、碎片等）的静态背景图像",
+    "capability_boundary": "{\"required_tools\": [\"groundingdino\", \"unidepth\", \"MLLM\"], \"input_constraints\": {\"media_type\": \"image\", \"event_type\": \"explosion\"}, \"detection_logic\": \"依赖 GroundingDINO 的开放词汇检测能力定位目标，结合 UniDepth 的空间深度信息，由 MLLM 进行最终语义判定。不支持非图像输入，不执行 embedding 操作。\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "explosion",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.groundingdino_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 explosion 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析完整图像。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "whole_image",
+          "kind": "world_model",
+          "description": "分析完整图像。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 explosion 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "explosion_a8dd7b3d320a",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入深度感知以区分真实爆炸与平面图像干扰，增强3D空间证据",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading"
+    ],
+    "tool_hints": {
+      "unidepth": "生成深度图以验证爆炸火球或烟雾是否具有符合物理规律的体积感和空间深度，排除贴纸或屏幕显示等2D干扰"
+    },
+    "diagnosis": "当前工作流仅依赖2D视觉特征（火光、烟雾），易受平面图像（如海报、屏幕）欺骗。引入 unidepth 可提供深度信息，作为区分真实3D爆炸事件与2D视觉伪影的强有力补充证据，在不改变MLLM最终判断逻辑的前提下显著提升鲁棒性。",
+    "selected_atom_ids": [
+      "groundingdino:box_threshold:low",
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 6,
+    "total_latency_ms": 100772.9321802035,
+    "structural_coverage": 6.0
+  },
+  "source_task_ids": [
+    "explosion__image_positive_01",
+    "explosion__image_positive_00"
+  ]
+}

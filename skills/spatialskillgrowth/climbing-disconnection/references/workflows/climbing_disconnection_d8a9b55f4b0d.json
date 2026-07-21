@@ -1,0 +1,79 @@
+{
+  "workflow_id": "climbing_disconnection_d8a9b55f4b0d",
+  "name": "climbing_disconnection_detector",
+  "applicability": {
+    "problem_class": "climbing_disconnection",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于多模态大语言模型（MLLM）分析输入图像，检测是否存在‘攀爬脱网’异常事件。该工作流通过视觉证据判断目标主体是否出现攀爬过程中脱离防护网或安全约束的状态，适用于静态图像场景下的特定安全违规检测。",
+    "exclusions": "不适用于视频流或动态序列分析，仅处理单张静态图像。; 不适用于非攀爬类异常（如跌倒、入侵、火灾等），仅针对攀爬行为中的脱网状态。; 不适用于无清晰视觉证据或图像质量严重受损导致无法识别主体与防护网关系的场景。; 不执行目标物体名称的泛化抽象，因工具图未提供可替换目标的运行时槽位，检测器严格限定于‘攀爬脱网’这一具体事件类型。",
+    "capability_boundary": "{\"required_evidence\": [\"图像中必须包含可识别的攀爬主体（如人员）与防护网结构。\", \"必须存在主体与防护网空间关系异常的视觉特征（如主体悬空、脱离网面接触点）。\", \"MLLM 需基于上述视觉证据输出明确的是/否判断，不得依赖外部文本或嵌入向量工具。\"], \"tool_constraints\": [\"禁止调用 embeddingTool，所有视觉分析必须通过图像工具与多模态模型完成。\", \"工具图固定为单步 MLLM 推理，无前置预处理或后处理步骤。\"], \"output_format\": \"仅返回‘是’或‘否’作为最终判断结果。\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 climbing_disconnection 分析局部区域，并同时遵守以下推理和证据要求：分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 climbing_disconnection 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "climbing_disconnection_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入人体检测作为结构化视觉证据，增强对‘攀爬’主体的定位能力，辅助 MLLM 进行更鲁棒的脱网判断",
+    "preferred_atom_ids": [
+      "paddleHeadDetTool:target:head",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading",
+      "paddlePedriderDetTool:target:traffic_subject"
+    ],
+    "tool_hints": {
+      "paddleHeadDetTool": "检测图像中的人头位置，确认是否存在攀爬者",
+      "MLLM": "结合人头检测框与整体画面，分析人物姿态与网具的相对位置关系，判断是否脱网"
+    },
+    "diagnosis": "当前工作流仅依赖 MLLM 直接判断，缺乏对关键主体（人）的结构化定位证据。引入 paddleHeadDetTool 可明确‘攀爬者’的存在与位置，为 MLLM 提供明确的视觉焦点（local_regions）和具体线索（explicit_visual_cues），从而在不改变最终判断逻辑的前提下，提高对复杂背景或模糊姿态下的检测鲁棒性。",
+    "selected_atom_ids": [
+      "MLLM:scope:local_regions"
+    ]
+  },
+  "metrics": {
+    "trial_count": 5,
+    "correct_count": 5,
+    "evidence_accept_count": 5,
+    "tool_failure_count": 0,
+    "total_tool_calls": 5,
+    "total_latency_ms": 22172.991439700127,
+    "structural_coverage": 1.0
+  },
+  "source_task_ids": [
+    "climbing_disconnection__image_positive_04",
+    "climbing_disconnection__image_negative_05",
+    "climbing_disconnection__image_negative_07",
+    "climbing_disconnection__image_negative_08",
+    "climbing_disconnection__image_negative_09"
+  ]
+}

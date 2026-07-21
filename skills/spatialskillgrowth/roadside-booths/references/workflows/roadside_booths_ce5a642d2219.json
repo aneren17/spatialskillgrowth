@@ -1,0 +1,144 @@
+{
+  "workflow_id": "roadside_booths_ce5a642d2219",
+  "name": "roadside_booths_detector",
+  "applicability": {
+    "problem_class": "roadside_booths",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "yoloTool",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "基于多模态视觉证据检测图像中是否存在占道经营（roadside_booths）异常事件。通过目标检测识别潜在摊位结构，利用深度估计分析其空间位置关系，并结合OCR提取的文字信息，综合判断是否构成占道经营。",
+    "exclusions": "非图像类型的输入数据; 需要调用embeddingTool的场景; 非roadside_booths类别的其他异常事件检测; 缺乏可见文字或目标结构导致无法获取必要视觉证据的场景",
+    "capability_boundary": "仅适用于静态图像输入，依赖yoloTool进行目标检测（阈值0.5）、unidepth进行深度估计以及paddleOcrTool进行文字识别，最终由多模态大模型依据上述视觉证据判断是否存在占道经营行为。"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.yolotool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 roadside_booths 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 roadside_booths 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0",
+        "yolotool_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "roadside_booths_45718f0e4667",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入深度感知以区分合法停放与占道经营，增强空间逻辑判断鲁棒性",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type"
+    ],
+    "tool_hints": {
+      "unidepth": "估计检测到的车辆或物体相对于道路边缘的深度，辅助判断是否侵入行车道",
+      "MLLM": "结合深度信息和局部区域视觉特征，判断物体是否构成占道经营"
+    },
+    "diagnosis": "当前工作流通过 YOLO 检测到车辆（car），但仅凭存在车辆无法区分‘合法路边停车’与‘占道经营’。引入 unidepth 提供深度证据，可帮助 MLLM 理解物体与道路的空间关系（如是否占据车道），同时聚焦局部区域分析，能更精确地捕捉摊位或经营行为的细节，从而在复杂场景下提高判断的鲁棒性和可解释性。",
+    "selected_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 8,
+    "total_latency_ms": 19080.34928329289,
+    "structural_coverage": 8.0
+  },
+  "source_task_ids": [
+    "roadside_booths__image_negative_08",
+    "roadside_booths__image_positive_00"
+  ]
+}

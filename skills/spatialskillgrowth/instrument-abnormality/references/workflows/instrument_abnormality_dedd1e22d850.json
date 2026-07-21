@@ -1,0 +1,94 @@
+{
+  "workflow_id": "instrument_abnormality_dedd1e22d850",
+  "name": "instrument_abnormality_detector",
+  "applicability": {
+    "problem_class": "instrument_abnormality",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "MLLM"
+    ],
+    "description": "针对静态图像输入，通过 OCR 提取可见文字信息（如读数、标识），并结合多模态大模型分析视觉特征（如指针位置、刻度、指示灯状态），以判定是否存在仪表异常事件。",
+    "exclusions": "非图像类型的媒体输入（如纯文本、音频、视频流）；无法通过 OCR 或视觉模型直接观测到的仪表内部机械故障或隐性电路故障；需要实时动态序列分析才能判定的瞬态异常（仅处理单帧静态图像）；图像中仪表区域被严重遮挡、模糊或完全不可见，导致缺少必要 OCR 文字或视觉证据不足以支撑判断的情况。",
+    "capability_boundary": "仅检测 event_type 为 instrument_abnormality 的异常；依赖 paddleOcrTool 获取文字证据及 MLLM 进行综合视觉推理；输入必须为包含可观测仪表特征的静态图像；输出为二分类结果（binary_yes_no）。"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 instrument_abnormality 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "instrument_abnormality_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过OCR提取仪表读数文本作为结构化证据，增强MLLM判断的鲁棒性",
+    "preferred_atom_ids": [
+      "paddleOcrTool:evidence_role:text_reading",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "paddleOcrTool": "读取图像中仪表盘的数字、刻度或状态文字，为MLLM提供精确的数值或状态证据",
+      "MLLM": "结合OCR提取的文本证据与视觉特征，综合判断是否存在仪表异常"
+    },
+    "diagnosis": "当前工作流仅依赖MLLM的端到端视觉判断，缺乏中间结构化证据。仪表异常通常涉及读数错误、指针偏移或显示故障，OCR提取的文字（如具体数值、错误代码）能提供客观、可复用的强证据，减少MLLM对细微视觉差异的误判，从而在不改变最终分类逻辑的前提下提高检测的准确性和解释性。",
+    "selected_atom_ids": [
+      "paddleOcrTool:evidence_role:text_reading"
+    ]
+  },
+  "metrics": {
+    "trial_count": 11,
+    "correct_count": 11,
+    "evidence_accept_count": 11,
+    "tool_failure_count": 0,
+    "total_tool_calls": 22,
+    "total_latency_ms": 157196.05876039714,
+    "structural_coverage": 6.0
+  },
+  "source_task_ids": [
+    "instrument_abnormality__image_positive_01",
+    "instrument_abnormality__image_positive_00",
+    "instrument_abnormality__image_positive_02",
+    "instrument_abnormality__image_positive_03",
+    "instrument_abnormality__image_positive_04",
+    "instrument_abnormality__image_negative_05",
+    "instrument_abnormality__image_negative_06",
+    "instrument_abnormality__image_negative_07",
+    "instrument_abnormality__image_negative_08",
+    "instrument_abnormality__image_negative_09"
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "workflow_id": "equipment_rust_9d74d5206871",
+  "name": "equipment_rust_detector",
+  "applicability": {
+    "problem_class": "equipment_rust",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于多模态大模型（MLLM）分析输入图像，检测是否存在设备生锈（equipment_rust）异常。通过视觉证据识别金属表面的氧化腐蚀特征，适用于工业设备、管道、结构件等场景的表面状态评估。",
+    "exclusions": "非图像类型的媒体输入（如视频、音频、纯文本）；图像中未包含任何可识别的设备或金属结构主体；需要精确量化锈蚀面积百分比、化学成分或详细程度分级的定量分析任务；涉及动态过程（如实时锈蚀生成监控）的连续视频流分析；涉及其他类型异常（如设备破损、漏电、过热等）的检测任务。",
+    "capability_boundary": "仅支持图像输入；仅判断是否存在设备生锈异常（是/否），不提供锈蚀等级评分、修复建议或量化指标；依赖MLLM基于可见画面的视觉证据直接推理，不涉及语义嵌入工具。"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 equipment_rust 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 equipment_rust 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "equipment_rust_3ebda905403f",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入局部区域聚焦分析以增强细粒度证据",
+    "preferred_atom_ids": [
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type"
+    ],
+    "tool_hints": {
+      "MLLM": "在整体判断基础上，进一步聚焦疑似锈蚀的局部区域进行细节确认"
+    },
+    "diagnosis": "现有工作流已成功利用显式视觉线索进行全局判断。引入 local_regions 分析能力，允许模型在确认存在锈蚀后，对特定锈蚀斑块进行更细致的纹理和颜色验证，从而进一步降低因背景干扰或相似颜色污渍导致的误报风险，形成从‘全局发现’到‘局部确认’的完整证据链。",
+    "selected_atom_ids": [
+      "MLLM:scope:local_regions"
+    ]
+  },
+  "metrics": {
+    "trial_count": 12,
+    "correct_count": 11,
+    "evidence_accept_count": 12,
+    "tool_failure_count": 0,
+    "total_tool_calls": 12,
+    "total_latency_ms": 71435.24371646345,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "equipment_rust__image_positive_03",
+    "equipment_rust__image_negative_07",
+    "equipment_rust__image_positive_02",
+    "equipment_rust__image_positive_00",
+    "equipment_rust__image_positive_01",
+    "equipment_rust__image_positive_04",
+    "equipment_rust__image_negative_05",
+    "equipment_rust__image_negative_08",
+    "equipment_rust__image_negative_09"
+  ]
+}

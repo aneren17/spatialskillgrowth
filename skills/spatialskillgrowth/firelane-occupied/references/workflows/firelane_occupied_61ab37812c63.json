@@ -1,0 +1,166 @@
+{
+  "workflow_id": "firelane_occupied_61ab37812c63",
+  "name": "firelane_occupied_detector",
+  "applicability": {
+    "problem_class": "firelane_occupied",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "paddlePedriderDetTool",
+      "yoloTool",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "检测静态图像中是否存在占用消防通道的异常事件。通过OCR识别标识文字、检测交通参与者及通用物体，结合深度估计分析空间占用，由多模态大模型综合判断是否构成占用。",
+    "exclusions": "非图像输入；无消防通道场景或标识的图像；需视频时序分析、动态行为判断、外部知识库、实时数据或特征提取的任务；非此类异常检测任务。",
+    "capability_boundary": "仅支持静态图像分析，输出二元占用结果。依赖固定工具链获取文字、物体检测及深度证据，不支持视频分析、动态阈值调整、身份识别、法律判定或时长统计。"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "paddlePedriderDetTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "tool": "paddlePedriderDetTool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddlePedriderDetTool",
+          "axis": "target",
+          "value": "traffic_subject",
+          "kind": "fixed",
+          "description": "检测交通参与者。",
+          "args": {}
+        }
+      ],
+      "purpose": "检测交通参与者。",
+      "step_id": "paddlepedriderdettool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.yolotool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 firelane_occupied 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 firelane_occupied 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0",
+        "paddlepedriderdettool_0",
+        "yolotool_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "firelane_occupied_9f5ed1e2bfbb",
+  "mutation_mode": "failure_repair",
+  "mutation_direction": {
+    "mode": "failure_repair",
+    "objective": "引入深度证据以区分前景目标与背景区域，纠正因缺乏空间上下文导致的误报",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "unidepth": "生成深度图以量化检测目标与地面的距离，验证是否真正占据指定平面",
+      "MLLM": "结合深度信息判断检测到的目标是否位于目标区域内，而非背景或远处"
+    },
+    "diagnosis": "工作流仅依赖2D检测框的存在性进行判断，缺乏空间深度信息。在负样本中，检测到的目标可能位于背景、远处或非目标区域，但由于缺少深度证据，模型错误地将其解释为占用目标区域的异常行为，导致假阳性。",
+    "selected_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 4,
+    "correct_count": 4,
+    "evidence_accept_count": 4,
+    "tool_failure_count": 0,
+    "total_tool_calls": 20,
+    "total_latency_ms": 157814.91626799107,
+    "structural_coverage": 20.0
+  },
+  "source_task_ids": [
+    "firelane_occupied__image_negative_09",
+    "firelane_occupied__image_positive_00"
+  ]
+}

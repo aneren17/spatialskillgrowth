@@ -1,0 +1,127 @@
+{
+  "workflow_id": "standing_water_2eed20ca5774",
+  "name": "standing_water_detector",
+  "applicability": {
+    "problem_class": "standing_water",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "基于多模态视觉证据检测图像中是否存在积水异常。工作流首先利用开放词汇检测模型定位潜在积水区域，随后通过深度估计分析其空间形态，最终由多模态大模型综合视觉特征判定是否构成积水事件。",
+    "exclusions": "非图像类型的媒体输入；需要语义嵌入处理的场景；非积水类别的异常检测任务；缺乏明确视觉边界的模糊积水疑似区域；未提供原始图像数据的请求",
+    "capability_boundary": "仅针对 event_type 为 standing_water 的图像输入进行异常判定；必须使用 groundingdino 进行初始检测，unidepth 进行深度估计，MLLM 进行最终推理；禁止使用 embeddingTool；最终输出仅为二元判断（是/否）"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "standing_water",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.groundingdino_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 standing_water 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 standing_water 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "standing_water_830ad7cab393",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过精细化视觉线索聚焦提升积水与反光/阴影的区分鲁棒性",
+    "preferred_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "groundingdino:box_threshold:medium"
+    ],
+    "tool_hints": {
+      "MLLM": "指令模型重点分析水面特有的物理特征（如镜面反射、边缘连续性、波纹），以排除深色路面或阴影造成的误报"
+    },
+    "diagnosis": "现有工作流已具备深度几何证据（unidepth），但在复杂光照下仍可能存在误判。通过引入 explicit_visual_cues，引导 MLLM 关注积水特有的光学属性（反射、透明度暗示），可进一步补充纹理和光影维度的证据，形成‘几何+光学’的双重验证，从而在不改变核心工具链的前提下增强对难例（如湿滑路面vs积水）的判别能力。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ]
+  },
+  "metrics": {
+    "trial_count": 12,
+    "correct_count": 8,
+    "evidence_accept_count": 12,
+    "tool_failure_count": 0,
+    "total_tool_calls": 36,
+    "total_latency_ms": 88406.68837539852,
+    "structural_coverage": 12.0
+  },
+  "source_task_ids": [
+    "standing_water__image_negative_09",
+    "standing_water__image_positive_00",
+    "standing_water__image_positive_01",
+    "standing_water__image_positive_02",
+    "standing_water__image_positive_03",
+    "standing_water__image_positive_04"
+  ]
+}

@@ -26,14 +26,15 @@
 图片经过 `MediaPreprocessor.prepare` 后，`sampled_frame_paths` 就是该图片。视频则保留原视频，同时把
 抽出的帧放进 `sampled_frame_paths`。
 
-`TaskPlanner.plan` 不分析问题文本，只验证类别、单媒体约束和 `embeddingTool`。唯一槽位是：
+`TaskPlanner.plan` 不分析问题文本，只验证类别、单媒体约束和媒体类型。运行时槽位是：
 
 ```python
-{"event_type": "banner"}
+{"event_type": "banner", "media_type": "image"}
 ```
 
-Retriever 只读取同类别工作流。如果没有合格 Skill，Coordinator 执行确定性的 embedding 基线。结果必须
-包含匹配的 `event_type`、明确的 `is_anomaly` 和数值 `threshold`。
+图片计划会排除 `embeddingTool`。探索阶段只读取同类别图片工作流；没有合格 Skill 时进入图像工具
+ReAct。视频推理会检索同类别全部结构合格图片工作流，并行执行原视频 embedding 与这些抽样帧工作流，
+最后用确定性 OR 规则汇总。
 
 探索阶段把最终“是”与标注比较，正确工作流进入指标和生命周期更新，错误结果进入失败修复。推理阶段只
 执行和记录，不修改 Skill。

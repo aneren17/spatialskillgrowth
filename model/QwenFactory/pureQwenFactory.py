@@ -1,21 +1,28 @@
+import asyncio
 import re
 import time
-from typing import Any, Dict, List, Optional
-import asyncio
+from typing import Any, List, Optional
 
-from langchain_openai import ChatOpenAI
+from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
+from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatResult
-from langchain_core.callbacks import (
-    CallbackManagerForLLMRun,
-    AsyncCallbackManagerForLLMRun,
-)
+from langchain_openai import ChatOpenAI
 
 #8860
 DEFAULT_BASE_URL = "http://127.0.0.1:8860/v1"
 DEFAULT_BASE_JUDGE_URL = "http://127.0.0.1:8863/v1"
 DEFAULT_MODEL = "Qwen3.6-27B-FP8"
 DEFAULT_API_KEY = "saki"
+DEFAULT_RETRY_ATTEMPTS = 3
+DEFAULT_RETRY_DELAY_SECONDS = 10
+RETRYABLE_HTTP_STATUS_CODES = {408, 409, 429}
+RETRYABLE_ERROR_NAMES = {
+    "APIConnectionError",
+    "APITimeoutError",
+    "InternalServerError",
+    "RateLimitError",
+}
 
 # DEFAULT_BASE_URL = "https://api.siliconflow.cn/v1"
 # DEFAULT_MODEL = "Qwen/Qwen3.6-27B"
@@ -30,6 +37,27 @@ DEFAULT_API_KEY = "saki"
 # DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 # DEFAULT_MODEL = "qwen3.6-27b"
 # DEFAULT_API_KEY = "sk-30c595cd9f784d338e180274c1a6906a"
+
+
+def _is_retryable_llm_error(error: Exception) -> bool:
+    status_code = getattr(error, "status_code", None)
+    if isinstance(status_code, int):
+        if status_code in RETRYABLE_HTTP_STATUS_CODES:
+            return True
+        if 500 <= status_code <= 599:
+            return True
+    if type(error).__name__ in RETRYABLE_ERROR_NAMES:
+        return True
+    message = str(error).lower()
+    markers = (
+        "rate limit",
+        "too many requests",
+        "connection error",
+        "timed out",
+        "timeout",
+    )
+    return any(marker in message for marker in markers)
+
 
 class MultimodalChatOpenAI(ChatOpenAI):
     """
@@ -62,22 +90,28 @@ class MultimodalChatOpenAI(ChatOpenAI):
         **kwargs: Any,
     ) -> ChatResult:
         
-        # 融入你的 Retry 限流重试机制
-        retry = 3
-        for i in range(retry):
+        for attempt in range(1, DEFAULT_RETRY_ATTEMPTS + 1):
             try:
                 # 直接将原始 messages 发送给大模型，不做任何处理
                 raw_result = super()._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
                 # 返回前剥离 think 框
                 return self._strip_think_tags(raw_result)
-            except Exception as e:
-                # 捕捉常见的频控报错关键字
-                if "rate limit" in str(e).lower() or "429" in str(e) or "too many requests" in str(e).lower():
-                    print(f"触发并发限制 (Rate Limit)，正在重试 ({i+1}/{retry})...")
-                    time.sleep(10)
-                else:
-                    raise e
-        raise Exception("已超出 RateLimit 最大重试次数")
+            except Exception as error:
+                if (
+                    not _is_retryable_llm_error(error)
+                    or attempt >= DEFAULT_RETRY_ATTEMPTS
+                ):
+                    raise
+                print(
+                    "LLM 暂时不可用，"
+                    + type(error).__name__
+                    + "，正在重试 ("
+                    + str(attempt)
+                    + "/"
+                    + str(DEFAULT_RETRY_ATTEMPTS)
+                    + ")..."
+                )
+                time.sleep(DEFAULT_RETRY_DELAY_SECONDS)
 
     # 重写底层异步生成方法
     async def _agenerate(
@@ -88,19 +122,27 @@ class MultimodalChatOpenAI(ChatOpenAI):
         **kwargs: Any,
     ) -> ChatResult:
         
-        retry = 3
-        for i in range(retry):
+        for attempt in range(1, DEFAULT_RETRY_ATTEMPTS + 1):
             try:
                 # 直接将原始 messages 发送给大模型，不做任何处理
                 raw_result = await super()._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
                 return self._strip_think_tags(raw_result)
-            except Exception as e:
-                if "rate limit" in str(e).lower() or "429" in str(e) or "too many requests" in str(e).lower():
-                    print(f"触发并发限制 (Rate Limit)，正在重试 ({i+1}/{retry})...")
-                    await asyncio.sleep(10)
-                else:
-                    raise e
-        raise Exception("已超出 RateLimit 最大重试次数")
+            except Exception as error:
+                if (
+                    not _is_retryable_llm_error(error)
+                    or attempt >= DEFAULT_RETRY_ATTEMPTS
+                ):
+                    raise
+                print(
+                    "LLM 暂时不可用，"
+                    + type(error).__name__
+                    + "，正在重试 ("
+                    + str(attempt)
+                    + "/"
+                    + str(DEFAULT_RETRY_ATTEMPTS)
+                    + ")..."
+                )
+                await asyncio.sleep(DEFAULT_RETRY_DELAY_SECONDS)
 
 
 def get_llm():

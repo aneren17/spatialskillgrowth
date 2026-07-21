@@ -3,7 +3,7 @@
   "title": "翻越护栏",
   "problem_class": "cross_barrier",
   "event_type": "cross_barrier",
-  "description": "检测输入视频或图像中是否发生“翻越护栏”异常事件（相关显示名称：翻越护栏、跨越护栏）；调用异常检测工具时，必须使用精确类别 ID `cross_barrier`。",
+  "description": "检测输入视频或图像中是否发生“翻越护栏”异常事件（相关显示名称：翻越护栏、跨越护栏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `cross_barrier`。",
   "aliases": [
     "翻越护栏",
     "跨越护栏"
@@ -12,23 +12,46 @@
     "dashboard": "翻越护栏",
     "rag": "跨越护栏"
   },
-  "primary_tool": "embeddingTool",
+  "primary_tool": "modality_aware",
+  "video_primary_tool": "embeddingTool",
+  "image_primary_tool": "MLLM",
+  "exploration_media_type": "image",
+  "video_inference_strategy": "parallel_or",
   "answer_type": "bool",
   "required_slots": [
     "event_type"
   ],
   "tool_template": {
     "tool_name": "embeddingTool",
+    "media_type": "video",
     "args": {
       "file_path": "$media",
       "event_type": "cross_barrier"
     }
   },
   "evidence_requirements": [
-    "embeddingTool 必须使用精确 event_type `cross_barrier`。",
-    "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-    "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+    "视频 embeddingTool 必须使用精确 event_type `cross_barrier`。",
+    "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+    "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+    "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+    "工具失败、类别不一致或缺少有效证据时不得接受答案。"
   ],
-  "workflow_count": 0,
-  "workflows": []
+  "workflow_count": 2,
+  "workflows": [
+    {
+      "workflow_id": "cross_barrier_96c9e72153f7",
+      "name": "cross_barrier_image_baseline",
+      "path": "references/workflows/cross_barrier_96c9e72153f7.json",
+      "script": "scripts/cross_barrier_96c9e72153f7.py",
+      "authorship": "generated"
+    },
+    {
+      "workflow_id": "cross_barrier_cd9e9a036446",
+      "name": "cross_barrier_detector",
+      "path": "references/workflows/cross_barrier_cd9e9a036446.json",
+      "script": "scripts/cross_barrier_cd9e9a036446.py",
+      "authorship": "generated"
+    }
+  ],
+  "status": "active"
 }

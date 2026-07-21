@@ -1,0 +1,108 @@
+{
+  "workflow_id": "foreign_objects_on_transmission_lines_ad5cbcebbbeb",
+  "name": "foreign_objects_on_transmission_lines_detector",
+  "applicability": {
+    "problem_class": "foreign_objects_on_transmission_lines",
+    "required_slots": [],
+    "required_tools": [
+      "python_code_sandbox",
+      "MLLM"
+    ],
+    "description": "检测输电线路图像中是否存在悬挂、缠绕或附着在导线、绝缘子串或杆塔结构上的非标准异物（如塑料薄膜、风筝线、树枝、鸟巢等）。该工作流首先通过代码沙箱提取图像中的结构化视觉特征摘要，随后利用多模态大模型结合这些证据，严格判定是否发生‘输电线路异物’异常事件。",
+    "exclusions": "非图像格式的输入数据（如纯文本、音频或视频流）。; 未包含输电线路核心组件（导线、绝缘子、杆塔）的图像。; 需要识别异物具体材质、品牌或来源的任务。; 需要评估异物对电网安全具体风险等级或量化影响的任务。; 其他类型的电力设施异常（如绝缘子破损、金具锈蚀、导线断股等，除非明确归类为异物附着）。",
+    "capability_boundary": "{\"input_constraints\": {\"media_type\": \"image\", \"format_requirements\": \"支持常见图像格式（如JPEG, PNG），需清晰展示输电线路局部或整体视图。\"}, \"detection_scope\": {\"target_objects\": \"输电线路上的非预期附着物或悬挂物。\", \"excluded_objects\": \"输电线路的标准组成部分（如防震锤、间隔棒、标准绝缘子串等，除非其状态异常且被归类为异物干扰）。\"}, \"output_format\": {\"type\": \"binary\", \"values\": [\"是\", \"否\"]}, \"tool_dependencies\": [\"python_code_sandbox: 用于生成图像的结构化证据摘要。\", \"MLLM: 用于基于视觉证据进行最终异常判定。\"]}"
+  },
+  "steps": [
+    {
+      "tool_name": "python_code_sandbox",
+      "args": {
+        "code": ""
+      },
+      "param_atoms": [
+        {
+          "tool_name": "python_code_sandbox",
+          "axis": "operation",
+          "value": "append_verification",
+          "kind": "structural",
+          "description": "计算结构化证据摘要。",
+          "args": {}
+        }
+      ],
+      "purpose": "计算结构化证据摘要。",
+      "step_id": "python_code_sandbox_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 foreign_objects_on_transmission_lines 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 foreign_objects_on_transmission_lines 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "python_code_sandbox_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "foreign_objects_on_transmission_lines_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入结构化视觉证据以增强鲁棒性",
+    "preferred_atom_ids": [
+      "MLLM:scope:local_regions",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "python_code_sandbox:operation:append_verification"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading",
+      "paddleHeadDetTool:target:head"
+    ],
+    "tool_hints": {
+      "MLLM": "聚焦局部区域并提取明确视觉线索",
+      "python_code_sandbox": "生成证据摘要以支持最终判断"
+    },
+    "diagnosis": "当前工作流仅依赖 MLLM 直接判断，缺乏中间证据支撑。通过增加局部区域分析和明确视觉线索提取，可形成更稳健的证据链；使用代码沙箱生成结构化摘要可进一步验证检测结果，提高鲁棒性。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions",
+      "python_code_sandbox:operation:append_verification"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 4,
+    "total_latency_ms": 5527.34645921737,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "foreign_objects_on_transmission_lines__image_negative_08",
+    "foreign_objects_on_transmission_lines__image_positive_00"
+  ]
+}

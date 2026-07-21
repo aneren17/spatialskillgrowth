@@ -1,0 +1,104 @@
+{
+  "workflow_id": "egress_blocked_8fb801c3fd73",
+  "name": "egress_blocked_detector",
+  "applicability": {
+    "problem_class": "egress_blocked",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "MLLM"
+    ],
+    "description": "针对静态图像输入，通过光学字符识别（OCR）提取场景中的可见文字信息，并结合多模态大语言模型（MLLM）进行视觉语义分析，以检测是否存在‘安全出口遮挡’（egress_blocked）异常事件。该工作流专注于验证安全出口通道是否被物理障碍物堵塞或标识被遮挡，确保证据链包含视觉特征与文本信息的综合判断。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频或纯文本日志）。; 需要动态时序分析的场景，本工作流仅处理单帧静态图像。; 其他类型的异常事件（如火灾、入侵、设备故障等），本检测器仅针对 egress_blocked 类别。; 无法通过 OCR 或视觉模型识别的极端低质量、模糊或完全黑暗图像。",
+    "capability_boundary": "{\"required_inputs\": [\"image\"], \"required_evidence\": [\"paddleOcrTool 提取的可见文字内容\", \"MLLM 基于图像视觉特征及 OCR 结果的综合判断\"], \"tool_constraints\": [\"禁止调用 embeddingTool。\", \"必须使用 paddleOcrTool 进行文字读取。\", \"必须使用 MLLM 进行最终异常判定。\"], \"event_type\": \"egress_blocked\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 egress_blocked 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 egress_blocked 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "egress_blocked_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入OCR证据以识别'安全出口'标识，增强对遮挡上下文的语义理解与鲁棒性",
+    "preferred_atom_ids": [
+      "paddleOcrTool:evidence_role:text_reading",
+      "MLLM:scope:local_regions",
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "paddleOcrTool": "读取图像中的文字，特别是寻找'安全出口'、'EXIT'等标识，以确认被遮挡区域的功能属性。"
+    },
+    "diagnosis": "当前工作流仅依赖MLLM的全局视觉判断，虽然准确但缺乏细粒度证据。对于'安全出口遮挡'，确认'安全出口'标识的存在是判断'遮挡'而非普通'堆积'的关键。引入OCR可以明确识别出口标识，从而在MLLM推理前提供强有力的语义证据，证明该区域确为安全出口，进而提高判断的可解释性和在复杂背景下的鲁棒性。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions",
+      "paddleOcrTool:evidence_role:text_reading"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 4,
+    "total_latency_ms": 14886.567335575819,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "egress_blocked__image_negative_05",
+    "egress_blocked__image_negative_08"
+  ]
+}

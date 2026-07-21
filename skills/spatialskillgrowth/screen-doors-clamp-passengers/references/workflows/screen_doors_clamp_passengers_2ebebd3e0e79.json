@@ -1,0 +1,130 @@
+{
+  "workflow_id": "screen_doors_clamp_passengers_2ebebd3e0e79",
+  "name": "screen_doors_clamp_passengers_detector",
+  "applicability": {
+    "problem_class": "screen_doors_clamp_passengers",
+    "required_slots": [],
+    "required_tools": [
+      "paddleHeadDetTool",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "基于图像输入，通过人头检测、深度估计及多模态大模型推理，检测地铁站台屏蔽门是否发生夹人异常事件。",
+    "exclusions": "非图像类型的媒体输入; 非屏蔽门夹人（screen_doors_clamp_passengers）类别的其他异常事件; 需要调用 embeddingTool 的场景",
+    "capability_boundary": "{\"required_inputs\": [\"包含站台屏蔽门区域的图像\"], \"evidence_requirements\": [\"必须检测到可见人头（paddleHeadDetTool）\", \"必须获取检测目标的深度信息（unidepth）\", \"必须通过多模态模型（MLLM）综合视觉证据进行最终判断\"], \"output_format\": \"布尔值（是/否）\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleHeadDetTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "tool": "paddleHeadDetTool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleHeadDetTool",
+          "axis": "target",
+          "value": "head",
+          "kind": "fixed",
+          "description": "检测可见人头。",
+          "args": {}
+        }
+      ],
+      "purpose": "检测可见人头。",
+      "step_id": "paddleheaddettool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.paddleheaddettool_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "paddleheaddettool_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 screen_doors_clamp_passengers 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 screen_doors_clamp_passengers 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleheaddettool_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "screen_doors_clamp_passengers_b9e829d1798b",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入深度感知以区分空间遮挡与物理夹持，提升对复杂背景下的鲁棒性",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading"
+    ],
+    "tool_hints": {
+      "unidepth": "生成深度图以量化人头与屏蔽门之间的相对距离，辅助判断是否存在物理接触或极近距离挤压"
+    },
+    "diagnosis": "当前工作流依赖人头检测坐标和MLLM视觉推理，但在缺乏深度信息时，MLLM难以区分‘视觉上重叠但实际无接触’（如远处乘客与近处门）和‘真实夹持’。引入 unidepth 提供 metric_depth 证据，可量化人与门的空间关系，为 MLLM 提供关键的三维几何约束，从而在已有成功证据基础上进一步降低误报率，增强对细微夹持状态的判断能力。",
+    "selected_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 3,
+    "correct_count": 3,
+    "evidence_accept_count": 3,
+    "tool_failure_count": 0,
+    "total_tool_calls": 9,
+    "total_latency_ms": 24926.690272055566,
+    "structural_coverage": 6.0
+  },
+  "source_task_ids": [
+    "screen_doors_clamp_passengers__image_negative_07",
+    "screen_doors_clamp_passengers__image_negative_08",
+    "screen_doors_clamp_passengers__image_negative_09"
+  ]
+}

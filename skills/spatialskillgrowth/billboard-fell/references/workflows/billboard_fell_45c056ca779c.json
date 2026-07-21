@@ -1,0 +1,128 @@
+{
+  "workflow_id": "billboard_fell_45c056ca779c",
+  "name": "billboard_fell_detector",
+  "applicability": {
+    "problem_class": "billboard_fell",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "检测输入静态图像中是否发生广告牌倒塌异常事件。通过 groundingdino 定位广告牌目标，利用 unidepth 估计其深度信息以分析空间姿态，最后由多模态大模型综合视觉与深度证据判断是否存在倒塌状态。",
+    "exclusions": "非静态图像输入（如视频流、实时动态监测）; 未包含广告牌或类似大型户外广告结构的场景; 需要调用 embeddingTool 进行特征提取的任务; 其他类型的异常事件检测（如火灾、交通事故、其他结构倒塌或物体坠落等）; groundingdino 检测失败导致无法获取目标实例的场景",
+    "capability_boundary": "基于开放词汇检测定位目标，结合深度估计分析空间结构与姿态，最终由多模态模型判定倒塌状态；仅支持静态图像输入，输出为二元判定结果，严格限定于广告牌倒塌事件。"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "使用中等阈值检测'billboard', 'debris', 'structure'等关键实体，提供定位证据",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.groundingdino_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 billboard_fell 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "billboard_fell_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入开放词汇检测与深度感知以增强视觉证据的客观性与空间上下文，减少纯语义判断的幻觉风险",
+    "preferred_atom_ids": [
+      "groundingdino:box_threshold:medium",
+      "unidepth:evidence_role:metric_depth",
+      "MLLM:scope:whole_image"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading",
+      "paddleHeadDetTool:target:head"
+    ],
+    "tool_hints": {
+      "groundingdino": "使用中等阈值检测'billboard', 'debris', 'structure'等关键实体，提供定位证据",
+      "unidepth": "生成深度图以辅助判断广告牌与地面/周围环境的相对空间关系，确认倒塌状态",
+      "MLLM": "结合检测框和深度信息，综合判断广告牌是否处于非正常悬挂或倒塌状态"
+    },
+    "diagnosis": "现有工作流仅依赖 MLLM 直接判断，缺乏结构化视觉证据支持。引入 groundingdino 可明确定位广告牌及其残骸，unidepth 可提供空间上下文（如广告牌是否接触地面），从而为 MLLM 提供更鲁棒的“倒塌”物理证据，补充单一语义判断的不足。",
+    "selected_atom_ids": [
+      "groundingdino:box_threshold:low",
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 11,
+    "correct_count": 11,
+    "evidence_accept_count": 11,
+    "tool_failure_count": 0,
+    "total_tool_calls": 33,
+    "total_latency_ms": 62220.65888531506,
+    "structural_coverage": 12.0
+  },
+  "source_task_ids": [
+    "billboard_fell__image_negative_06",
+    "billboard_fell__image_positive_00",
+    "billboard_fell__image_positive_01",
+    "billboard_fell__image_positive_02",
+    "billboard_fell__image_positive_03",
+    "billboard_fell__image_positive_04",
+    "billboard_fell__image_negative_05",
+    "billboard_fell__image_negative_07",
+    "billboard_fell__image_negative_08",
+    "billboard_fell__image_negative_09"
+  ]
+}

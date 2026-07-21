@@ -5,7 +5,7 @@
       "title": "违规横幅检测",
       "problem_class": "banner",
       "event_type": "banner",
-      "description": "检测输入视频或图像中是否发生“违规横幅检测”异常事件（相关显示名称：违规横幅检测、横幅异常）；调用异常检测工具时，必须使用精确类别 ID `banner`。",
+      "description": "检测输入视频或图像中是否发生“违规横幅检测”异常事件（相关显示名称：违规横幅检测、横幅异常）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `banner`。",
       "aliases": [
         "违规横幅检测",
         "横幅异常"
@@ -15,96 +15,186 @@
         "rag": "横幅异常",
         "stream": "横幅异常"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "banner"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `banner`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `banner`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "banner_97c96483c376",
+          "name": "banner_detection_workflow",
+          "path": "references/workflows/banner_97c96483c376.json",
+          "script": "scripts/banner_97c96483c376.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "banner_f043712d5540",
+          "name": "banner_detection_workflow",
+          "path": "references/workflows/banner_f043712d5540.json",
+          "script": "scripts/banner_f043712d5540.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "billboard-fell",
       "title": "广告牌倒塌",
       "problem_class": "billboard_fell",
       "event_type": "billboard_fell",
-      "description": "检测输入视频或图像中是否发生“广告牌倒塌”异常事件（相关显示名称：广告牌倒塌）；调用异常检测工具时，必须使用精确类别 ID `billboard_fell`。",
+      "description": "检测输入视频或图像中是否发生“广告牌倒塌”异常事件（相关显示名称：广告牌倒塌）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `billboard_fell`。",
       "aliases": [
         "广告牌倒塌"
       ],
       "display_names": {
         "rag": "广告牌倒塌"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "billboard_fell"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `billboard_fell`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `billboard_fell`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "billboard_fell_45c056ca779c",
+          "name": "billboard_fell_detector",
+          "path": "references/workflows/billboard_fell_45c056ca779c.json",
+          "script": "scripts/billboard_fell_45c056ca779c.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "billboard_fell_96c9e72153f7",
+          "name": "billboard_fell_image_baseline",
+          "path": "references/workflows/billboard_fell_96c9e72153f7.json",
+          "script": "scripts/billboard_fell_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "breaking-through-toll-booths",
       "title": "闯收费站",
       "problem_class": "breaking_through_toll_booths",
       "event_type": "breaking_through_toll_booths",
-      "description": "检测输入视频或图像中是否发生“闯收费站”异常事件（相关显示名称：闯收费站）；调用异常检测工具时，必须使用精确类别 ID `breaking_through_toll_booths`。",
+      "description": "检测输入视频或图像中是否发生“闯收费站”异常事件（相关显示名称：闯收费站）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `breaking_through_toll_booths`。",
       "aliases": [
         "闯收费站"
       ],
       "display_names": {
         "rag": "闯收费站"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "breaking_through_toll_booths"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `breaking_through_toll_booths`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `breaking_through_toll_booths`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 5,
+      "workflows": [
+        {
+          "workflow_id": "breaking_through_toll_booths_53481044122a",
+          "name": "breaking_through_toll_booths_detector",
+          "path": "references/workflows/breaking_through_toll_booths_53481044122a.json",
+          "script": "scripts/breaking_through_toll_booths_53481044122a.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "breaking_through_toll_booths_5a401c0b68f1",
+          "name": "breaking_through_toll_booths_detector",
+          "path": "references/workflows/breaking_through_toll_booths_5a401c0b68f1.json",
+          "script": "scripts/breaking_through_toll_booths_5a401c0b68f1.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "breaking_through_toll_booths_96c9e72153f7",
+          "name": "breaking_through_toll_booths_image_baseline",
+          "path": "references/workflows/breaking_through_toll_booths_96c9e72153f7.json",
+          "script": "scripts/breaking_through_toll_booths_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "breaking_through_toll_booths_9f74d96f04bd",
+          "name": "breaking_through_toll_booths_detector",
+          "path": "references/workflows/breaking_through_toll_booths_9f74d96f04bd.json",
+          "script": "scripts/breaking_through_toll_booths_9f74d96f04bd.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "breaking_through_toll_booths_e7ed2b3b5674",
+          "name": "breaking_through_toll_booths_detector",
+          "path": "references/workflows/breaking_through_toll_booths_e7ed2b3b5674.json",
+          "script": "scripts/breaking_through_toll_booths_e7ed2b3b5674.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "building-collapse",
       "title": "建筑坍塌",
       "problem_class": "building_collapse",
       "event_type": "building_collapse",
-      "description": "检测输入视频或图像中是否发生“建筑坍塌”异常事件（相关显示名称：建筑坍塌、建筑倒塌）；调用异常检测工具时，必须使用精确类别 ID `building_collapse`。",
+      "description": "检测输入视频或图像中是否发生“建筑坍塌”异常事件（相关显示名称：建筑坍塌、建筑倒塌）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `building_collapse`。",
       "aliases": [
         "建筑坍塌",
         "建筑倒塌"
@@ -114,32 +204,62 @@
         "rag": "建筑倒塌",
         "stream": "建筑倒塌"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "building_collapse"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `building_collapse`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `building_collapse`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "building_collapse_1bc452328e83",
+          "name": "building_collapse_detector",
+          "path": "references/workflows/building_collapse_1bc452328e83.json",
+          "script": "scripts/building_collapse_1bc452328e83.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "building_collapse_3f5b81b18890",
+          "name": "building_collapse_detector",
+          "path": "references/workflows/building_collapse_3f5b81b18890.json",
+          "script": "scripts/building_collapse_3f5b81b18890.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "building_collapse_96c9e72153f7",
+          "name": "building_collapse_detector",
+          "path": "references/workflows/building_collapse_96c9e72153f7.json",
+          "script": "scripts/building_collapse_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "bus-shelter-was-vandalized",
       "title": "公交站台破坏",
       "problem_class": "bus_shelter_was_vandalized",
       "event_type": "bus_shelter_was_vandalized",
-      "description": "检测输入视频或图像中是否发生“公交站台破坏”异常事件（相关显示名称：公交站台破坏、公交候车亭损坏）；调用异常检测工具时，必须使用精确类别 ID `bus_shelter_was_vandalized`。",
+      "description": "检测输入视频或图像中是否发生“公交站台破坏”异常事件（相关显示名称：公交站台破坏、公交候车亭损坏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `bus_shelter_was_vandalized`。",
       "aliases": [
         "公交站台破坏",
         "公交候车亭损坏"
@@ -148,64 +268,110 @@
         "dashboard": "公交站台破坏",
         "rag": "公交候车亭损坏"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "bus_shelter_was_vandalized"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `bus_shelter_was_vandalized`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `bus_shelter_was_vandalized`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "bus_shelter_was_vandalized_74b0c3f20721",
+          "name": "bus_shelter_vandalism_detector",
+          "path": "references/workflows/bus_shelter_was_vandalized_74b0c3f20721.json",
+          "script": "scripts/bus_shelter_was_vandalized_74b0c3f20721.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "bus_shelter_was_vandalized_96c9e72153f7",
+          "name": "bus_shelter_was_vandalized_image_baseline",
+          "path": "references/workflows/bus_shelter_was_vandalized_96c9e72153f7.json",
+          "script": "scripts/bus_shelter_was_vandalized_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "charger",
       "title": "充电器未归位",
       "problem_class": "charger",
       "event_type": "charger",
-      "description": "检测输入视频或图像中是否发生“充电器未归位”异常事件（相关显示名称：充电器未归位）；调用异常检测工具时，必须使用精确类别 ID `charger`。",
+      "description": "检测输入视频或图像中是否发生“充电器未归位”异常事件（相关显示名称：充电器未归位）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `charger`。",
       "aliases": [
         "充电器未归位"
       ],
       "display_names": {
         "dashboard": "充电器未归位"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "charger"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `charger`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `charger`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "charger_96c9e72153f7",
+          "name": "charger_image_baseline",
+          "path": "references/workflows/charger_96c9e72153f7.json",
+          "script": "scripts/charger_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "charger_e209f7624e92",
+          "name": "charger_unreturned_detection",
+          "path": "references/workflows/charger_e209f7624e92.json",
+          "script": "scripts/charger_e209f7624e92.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "climbing-disconnection",
       "title": "攀爬脱网",
       "problem_class": "climbing_disconnection",
       "event_type": "climbing_disconnection",
-      "description": "检测输入视频或图像中是否发生“攀爬脱网”异常事件（相关显示名称：攀爬脱网、攀爬脱离）；调用异常检测工具时，必须使用精确类别 ID `climbing_disconnection`。",
+      "description": "检测输入视频或图像中是否发生“攀爬脱网”异常事件（相关显示名称：攀爬脱网、攀爬脱离）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `climbing_disconnection`。",
       "aliases": [
         "攀爬脱网",
         "攀爬脱离"
@@ -214,32 +380,55 @@
         "dashboard": "攀爬脱网",
         "rag": "攀爬脱离"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "climbing_disconnection"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `climbing_disconnection`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `climbing_disconnection`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "climbing_disconnection_cfde2056e5e9",
+          "name": "climbing_disconnection_detector",
+          "path": "references/workflows/climbing_disconnection_cfde2056e5e9.json",
+          "script": "scripts/climbing_disconnection_cfde2056e5e9.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "climbing_disconnection_d8a9b55f4b0d",
+          "name": "climbing_disconnection_detector",
+          "path": "references/workflows/climbing_disconnection_d8a9b55f4b0d.json",
+          "script": "scripts/climbing_disconnection_d8a9b55f4b0d.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "cold-flame",
       "title": "冷焰火检测",
       "problem_class": "cold_flame",
       "event_type": "cold_flame",
-      "description": "检测输入视频或图像中是否发生“冷焰火检测”异常事件（相关显示名称：冷焰火检测、冷焰）；调用异常检测工具时，必须使用精确类别 ID `cold_flame`。",
+      "description": "检测输入视频或图像中是否发生“冷焰火检测”异常事件（相关显示名称：冷焰火检测、冷焰）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `cold_flame`。",
       "aliases": [
         "冷焰火检测",
         "冷焰"
@@ -248,32 +437,69 @@
         "dashboard": "冷焰火检测",
         "rag": "冷焰"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "cold_flame"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `cold_flame`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `cold_flame`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 4,
+      "workflows": [
+        {
+          "workflow_id": "cold_flame_8525e5d8e629",
+          "name": "cold_flame_detector",
+          "path": "references/workflows/cold_flame_8525e5d8e629.json",
+          "script": "scripts/cold_flame_8525e5d8e629.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "cold_flame_874ea29c1e51",
+          "name": "cold_flame_detector",
+          "path": "references/workflows/cold_flame_874ea29c1e51.json",
+          "script": "scripts/cold_flame_874ea29c1e51.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "cold_flame_96c9e72153f7",
+          "name": "cold_flame_image_baseline",
+          "path": "references/workflows/cold_flame_96c9e72153f7.json",
+          "script": "scripts/cold_flame_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "cold_flame_f6f8ce21d2a1",
+          "name": "cold_flame_detector",
+          "path": "references/workflows/cold_flame_f6f8ce21d2a1.json",
+          "script": "scripts/cold_flame_f6f8ce21d2a1.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "container-dropped",
       "title": "集装箱掉落",
       "problem_class": "container_dropped",
       "event_type": "container_dropped",
-      "description": "检测输入视频或图像中是否发生“集装箱掉落”异常事件（相关显示名称：集装箱掉落、集装箱坠落）；调用异常检测工具时，必须使用精确类别 ID `container_dropped`。",
+      "description": "检测输入视频或图像中是否发生“集装箱掉落”异常事件（相关显示名称：集装箱掉落、集装箱坠落）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `container_dropped`。",
       "aliases": [
         "集装箱掉落",
         "集装箱坠落"
@@ -282,32 +508,55 @@
         "dashboard": "集装箱掉落",
         "rag": "集装箱坠落"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "container_dropped"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `container_dropped`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `container_dropped`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "container_dropped_48ef3b2e43a9",
+          "name": "container_dropped_detector",
+          "path": "references/workflows/container_dropped_48ef3b2e43a9.json",
+          "script": "scripts/container_dropped_48ef3b2e43a9.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "container_dropped_c47dbc69142b",
+          "name": "container_dropped_detector",
+          "path": "references/workflows/container_dropped_c47dbc69142b.json",
+          "script": "scripts/container_dropped_c47dbc69142b.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "cross-barrier",
       "title": "翻越护栏",
       "problem_class": "cross_barrier",
       "event_type": "cross_barrier",
-      "description": "检测输入视频或图像中是否发生“翻越护栏”异常事件（相关显示名称：翻越护栏、跨越护栏）；调用异常检测工具时，必须使用精确类别 ID `cross_barrier`。",
+      "description": "检测输入视频或图像中是否发生“翻越护栏”异常事件（相关显示名称：翻越护栏、跨越护栏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `cross_barrier`。",
       "aliases": [
         "翻越护栏",
         "跨越护栏"
@@ -316,32 +565,55 @@
         "dashboard": "翻越护栏",
         "rag": "跨越护栏"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "cross_barrier"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `cross_barrier`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `cross_barrier`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "cross_barrier_96c9e72153f7",
+          "name": "cross_barrier_image_baseline",
+          "path": "references/workflows/cross_barrier_96c9e72153f7.json",
+          "script": "scripts/cross_barrier_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "cross_barrier_cd9e9a036446",
+          "name": "cross_barrier_detector",
+          "path": "references/workflows/cross_barrier_cd9e9a036446.json",
+          "script": "scripts/cross_barrier_cd9e9a036446.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "doors-and-windows-are-damaged",
       "title": "门窗破损",
       "problem_class": "doors_and_windows_are_damaged",
       "event_type": "doors_and_windows_are_damaged",
-      "description": "检测输入视频或图像中是否发生“门窗破损”异常事件（相关显示名称：门窗破损、门窗损坏）；调用异常检测工具时，必须使用精确类别 ID `doors_and_windows_are_damaged`。",
+      "description": "检测输入视频或图像中是否发生“门窗破损”异常事件（相关显示名称：门窗破损、门窗损坏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `doors_and_windows_are_damaged`。",
       "aliases": [
         "门窗破损",
         "门窗损坏"
@@ -350,32 +622,55 @@
         "dashboard": "门窗破损",
         "rag": "门窗损坏"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "doors_and_windows_are_damaged"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `doors_and_windows_are_damaged`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `doors_and_windows_are_damaged`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "doors_and_windows_are_damaged_93f366d102cc",
+          "name": "doors_and_windows_are_damaged_detector",
+          "path": "references/workflows/doors_and_windows_are_damaged_93f366d102cc.json",
+          "script": "scripts/doors_and_windows_are_damaged_93f366d102cc.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "doors_and_windows_are_damaged_f16c7937be91",
+          "name": "doors_and_windows_are_damaged_detector",
+          "path": "references/workflows/doors_and_windows_are_damaged_f16c7937be91.json",
+          "script": "scripts/doors_and_windows_are_damaged_f16c7937be91.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "ebike-reverse",
       "title": "非机动车逆行",
       "problem_class": "ebike_reverse",
       "event_type": "ebike_reverse",
-      "description": "检测输入视频或图像中是否发生“非机动车逆行”异常事件（相关显示名称：非机动车逆行、电动车逆行）；调用异常检测工具时，必须使用精确类别 ID `ebike_reverse`。",
+      "description": "检测输入视频或图像中是否发生“非机动车逆行”异常事件（相关显示名称：非机动车逆行、电动车逆行）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `ebike_reverse`。",
       "aliases": [
         "非机动车逆行",
         "电动车逆行"
@@ -384,32 +679,48 @@
         "dashboard": "非机动车逆行",
         "rag": "电动车逆行"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "ebike_reverse"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `ebike_reverse`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `ebike_reverse`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 1,
+      "workflows": [
+        {
+          "workflow_id": "ebike_reverse_583e438d5c97",
+          "name": "ebike_reverse_detector",
+          "path": "references/workflows/ebike_reverse_583e438d5c97.json",
+          "script": "scripts/ebike_reverse_583e438d5c97.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "egress-blocked",
       "title": "安全出口遮挡",
       "problem_class": "egress_blocked",
       "event_type": "egress_blocked",
-      "description": "检测输入视频或图像中是否发生“安全出口遮挡”异常事件（相关显示名称：安全出口遮挡、出口堵塞）；调用异常检测工具时，必须使用精确类别 ID `egress_blocked`。",
+      "description": "检测输入视频或图像中是否发生“安全出口遮挡”异常事件（相关显示名称：安全出口遮挡、出口堵塞）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `egress_blocked`。",
       "aliases": [
         "安全出口遮挡",
         "出口堵塞"
@@ -418,32 +729,83 @@
         "dashboard": "安全出口遮挡",
         "rag": "出口堵塞"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "egress_blocked"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `egress_blocked`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `egress_blocked`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 6,
+      "workflows": [
+        {
+          "workflow_id": "egress_blocked_5edebbe1dfe0",
+          "name": "egress_blocked_detector",
+          "path": "references/workflows/egress_blocked_5edebbe1dfe0.json",
+          "script": "scripts/egress_blocked_5edebbe1dfe0.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "egress_blocked_661077834e2a",
+          "name": "egress_blocked_detector",
+          "path": "references/workflows/egress_blocked_661077834e2a.json",
+          "script": "scripts/egress_blocked_661077834e2a.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "egress_blocked_8fb801c3fd73",
+          "name": "egress_blocked_detector",
+          "path": "references/workflows/egress_blocked_8fb801c3fd73.json",
+          "script": "scripts/egress_blocked_8fb801c3fd73.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "egress_blocked_96c9e72153f7",
+          "name": "egress_blocked_vision_detector",
+          "path": "references/workflows/egress_blocked_96c9e72153f7.json",
+          "script": "scripts/egress_blocked_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "egress_blocked_bf89f2a3b4ab",
+          "name": "egress_blocked_detector",
+          "path": "references/workflows/egress_blocked_bf89f2a3b4ab.json",
+          "script": "scripts/egress_blocked_bf89f2a3b4ab.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "egress_blocked_ca7dd3800fd8",
+          "name": "egress_blocked_detector",
+          "path": "references/workflows/egress_blocked_ca7dd3800fd8.json",
+          "script": "scripts/egress_blocked_ca7dd3800fd8.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "emergency-lane-occupancy",
       "title": "占用应急车道",
       "problem_class": "emergency_lane_occupancy",
       "event_type": "emergency_lane_occupancy",
-      "description": "检测输入视频或图像中是否发生“占用应急车道”异常事件（相关显示名称：占用应急车道、应急车道占用）；调用异常检测工具时，必须使用精确类别 ID `emergency_lane_occupancy`。",
+      "description": "检测输入视频或图像中是否发生“占用应急车道”异常事件（相关显示名称：占用应急车道、应急车道占用）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `emergency_lane_occupancy`。",
       "aliases": [
         "占用应急车道",
         "应急车道占用"
@@ -453,32 +815,62 @@
         "rag": "应急车道占用",
         "stream": "应急车道占用"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "emergency_lane_occupancy"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `emergency_lane_occupancy`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `emergency_lane_occupancy`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "emergency_lane_occupancy_2206144ac1e6",
+          "name": "emergency_lane_occupancy_detector",
+          "path": "references/workflows/emergency_lane_occupancy_2206144ac1e6.json",
+          "script": "scripts/emergency_lane_occupancy_2206144ac1e6.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "emergency_lane_occupancy_2fff1b65dc02",
+          "name": "emergency_lane_occupancy_detector",
+          "path": "references/workflows/emergency_lane_occupancy_2fff1b65dc02.json",
+          "script": "scripts/emergency_lane_occupancy_2fff1b65dc02.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "emergency_lane_occupancy_96c9e72153f7",
+          "name": "emergency_lane_occupancy_image_baseline",
+          "path": "references/workflows/emergency_lane_occupancy_96c9e72153f7.json",
+          "script": "scripts/emergency_lane_occupancy_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "equipment-rust",
       "title": "设备生锈",
       "problem_class": "equipment_rust",
       "event_type": "equipment_rust",
-      "description": "检测输入视频或图像中是否发生“设备生锈”异常事件（相关显示名称：设备生锈）；调用异常检测工具时，必须使用精确类别 ID `equipment_rust`。",
+      "description": "检测输入视频或图像中是否发生“设备生锈”异常事件（相关显示名称：设备生锈）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `equipment_rust`。",
       "aliases": [
         "设备生锈"
       ],
@@ -486,32 +878,55 @@
         "dashboard": "设备生锈",
         "rag": "设备生锈"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "equipment_rust"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `equipment_rust`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `equipment_rust`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "equipment_rust_68bfa4a01e72",
+          "name": "equipment_rust_detector",
+          "path": "references/workflows/equipment_rust_68bfa4a01e72.json",
+          "script": "scripts/equipment_rust_68bfa4a01e72.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "equipment_rust_9d74d5206871",
+          "name": "equipment_rust_detector",
+          "path": "references/workflows/equipment_rust_9d74d5206871.json",
+          "script": "scripts/equipment_rust_9d74d5206871.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "explosion",
       "title": "爆炸检测",
       "problem_class": "explosion",
       "event_type": "explosion",
-      "description": "检测输入视频或图像中是否发生“爆炸检测”异常事件（相关显示名称：爆炸检测、爆炸）；调用异常检测工具时，必须使用精确类别 ID `explosion`。",
+      "description": "检测输入视频或图像中是否发生“爆炸检测”异常事件（相关显示名称：爆炸检测、爆炸）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `explosion`。",
       "aliases": [
         "爆炸检测",
         "爆炸"
@@ -521,32 +936,55 @@
         "rag": "爆炸",
         "stream": "爆炸"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "explosion"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `explosion`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `explosion`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "explosion_a8dd7b3d320a",
+          "name": "explosion_image_detection_workflow",
+          "path": "references/workflows/explosion_a8dd7b3d320a.json",
+          "script": "scripts/explosion_a8dd7b3d320a.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "explosion_ca756c4f9788",
+          "name": "explosion_detection_workflow",
+          "path": "references/workflows/explosion_ca756c4f9788.json",
+          "script": "scripts/explosion_ca756c4f9788.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "fall",
       "title": "人员摔倒",
       "problem_class": "fall",
       "event_type": "fall",
-      "description": "检测输入视频或图像中是否发生“人员摔倒”异常事件（相关显示名称：人员摔倒、跌倒）；调用异常检测工具时，必须使用精确类别 ID `fall`。",
+      "description": "检测输入视频或图像中是否发生“人员摔倒”异常事件（相关显示名称：人员摔倒、跌倒）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fall`。",
       "aliases": [
         "人员摔倒",
         "跌倒"
@@ -556,32 +994,62 @@
         "rag": "跌倒",
         "stream": "跌倒"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "fall"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `fall`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `fall`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "fall_68edd8ec2f06",
+          "name": "fall_detection_workflow",
+          "path": "references/workflows/fall_68edd8ec2f06.json",
+          "script": "scripts/fall_68edd8ec2f06.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fall_96c9e72153f7",
+          "name": "fall_image_baseline",
+          "path": "references/workflows/fall_96c9e72153f7.json",
+          "script": "scripts/fall_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fall_c6c5bc199599",
+          "name": "fall_detection_image",
+          "path": "references/workflows/fall_c6c5bc199599.json",
+          "script": "scripts/fall_c6c5bc199599.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "fight",
       "title": "打架斗殴",
       "problem_class": "fight",
       "event_type": "fight",
-      "description": "检测输入视频或图像中是否发生“打架斗殴”异常事件（相关显示名称：打架斗殴、打架）；调用异常检测工具时，必须使用精确类别 ID `fight`。",
+      "description": "检测输入视频或图像中是否发生“打架斗殴”异常事件（相关显示名称：打架斗殴、打架）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fight`。",
       "aliases": [
         "打架斗殴",
         "打架"
@@ -591,64 +1059,138 @@
         "rag": "打架",
         "stream": "打架"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "fight"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `fight`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `fight`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 4,
+      "workflows": [
+        {
+          "workflow_id": "fight_0bebbe640bf1",
+          "name": "fight_detection_image",
+          "path": "references/workflows/fight_0bebbe640bf1.json",
+          "script": "scripts/fight_0bebbe640bf1.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fight_513cb2fe7351",
+          "name": "fight_detection_workflow",
+          "path": "references/workflows/fight_513cb2fe7351.json",
+          "script": "scripts/fight_513cb2fe7351.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fight_96c9e72153f7",
+          "name": "fight_image_baseline",
+          "path": "references/workflows/fight_96c9e72153f7.json",
+          "script": "scripts/fight_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fight_d0dd12ac36b0",
+          "name": "fight_detection_workflow",
+          "path": "references/workflows/fight_d0dd12ac36b0.json",
+          "script": "scripts/fight_d0dd12ac36b0.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "fire",
       "title": "起火",
       "problem_class": "fire",
       "event_type": "fire",
-      "description": "检测输入视频或图像中是否发生“起火”异常事件（相关显示名称：起火）；调用异常检测工具时，必须使用精确类别 ID `fire`。",
+      "description": "检测输入视频或图像中是否发生“起火”异常事件（相关显示名称：起火）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fire`。",
       "aliases": [
         "起火"
       ],
       "display_names": {
         "dashboard": "起火"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "fire"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `fire`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `fire`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 4,
+      "workflows": [
+        {
+          "workflow_id": "fire_38a6e4d538da",
+          "name": "fire_detection_workflow",
+          "path": "references/workflows/fire_38a6e4d538da.json",
+          "script": "scripts/fire_38a6e4d538da.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fire_428af33cad44",
+          "name": "fire_detection_workflow",
+          "path": "references/workflows/fire_428af33cad44.json",
+          "script": "scripts/fire_428af33cad44.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fire_96c9e72153f7",
+          "name": "fire_image_baseline",
+          "path": "references/workflows/fire_96c9e72153f7.json",
+          "script": "scripts/fire_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fire_ea9123696534",
+          "name": "fire_detection_image",
+          "path": "references/workflows/fire_ea9123696534.json",
+          "script": "scripts/fire_ea9123696534.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "fire-door-unclosed",
       "title": "消防门未关闭",
       "problem_class": "fire_door_unclosed",
       "event_type": "fire_door_unclosed",
-      "description": "检测输入视频或图像中是否发生“消防门未关闭”异常事件（相关显示名称：消防门未关闭）；调用异常检测工具时，必须使用精确类别 ID `fire_door_unclosed`。",
+      "description": "检测输入视频或图像中是否发生“消防门未关闭”异常事件（相关显示名称：消防门未关闭）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fire_door_unclosed`。",
       "aliases": [
         "消防门未关闭"
       ],
@@ -657,64 +1199,124 @@
         "rag": "消防门未关闭",
         "stream": "消防门未关闭"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "fire_door_unclosed"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `fire_door_unclosed`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `fire_door_unclosed`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "fire_door_unclosed_1c1aea5e038d",
+          "name": "fire_door_unclosed_detector",
+          "path": "references/workflows/fire_door_unclosed_1c1aea5e038d.json",
+          "script": "scripts/fire_door_unclosed_1c1aea5e038d.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fire_door_unclosed_74b0c3f20721",
+          "name": "fire_door_unclosed_detector",
+          "path": "references/workflows/fire_door_unclosed_74b0c3f20721.json",
+          "script": "scripts/fire_door_unclosed_74b0c3f20721.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fire_door_unclosed_96c9e72153f7",
+          "name": "fire_door_unclosed_image_baseline",
+          "path": "references/workflows/fire_door_unclosed_96c9e72153f7.json",
+          "script": "scripts/fire_door_unclosed_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "fire-hydrant-leakage",
       "title": "消防栓泄漏",
       "problem_class": "fire_hydrant_leakage",
       "event_type": "fire_hydrant_leakage",
-      "description": "检测输入视频或图像中是否发生“消防栓泄漏”异常事件（相关显示名称：消防栓泄漏）；调用异常检测工具时，必须使用精确类别 ID `fire_hydrant_leakage`。",
+      "description": "检测输入视频或图像中是否发生“消防栓泄漏”异常事件（相关显示名称：消防栓泄漏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fire_hydrant_leakage`。",
       "aliases": [
         "消防栓泄漏"
       ],
       "display_names": {
         "rag": "消防栓泄漏"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "fire_hydrant_leakage"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `fire_hydrant_leakage`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `fire_hydrant_leakage`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "fire_hydrant_leakage_06ff05f588ac",
+          "name": "fire_hydrant_leakage_detector",
+          "path": "references/workflows/fire_hydrant_leakage_06ff05f588ac.json",
+          "script": "scripts/fire_hydrant_leakage_06ff05f588ac.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fire_hydrant_leakage_0e1ee6980e3f",
+          "name": "fire_hydrant_leakage_detector",
+          "path": "references/workflows/fire_hydrant_leakage_0e1ee6980e3f.json",
+          "script": "scripts/fire_hydrant_leakage_0e1ee6980e3f.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "fire_hydrant_leakage_12775eaca699",
+          "name": "fire_hydrant_leakage_detector",
+          "path": "references/workflows/fire_hydrant_leakage_12775eaca699.json",
+          "script": "scripts/fire_hydrant_leakage_12775eaca699.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "firelane-occupied",
       "title": "占用消防通道",
       "problem_class": "firelane_occupied",
       "event_type": "firelane_occupied",
-      "description": "检测输入视频或图像中是否发生“占用消防通道”异常事件（相关显示名称：占用消防通道、消防通道占用）；调用异常检测工具时，必须使用精确类别 ID `firelane_occupied`。",
+      "description": "检测输入视频或图像中是否发生“占用消防通道”异常事件（相关显示名称：占用消防通道、消防通道占用）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `firelane_occupied`。",
       "aliases": [
         "占用消防通道",
         "消防通道占用"
@@ -723,32 +1325,69 @@
         "dashboard": "占用消防通道",
         "rag": "消防通道占用"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "firelane_occupied"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `firelane_occupied`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `firelane_occupied`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 4,
+      "workflows": [
+        {
+          "workflow_id": "firelane_occupied_61ab37812c63",
+          "name": "firelane_occupied_detector",
+          "path": "references/workflows/firelane_occupied_61ab37812c63.json",
+          "script": "scripts/firelane_occupied_61ab37812c63.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "firelane_occupied_96c9e72153f7",
+          "name": "firelane_occupied_image_baseline",
+          "path": "references/workflows/firelane_occupied_96c9e72153f7.json",
+          "script": "scripts/firelane_occupied_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "firelane_occupied_af8ef8146a45",
+          "name": "firelane_occupied_detector",
+          "path": "references/workflows/firelane_occupied_af8ef8146a45.json",
+          "script": "scripts/firelane_occupied_af8ef8146a45.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "firelane_occupied_c473dd4021b2",
+          "name": "firelane_occupied_detector",
+          "path": "references/workflows/firelane_occupied_c473dd4021b2.json",
+          "script": "scripts/firelane_occupied_c473dd4021b2.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "flag",
       "title": "旗帜检测",
       "problem_class": "flag",
       "event_type": "flag",
-      "description": "检测输入视频或图像中是否发生“旗帜检测”异常事件（相关显示名称：旗帜检测、旗帜异常）；调用异常检测工具时，必须使用精确类别 ID `flag`。",
+      "description": "检测输入视频或图像中是否发生“旗帜检测”异常事件（相关显示名称：旗帜检测、旗帜异常）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `flag`。",
       "aliases": [
         "旗帜检测",
         "旗帜异常"
@@ -757,64 +1396,117 @@
         "dashboard": "旗帜检测",
         "rag": "旗帜异常"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "flag"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `flag`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `flag`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "flag_96c9e72153f7",
+          "name": "flag_detection_workflow",
+          "path": "references/workflows/flag_96c9e72153f7.json",
+          "script": "scripts/flag_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "flag_e92162514a45",
+          "name": "flag_detection_workflow",
+          "path": "references/workflows/flag_e92162514a45.json",
+          "script": "scripts/flag_e92162514a45.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "foreign-objects-on-transmission-lines",
       "title": "输电线路异物",
       "problem_class": "foreign_objects_on_transmission_lines",
       "event_type": "foreign_objects_on_transmission_lines",
-      "description": "检测输入视频或图像中是否发生“输电线路异物”异常事件（相关显示名称：输电线路异物）；调用异常检测工具时，必须使用精确类别 ID `foreign_objects_on_transmission_lines`。",
+      "description": "检测输入视频或图像中是否发生“输电线路异物”异常事件（相关显示名称：输电线路异物）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `foreign_objects_on_transmission_lines`。",
       "aliases": [
         "输电线路异物"
       ],
       "display_names": {
         "rag": "输电线路异物"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "foreign_objects_on_transmission_lines"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `foreign_objects_on_transmission_lines`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `foreign_objects_on_transmission_lines`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "foreign_objects_on_transmission_lines_31a8b0597407",
+          "name": "foreign_objects_on_transmission_lines",
+          "path": "references/workflows/foreign_objects_on_transmission_lines_31a8b0597407.json",
+          "script": "scripts/foreign_objects_on_transmission_lines_31a8b0597407.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "foreign_objects_on_transmission_lines_96c9e72153f7",
+          "name": "foreign_objects_on_transmission_lines",
+          "path": "references/workflows/foreign_objects_on_transmission_lines_96c9e72153f7.json",
+          "script": "scripts/foreign_objects_on_transmission_lines_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "foreign_objects_on_transmission_lines_ad5cbcebbbeb",
+          "name": "foreign_objects_on_transmission_lines_detector",
+          "path": "references/workflows/foreign_objects_on_transmission_lines_ad5cbcebbbeb.json",
+          "script": "scripts/foreign_objects_on_transmission_lines_ad5cbcebbbeb.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "forest-fire",
       "title": "森林火灾",
       "problem_class": "forest_fire",
       "event_type": "forest_fire",
-      "description": "检测输入视频或图像中是否发生“森林火灾”异常事件（相关显示名称：森林火灾）；调用异常检测工具时，必须使用精确类别 ID `forest_fire`。",
+      "description": "检测输入视频或图像中是否发生“森林火灾”异常事件（相关显示名称：森林火灾）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `forest_fire`。",
       "aliases": [
         "森林火灾"
       ],
@@ -822,32 +1514,62 @@
         "rag": "森林火灾",
         "stream": "森林火灾"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "forest_fire"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `forest_fire`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `forest_fire`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "forest_fire_2c91fe8e39d2",
+          "name": "forest_fire_detector",
+          "path": "references/workflows/forest_fire_2c91fe8e39d2.json",
+          "script": "scripts/forest_fire_2c91fe8e39d2.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "forest_fire_a3655cdae210",
+          "name": "forest_fire_detection",
+          "path": "references/workflows/forest_fire_a3655cdae210.json",
+          "script": "scripts/forest_fire_a3655cdae210.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "forest_fire_c2d955795bcc",
+          "name": "forest_fire_detector",
+          "path": "references/workflows/forest_fire_c2d955795bcc.json",
+          "script": "scripts/forest_fire_c2d955795bcc.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "garbage-bin-dumping",
       "title": "垃圾桶倾倒",
       "problem_class": "garbage_bin_dumping",
       "event_type": "garbage_bin_dumping",
-      "description": "检测输入视频或图像中是否发生“垃圾桶倾倒”异常事件（相关显示名称：垃圾桶倾倒）；调用异常检测工具时，必须使用精确类别 ID `garbage_bin_dumping`。",
+      "description": "检测输入视频或图像中是否发生“垃圾桶倾倒”异常事件（相关显示名称：垃圾桶倾倒）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `garbage_bin_dumping`。",
       "aliases": [
         "垃圾桶倾倒"
       ],
@@ -855,32 +1577,62 @@
         "dashboard": "垃圾桶倾倒",
         "rag": "垃圾桶倾倒"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "garbage_bin_dumping"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `garbage_bin_dumping`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `garbage_bin_dumping`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "garbage_bin_dumping_06c81c66a38f",
+          "name": "garbage_bin_dumping_detector",
+          "path": "references/workflows/garbage_bin_dumping_06c81c66a38f.json",
+          "script": "scripts/garbage_bin_dumping_06c81c66a38f.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "garbage_bin_dumping_85f53b1a8ad2",
+          "name": "garbage_bin_dumping_detector",
+          "path": "references/workflows/garbage_bin_dumping_85f53b1a8ad2.json",
+          "script": "scripts/garbage_bin_dumping_85f53b1a8ad2.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "garbage_bin_dumping_fd657a72e118",
+          "name": "garbage_bin_dumping_detector",
+          "path": "references/workflows/garbage_bin_dumping_fd657a72e118.json",
+          "script": "scripts/garbage_bin_dumping_fd657a72e118.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "gas-station-smoking",
       "title": "加油站抽烟",
       "problem_class": "gas_station_smoking",
       "event_type": "gas_station_smoking",
-      "description": "检测输入视频或图像中是否发生“加油站抽烟”异常事件（相关显示名称：加油站抽烟、加油站吸烟）；调用异常检测工具时，必须使用精确类别 ID `gas_station_smoking`。",
+      "description": "检测输入视频或图像中是否发生“加油站抽烟”异常事件（相关显示名称：加油站抽烟、加油站吸烟）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `gas_station_smoking`。",
       "aliases": [
         "加油站抽烟",
         "加油站吸烟"
@@ -889,32 +1641,48 @@
         "dashboard": "加油站抽烟",
         "rag": "加油站吸烟"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "gas_station_smoking"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `gas_station_smoking`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `gas_station_smoking`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 1,
+      "workflows": [
+        {
+          "workflow_id": "gas_station_smoking_9815521804ee",
+          "name": "gas_station_smoking_detector",
+          "path": "references/workflows/gas_station_smoking_9815521804ee.json",
+          "script": "scripts/gas_station_smoking_9815521804ee.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "guardrail-damaged",
       "title": "护栏损坏",
       "problem_class": "guardrail_damaged",
       "event_type": "guardrail_damaged",
-      "description": "检测输入视频或图像中是否发生“护栏损坏”异常事件（相关显示名称：护栏损坏）；调用异常检测工具时，必须使用精确类别 ID `guardrail_damaged`。",
+      "description": "检测输入视频或图像中是否发生“护栏损坏”异常事件（相关显示名称：护栏损坏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `guardrail_damaged`。",
       "aliases": [
         "护栏损坏"
       ],
@@ -922,32 +1690,55 @@
         "dashboard": "护栏损坏",
         "rag": "护栏损坏"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "guardrail_damaged"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `guardrail_damaged`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `guardrail_damaged`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "guardrail_damaged_74b0c3f20721",
+          "name": "guardrail_damaged_detector",
+          "path": "references/workflows/guardrail_damaged_74b0c3f20721.json",
+          "script": "scripts/guardrail_damaged_74b0c3f20721.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "guardrail_damaged_96c9e72153f7",
+          "name": "guardrail_damaged_detector",
+          "path": "references/workflows/guardrail_damaged_96c9e72153f7.json",
+          "script": "scripts/guardrail_damaged_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "instrument-abnormality",
       "title": "仪表异常",
       "problem_class": "instrument_abnormality",
       "event_type": "instrument_abnormality",
-      "description": "检测输入视频或图像中是否发生“仪表异常”异常事件（相关显示名称：仪表异常）；调用异常检测工具时，必须使用精确类别 ID `instrument_abnormality`。",
+      "description": "检测输入视频或图像中是否发生“仪表异常”异常事件（相关显示名称：仪表异常）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `instrument_abnormality`。",
       "aliases": [
         "仪表异常"
       ],
@@ -955,224 +1746,406 @@
         "dashboard": "仪表异常",
         "rag": "仪表异常"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "instrument_abnormality"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `instrument_abnormality`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `instrument_abnormality`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "instrument_abnormality_07de9c936d38",
+          "name": "instrument_abnormality_detector",
+          "path": "references/workflows/instrument_abnormality_07de9c936d38.json",
+          "script": "scripts/instrument_abnormality_07de9c936d38.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "instrument_abnormality_96c9e72153f7",
+          "name": "instrument_abnormality_image_baseline",
+          "path": "references/workflows/instrument_abnormality_96c9e72153f7.json",
+          "script": "scripts/instrument_abnormality_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "instrument_abnormality_dedd1e22d850",
+          "name": "instrument_abnormality_detector",
+          "path": "references/workflows/instrument_abnormality_dedd1e22d850.json",
+          "script": "scripts/instrument_abnormality_dedd1e22d850.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "instrument-operation",
       "title": "是否操作仪器",
       "problem_class": "instrument_operation",
       "event_type": "instrument_operation",
-      "description": "检测输入视频或图像中是否发生“是否操作仪器”异常事件（相关显示名称：是否操作仪器）；调用异常检测工具时，必须使用精确类别 ID `instrument_operation`。",
+      "description": "检测输入视频或图像中是否发生“是否操作仪器”异常事件（相关显示名称：是否操作仪器）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `instrument_operation`。",
       "aliases": [
         "是否操作仪器"
       ],
       "display_names": {
         "dashboard": "是否操作仪器"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "instrument_operation"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `instrument_operation`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `instrument_operation`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "instrument_operation_1bd3fad70aa2",
+          "name": "instrument_operation_detector",
+          "path": "references/workflows/instrument_operation_1bd3fad70aa2.json",
+          "script": "scripts/instrument_operation_1bd3fad70aa2.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "instrument_operation_884b9b12288c",
+          "name": "instrument_operation_detector",
+          "path": "references/workflows/instrument_operation_884b9b12288c.json",
+          "script": "scripts/instrument_operation_884b9b12288c.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "instrument_operation_f06dd7f53eb7",
+          "name": "instrument_operation_detector",
+          "path": "references/workflows/instrument_operation_f06dd7f53eb7.json",
+          "script": "scripts/instrument_operation_f06dd7f53eb7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "kitchen-infested-with-rats",
       "title": "厨房出现老鼠",
       "problem_class": "kitchen_infested_with_rats",
       "event_type": "kitchen_infested_with_rats",
-      "description": "检测输入视频或图像中是否发生“厨房出现老鼠”异常事件（相关显示名称：厨房出现老鼠）；调用异常检测工具时，必须使用精确类别 ID `kitchen_infested_with_rats`。",
+      "description": "检测输入视频或图像中是否发生“厨房出现老鼠”异常事件（相关显示名称：厨房出现老鼠）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `kitchen_infested_with_rats`。",
       "aliases": [
         "厨房出现老鼠"
       ],
       "display_names": {
         "rag": "厨房出现老鼠"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "kitchen_infested_with_rats"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `kitchen_infested_with_rats`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `kitchen_infested_with_rats`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "kitchen_infested_with_rats_14a547780a36",
+          "name": "kitchen_infested_with_rats",
+          "path": "references/workflows/kitchen_infested_with_rats_14a547780a36.json",
+          "script": "scripts/kitchen_infested_with_rats_14a547780a36.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "kitchen_infested_with_rats_96c9e72153f7",
+          "name": "kitchen_infested_with_rats_image_baseline",
+          "path": "references/workflows/kitchen_infested_with_rats_96c9e72153f7.json",
+          "script": "scripts/kitchen_infested_with_rats_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "license-plate-is-not-standard",
       "title": "车牌不规范",
       "problem_class": "license_plate_is_not_standard",
       "event_type": "license_plate_is_not_standard",
-      "description": "检测输入视频或图像中是否发生“车牌不规范”异常事件（相关显示名称：车牌不规范）；调用异常检测工具时，必须使用精确类别 ID `license_plate_is_not_standard`。",
+      "description": "检测输入视频或图像中是否发生“车牌不规范”异常事件（相关显示名称：车牌不规范）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `license_plate_is_not_standard`。",
       "aliases": [
         "车牌不规范"
       ],
       "display_names": {
         "rag": "车牌不规范"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "license_plate_is_not_standard"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `license_plate_is_not_standard`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `license_plate_is_not_standard`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "license_plate_is_not_standard_5e16b30de642",
+          "name": "license_plate_is_not_standard_detector",
+          "path": "references/workflows/license_plate_is_not_standard_5e16b30de642.json",
+          "script": "scripts/license_plate_is_not_standard_5e16b30de642.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "license_plate_is_not_standard_bbef2b8a62b4",
+          "name": "license_plate_is_not_standard",
+          "path": "references/workflows/license_plate_is_not_standard_bbef2b8a62b4.json",
+          "script": "scripts/license_plate_is_not_standard_bbef2b8a62b4.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "litter-randomly",
       "title": "随地乱扔垃圾",
       "problem_class": "litter_randomly",
       "event_type": "litter_randomly",
-      "description": "检测输入视频或图像中是否发生“随地乱扔垃圾”异常事件（相关显示名称：随地乱扔垃圾）；调用异常检测工具时，必须使用精确类别 ID `litter_randomly`。",
+      "description": "检测输入视频或图像中是否发生“随地乱扔垃圾”异常事件（相关显示名称：随地乱扔垃圾）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `litter_randomly`。",
       "aliases": [
         "随地乱扔垃圾"
       ],
       "display_names": {
         "rag": "随地乱扔垃圾"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "litter_randomly"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `litter_randomly`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `litter_randomly`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "litter_randomly_96c9e72153f7",
+          "name": "litter_randomly_detector",
+          "path": "references/workflows/litter_randomly_96c9e72153f7.json",
+          "script": "scripts/litter_randomly_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "litter_randomly_f833911323f6",
+          "name": "litter_randomly_detector",
+          "path": "references/workflows/litter_randomly_f833911323f6.json",
+          "script": "scripts/litter_randomly_f833911323f6.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "lost-manhole-cover",
       "title": "井盖丢失或井盖没盖好",
       "problem_class": "lost_manhole_cover",
       "event_type": "lost_manhole_cover",
-      "description": "检测输入视频或图像中是否发生“井盖丢失或井盖没盖好”异常事件（相关显示名称：井盖丢失或井盖没盖好）；调用异常检测工具时，必须使用精确类别 ID `lost_manhole_cover`。",
+      "description": "检测输入视频或图像中是否发生“井盖丢失或井盖没盖好”异常事件（相关显示名称：井盖丢失或井盖没盖好）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `lost_manhole_cover`。",
       "aliases": [
         "井盖丢失或井盖没盖好"
       ],
       "display_names": {
         "rag": "井盖丢失或井盖没盖好"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "lost_manhole_cover"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `lost_manhole_cover`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `lost_manhole_cover`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "lost_manhole_cover_428af33cad44",
+          "name": "lost_manhole_cover_detector",
+          "path": "references/workflows/lost_manhole_cover_428af33cad44.json",
+          "script": "scripts/lost_manhole_cover_428af33cad44.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "lost_manhole_cover_96c9e72153f7",
+          "name": "lost_manhole_cover_detector",
+          "path": "references/workflows/lost_manhole_cover_96c9e72153f7.json",
+          "script": "scripts/lost_manhole_cover_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "occluded-license-plate",
       "title": "车牌遮挡",
       "problem_class": "occluded_license_plate",
       "event_type": "occluded_license_plate",
-      "description": "检测输入视频或图像中是否发生“车牌遮挡”异常事件（相关显示名称：车牌遮挡）；调用异常检测工具时，必须使用精确类别 ID `occluded_license_plate`。",
+      "description": "检测输入视频或图像中是否发生“车牌遮挡”异常事件（相关显示名称：车牌遮挡）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `occluded_license_plate`。",
       "aliases": [
         "车牌遮挡"
       ],
       "display_names": {
         "rag": "车牌遮挡"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "occluded_license_plate"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `occluded_license_plate`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `occluded_license_plate`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "occluded_license_plate_3e48518cbbb4",
+          "name": "occluded_license_plate_detector",
+          "path": "references/workflows/occluded_license_plate_3e48518cbbb4.json",
+          "script": "scripts/occluded_license_plate_3e48518cbbb4.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "occluded_license_plate_74b0c3f20721",
+          "name": "occluded_license_plate_detector",
+          "path": "references/workflows/occluded_license_plate_74b0c3f20721.json",
+          "script": "scripts/occluded_license_plate_74b0c3f20721.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "occluded_license_plate_96c9e72153f7",
+          "name": "occluded_license_plate_image_detector",
+          "path": "references/workflows/occluded_license_plate_96c9e72153f7.json",
+          "script": "scripts/occluded_license_plate_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "pedestrian-queue",
       "title": "行人排队聚集",
       "problem_class": "pedestrian_queue",
       "event_type": "pedestrian_queue",
-      "description": "检测输入视频或图像中是否发生“行人排队聚集”异常事件（相关显示名称：行人排队聚集、行人排队）；调用异常检测工具时，必须使用精确类别 ID `pedestrian_queue`。",
+      "description": "检测输入视频或图像中是否发生“行人排队聚集”异常事件（相关显示名称：行人排队聚集、行人排队）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `pedestrian_queue`。",
       "aliases": [
         "行人排队聚集",
         "行人排队"
@@ -1181,32 +2154,62 @@
         "dashboard": "行人排队聚集",
         "rag": "行人排队"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "pedestrian_queue"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `pedestrian_queue`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `pedestrian_queue`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "pedestrian_queue_3f406b278470",
+          "name": "pedestrian_queue_detector",
+          "path": "references/workflows/pedestrian_queue_3f406b278470.json",
+          "script": "scripts/pedestrian_queue_3f406b278470.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "pedestrian_queue_62f634f7afa7",
+          "name": "pedestrian_queue_detector",
+          "path": "references/workflows/pedestrian_queue_62f634f7afa7.json",
+          "script": "scripts/pedestrian_queue_62f634f7afa7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "pedestrian_queue_96c9e72153f7",
+          "name": "pedestrian_queue_image_baseline",
+          "path": "references/workflows/pedestrian_queue_96c9e72153f7.json",
+          "script": "scripts/pedestrian_queue_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "pipeline-leak",
       "title": "管道泄漏",
       "problem_class": "pipeline_leak",
       "event_type": "pipeline_leak",
-      "description": "检测输入视频或图像中是否发生“管道泄漏”异常事件（相关显示名称：管道泄漏）；调用异常检测工具时，必须使用精确类别 ID `pipeline_leak`。",
+      "description": "检测输入视频或图像中是否发生“管道泄漏”异常事件（相关显示名称：管道泄漏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `pipeline_leak`。",
       "aliases": [
         "管道泄漏"
       ],
@@ -1214,32 +2217,62 @@
         "dashboard": "管道泄漏",
         "rag": "管道泄漏"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "pipeline_leak"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `pipeline_leak`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `pipeline_leak`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "pipeline_leak_1dbd8d95a7a7",
+          "name": "pipeline_leak_detector",
+          "path": "references/workflows/pipeline_leak_1dbd8d95a7a7.json",
+          "script": "scripts/pipeline_leak_1dbd8d95a7a7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "pipeline_leak_ad1b245c64fb",
+          "name": "pipeline_leak_detector",
+          "path": "references/workflows/pipeline_leak_ad1b245c64fb.json",
+          "script": "scripts/pipeline_leak_ad1b245c64fb.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "pipeline_leak_d1f7dfcf6135",
+          "name": "pipeline_leak_visual_detector",
+          "path": "references/workflows/pipeline_leak_d1f7dfcf6135.json",
+          "script": "scripts/pipeline_leak_d1f7dfcf6135.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "platform-yellowline",
       "title": "越过站台黄线",
       "problem_class": "platform_yellowline",
       "event_type": "platform_yellowline",
-      "description": "检测输入视频或图像中是否发生“越过站台黄线”异常事件（相关显示名称：越过站台黄线、站台黄线）；调用异常检测工具时，必须使用精确类别 ID `platform_yellowline`。",
+      "description": "检测输入视频或图像中是否发生“越过站台黄线”异常事件（相关显示名称：越过站台黄线、站台黄线）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `platform_yellowline`。",
       "aliases": [
         "越过站台黄线",
         "站台黄线"
@@ -1248,32 +2281,55 @@
         "dashboard": "越过站台黄线",
         "rag": "站台黄线"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "platform_yellowline"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `platform_yellowline`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `platform_yellowline`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "platform_yellowline_96c9e72153f7",
+          "name": "platform_yellowline_detector",
+          "path": "references/workflows/platform_yellowline_96c9e72153f7.json",
+          "script": "scripts/platform_yellowline_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "platform_yellowline_a1314fd8a363",
+          "name": "platform_yellowline_detector",
+          "path": "references/workflows/platform_yellowline_a1314fd8a363.json",
+          "script": "scripts/platform_yellowline_a1314fd8a363.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "road-surface-dameged",
       "title": "路面破损",
       "problem_class": "road_surface_dameged",
       "event_type": "road_surface_dameged",
-      "description": "检测输入视频或图像中是否发生“路面破损”异常事件（相关显示名称：路面破损、路面损坏）；调用异常检测工具时，必须使用精确类别 ID `road_surface_dameged`。",
+      "description": "检测输入视频或图像中是否发生“路面破损”异常事件（相关显示名称：路面破损、路面损坏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `road_surface_dameged`。",
       "aliases": [
         "路面破损",
         "路面损坏"
@@ -1282,64 +2338,131 @@
         "dashboard": "路面破损",
         "rag": "路面损坏"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "road_surface_dameged"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `road_surface_dameged`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `road_surface_dameged`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "road_surface_dameged_96c9e72153f7",
+          "name": "road_surface_dameged_image_baseline",
+          "path": "references/workflows/road_surface_dameged_96c9e72153f7.json",
+          "script": "scripts/road_surface_dameged_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "road_surface_dameged_a073eff56c6a",
+          "name": "road_surface_dameged_detector",
+          "path": "references/workflows/road_surface_dameged_a073eff56c6a.json",
+          "script": "scripts/road_surface_dameged_a073eff56c6a.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "road_surface_dameged_b399a8ddd311",
+          "name": "road_surface_dameged_detector",
+          "path": "references/workflows/road_surface_dameged_b399a8ddd311.json",
+          "script": "scripts/road_surface_dameged_b399a8ddd311.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "roadside-booths",
       "title": "占道经营",
       "problem_class": "roadside_booths",
       "event_type": "roadside_booths",
-      "description": "检测输入视频或图像中是否发生“占道经营”异常事件（相关显示名称：占道经营）；调用异常检测工具时，必须使用精确类别 ID `roadside_booths`。",
+      "description": "检测输入视频或图像中是否发生“占道经营”异常事件（相关显示名称：占道经营）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `roadside_booths`。",
       "aliases": [
         "占道经营"
       ],
       "display_names": {
         "rag": "占道经营"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "roadside_booths"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `roadside_booths`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `roadside_booths`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 4,
+      "workflows": [
+        {
+          "workflow_id": "roadside_booths_45718f0e4667",
+          "name": "roadside_booths_detector",
+          "path": "references/workflows/roadside_booths_45718f0e4667.json",
+          "script": "scripts/roadside_booths_45718f0e4667.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "roadside_booths_96c9e72153f7",
+          "name": "roadside_booths_image_baseline",
+          "path": "references/workflows/roadside_booths_96c9e72153f7.json",
+          "script": "scripts/roadside_booths_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "roadside_booths_ce5a642d2219",
+          "name": "roadside_booths_detector",
+          "path": "references/workflows/roadside_booths_ce5a642d2219.json",
+          "script": "scripts/roadside_booths_ce5a642d2219.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "roadside_booths_dedd1e22d850",
+          "name": "roadside_booths_detector",
+          "path": "references/workflows/roadside_booths_dedd1e22d850.json",
+          "script": "scripts/roadside_booths_dedd1e22d850.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "run-the-red-light",
       "title": "闯红灯",
       "problem_class": "run_the_red_light",
       "event_type": "run_the_red_light",
-      "description": "检测输入视频或图像中是否发生“闯红灯”异常事件（相关显示名称：闯红灯）；调用异常检测工具时，必须使用精确类别 ID `run_the_red_light`。",
+      "description": "检测输入视频或图像中是否发生“闯红灯”异常事件（相关显示名称：闯红灯）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `run_the_red_light`。",
       "aliases": [
         "闯红灯"
       ],
@@ -1347,32 +2470,69 @@
         "dashboard": "闯红灯",
         "rag": "闯红灯"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "run_the_red_light"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `run_the_red_light`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `run_the_red_light`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 4,
+      "workflows": [
+        {
+          "workflow_id": "run_the_red_light_5a1750356a9e",
+          "name": "run_the_red_light",
+          "path": "references/workflows/run_the_red_light_5a1750356a9e.json",
+          "script": "scripts/run_the_red_light_5a1750356a9e.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "run_the_red_light_96c9e72153f7",
+          "name": "run_the_red_light_image_baseline",
+          "path": "references/workflows/run_the_red_light_96c9e72153f7.json",
+          "script": "scripts/run_the_red_light_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "run_the_red_light_dedd1e22d850",
+          "name": "run_the_red_light",
+          "path": "references/workflows/run_the_red_light_dedd1e22d850.json",
+          "script": "scripts/run_the_red_light_dedd1e22d850.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "run_the_red_light_ed990c3cbf1e",
+          "name": "run_the_red_light",
+          "path": "references/workflows/run_the_red_light_ed990c3cbf1e.json",
+          "script": "scripts/run_the_red_light_ed990c3cbf1e.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "screen-doors-clamp-passengers",
       "title": "屏蔽门夹人",
       "problem_class": "screen_doors_clamp_passengers",
       "event_type": "screen_doors_clamp_passengers",
-      "description": "检测输入视频或图像中是否发生“屏蔽门夹人”异常事件（相关显示名称：屏蔽门夹人）；调用异常检测工具时，必须使用精确类别 ID `screen_doors_clamp_passengers`。",
+      "description": "检测输入视频或图像中是否发生“屏蔽门夹人”异常事件（相关显示名称：屏蔽门夹人）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `screen_doors_clamp_passengers`。",
       "aliases": [
         "屏蔽门夹人"
       ],
@@ -1380,32 +2540,76 @@
         "dashboard": "屏蔽门夹人",
         "rag": "屏蔽门夹人"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "screen_doors_clamp_passengers"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `screen_doors_clamp_passengers`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `screen_doors_clamp_passengers`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 5,
+      "workflows": [
+        {
+          "workflow_id": "screen_doors_clamp_passengers_2ebebd3e0e79",
+          "name": "screen_doors_clamp_passengers_detector",
+          "path": "references/workflows/screen_doors_clamp_passengers_2ebebd3e0e79.json",
+          "script": "scripts/screen_doors_clamp_passengers_2ebebd3e0e79.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "screen_doors_clamp_passengers_96c9e72153f7",
+          "name": "screen_doors_clamp_passengers_image_baseline",
+          "path": "references/workflows/screen_doors_clamp_passengers_96c9e72153f7.json",
+          "script": "scripts/screen_doors_clamp_passengers_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "screen_doors_clamp_passengers_b9e829d1798b",
+          "name": "screen_doors_clamp_passengers_detector",
+          "path": "references/workflows/screen_doors_clamp_passengers_b9e829d1798b.json",
+          "script": "scripts/screen_doors_clamp_passengers_b9e829d1798b.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "screen_doors_clamp_passengers_f0c329f7e2a1",
+          "name": "screen_doors_clamp_passengers_detector",
+          "path": "references/workflows/screen_doors_clamp_passengers_f0c329f7e2a1.json",
+          "script": "scripts/screen_doors_clamp_passengers_f0c329f7e2a1.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "screen_doors_clamp_passengers_f9bb0f23e3a4",
+          "name": "screen_doors_clamp_passengers_detector",
+          "path": "references/workflows/screen_doors_clamp_passengers_f9bb0f23e3a4.json",
+          "script": "scripts/screen_doors_clamp_passengers_f9bb0f23e3a4.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "seat-damaged",
       "title": "座椅损坏",
       "problem_class": "seat_damaged",
       "event_type": "seat_damaged",
-      "description": "检测输入视频或图像中是否发生“座椅损坏”异常事件（相关显示名称：座椅损坏、座位损坏）；调用异常检测工具时，必须使用精确类别 ID `seat_damaged`。",
+      "description": "检测输入视频或图像中是否发生“座椅损坏”异常事件（相关显示名称：座椅损坏、座位损坏）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `seat_damaged`。",
       "aliases": [
         "座椅损坏",
         "座位损坏"
@@ -1414,32 +2618,55 @@
         "dashboard": "座椅损坏",
         "rag": "座位损坏"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "seat_damaged"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `seat_damaged`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `seat_damaged`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "seat_damaged_1f1305676bb6",
+          "name": "seat_damaged_detector",
+          "path": "references/workflows/seat_damaged_1f1305676bb6.json",
+          "script": "scripts/seat_damaged_1f1305676bb6.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "seat_damaged_96c9e72153f7",
+          "name": "seat_damaged_image_baseline",
+          "path": "references/workflows/seat_damaged_96c9e72153f7.json",
+          "script": "scripts/seat_damaged_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "standing-water",
       "title": "积水检测",
       "problem_class": "standing_water",
       "event_type": "standing_water",
-      "description": "检测输入视频或图像中是否发生“积水检测”异常事件（相关显示名称：积水检测、积水）；调用异常检测工具时，必须使用精确类别 ID `standing_water`。",
+      "description": "检测输入视频或图像中是否发生“积水检测”异常事件（相关显示名称：积水检测、积水）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `standing_water`。",
       "aliases": [
         "积水检测",
         "积水"
@@ -1448,32 +2675,55 @@
         "dashboard": "积水检测",
         "rag": "积水"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "standing_water"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `standing_water`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `standing_water`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "standing_water_2eed20ca5774",
+          "name": "standing_water_detector",
+          "path": "references/workflows/standing_water_2eed20ca5774.json",
+          "script": "scripts/standing_water_2eed20ca5774.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "standing_water_96c9e72153f7",
+          "name": "standing_water_image_baseline",
+          "path": "references/workflows/standing_water_96c9e72153f7.json",
+          "script": "scripts/standing_water_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "tank-body-landing",
       "title": "罐体落地",
       "problem_class": "tank_body_landing",
       "event_type": "tank_body_landing",
-      "description": "检测输入视频或图像中是否发生“罐体落地”异常事件（相关显示名称：罐体落地、罐体着陆）；调用异常检测工具时，必须使用精确类别 ID `tank_body_landing`。",
+      "description": "检测输入视频或图像中是否发生“罐体落地”异常事件（相关显示名称：罐体落地、罐体着陆）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tank_body_landing`。",
       "aliases": [
         "罐体落地",
         "罐体着陆"
@@ -1482,32 +2732,55 @@
         "dashboard": "罐体落地",
         "rag": "罐体着陆"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "tank_body_landing"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `tank_body_landing`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `tank_body_landing`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "tank_body_landing_96c9e72153f7",
+          "name": "tank_body_landing_image_baseline",
+          "path": "references/workflows/tank_body_landing_96c9e72153f7.json",
+          "script": "scripts/tank_body_landing_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "tank_body_landing_a798073ef370",
+          "name": "tank_body_landing_detector",
+          "path": "references/workflows/tank_body_landing_a798073ef370.json",
+          "script": "scripts/tank_body_landing_a798073ef370.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "track-obstacle",
       "title": "轨道异物",
       "problem_class": "track_obstacle",
       "event_type": "track_obstacle",
-      "description": "检测输入视频或图像中是否发生“轨道异物”异常事件（相关显示名称：轨道异物、轨道障碍物）；调用异常检测工具时，必须使用精确类别 ID `track_obstacle`。",
+      "description": "检测输入视频或图像中是否发生“轨道异物”异常事件（相关显示名称：轨道异物、轨道障碍物）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `track_obstacle`。",
       "aliases": [
         "轨道异物",
         "轨道障碍物"
@@ -1516,32 +2789,55 @@
         "dashboard": "轨道异物",
         "rag": "轨道障碍物"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "track_obstacle"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `track_obstacle`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `track_obstacle`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "track_obstacle_87fbd3cbd1af",
+          "name": "track_obstacle_detector",
+          "path": "references/workflows/track_obstacle_87fbd3cbd1af.json",
+          "script": "scripts/track_obstacle_87fbd3cbd1af.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "track_obstacle_96c9e72153f7",
+          "name": "track_obstacle_image_baseline",
+          "path": "references/workflows/track_obstacle_96c9e72153f7.json",
+          "script": "scripts/track_obstacle_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "traffic-accident",
       "title": "交通事故",
       "problem_class": "traffic_accident",
       "event_type": "traffic_accident",
-      "description": "检测输入视频或图像中是否发生“交通事故”异常事件（相关显示名称：交通事故）；调用异常检测工具时，必须使用精确类别 ID `traffic_accident`。",
+      "description": "检测输入视频或图像中是否发生“交通事故”异常事件（相关显示名称：交通事故）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `traffic_accident`。",
       "aliases": [
         "交通事故"
       ],
@@ -1550,32 +2846,69 @@
         "rag": "交通事故",
         "stream": "交通事故"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "traffic_accident"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `traffic_accident`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `traffic_accident`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 4,
+      "workflows": [
+        {
+          "workflow_id": "traffic_accident_11bc493538c6",
+          "name": "traffic_accident_detector",
+          "path": "references/workflows/traffic_accident_11bc493538c6.json",
+          "script": "scripts/traffic_accident_11bc493538c6.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "traffic_accident_1900245abeb1",
+          "name": "traffic_accident_detector",
+          "path": "references/workflows/traffic_accident_1900245abeb1.json",
+          "script": "scripts/traffic_accident_1900245abeb1.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "traffic_accident_34f138c7ac64",
+          "name": "traffic_accident_detector",
+          "path": "references/workflows/traffic_accident_34f138c7ac64.json",
+          "script": "scripts/traffic_accident_34f138c7ac64.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "traffic_accident_96c9e72153f7",
+          "name": "traffic_accident_image_detector",
+          "path": "references/workflows/traffic_accident_96c9e72153f7.json",
+          "script": "scripts/traffic_accident_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "tree-fallen",
       "title": "树木倒伏",
       "problem_class": "tree_fallen",
       "event_type": "tree_fallen",
-      "description": "检测输入视频或图像中是否发生“树木倒伏”异常事件（相关显示名称：树木倒伏、树木倒塌）；调用异常检测工具时，必须使用精确类别 ID `tree_fallen`。",
+      "description": "检测输入视频或图像中是否发生“树木倒伏”异常事件（相关显示名称：树木倒伏、树木倒塌）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tree_fallen`。",
       "aliases": [
         "树木倒伏",
         "树木倒塌"
@@ -1584,32 +2917,69 @@
         "dashboard": "树木倒伏",
         "rag": "树木倒塌"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "tree_fallen"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `tree_fallen`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `tree_fallen`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 4,
+      "workflows": [
+        {
+          "workflow_id": "tree_fallen_5b4213dceb8e",
+          "name": "tree_fallen_detector",
+          "path": "references/workflows/tree_fallen_5b4213dceb8e.json",
+          "script": "scripts/tree_fallen_5b4213dceb8e.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "tree_fallen_96c9e72153f7",
+          "name": "tree_fallen_image_baseline",
+          "path": "references/workflows/tree_fallen_96c9e72153f7.json",
+          "script": "scripts/tree_fallen_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "tree_fallen_cda35fb4d7a4",
+          "name": "tree_fallen_detector",
+          "path": "references/workflows/tree_fallen_cda35fb4d7a4.json",
+          "script": "scripts/tree_fallen_cda35fb4d7a4.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "tree_fallen_dcb94e4f472f",
+          "name": "tree_fallen_detector",
+          "path": "references/workflows/tree_fallen_dcb94e4f472f.json",
+          "script": "scripts/tree_fallen_dcb94e4f472f.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "tube-falls-and-breaks",
       "title": "试管掉落破碎",
       "problem_class": "tube_falls_and_breaks",
       "event_type": "tube_falls_and_breaks",
-      "description": "检测输入视频或图像中是否发生“试管掉落破碎”异常事件（相关显示名称：试管掉落破碎、管道坠落破裂）；调用异常检测工具时，必须使用精确类别 ID `tube_falls_and_breaks`。",
+      "description": "检测输入视频或图像中是否发生“试管掉落破碎”异常事件（相关显示名称：试管掉落破碎、管道坠落破裂）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tube_falls_and_breaks`。",
       "aliases": [
         "试管掉落破碎",
         "管道坠落破裂"
@@ -1618,217 +2988,399 @@
         "dashboard": "试管掉落破碎",
         "rag": "管道坠落破裂"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "tube_falls_and_breaks"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `tube_falls_and_breaks`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `tube_falls_and_breaks`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 1,
+      "workflows": [
+        {
+          "workflow_id": "tube_falls_and_breaks_96c9e72153f7",
+          "name": "tube_falls_and_breaks_detector",
+          "path": "references/workflows/tube_falls_and_breaks_96c9e72153f7.json",
+          "script": "scripts/tube_falls_and_breaks_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "vehicle-illegal-parking",
       "title": "车辆违停",
       "problem_class": "vehicle_illegal_parking",
       "event_type": "vehicle_illegal_parking",
-      "description": "检测输入视频或图像中是否发生“车辆违停”异常事件（相关显示名称：车辆违停）；调用异常检测工具时，必须使用精确类别 ID `vehicle_illegal_parking`。",
+      "description": "检测输入视频或图像中是否发生“车辆违停”异常事件（相关显示名称：车辆违停）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `vehicle_illegal_parking`。",
       "aliases": [
         "车辆违停"
       ],
       "display_names": {
         "rag": "车辆违停"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "vehicle_illegal_parking"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `vehicle_illegal_parking`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `vehicle_illegal_parking`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "vehicle_illegal_parking_1310756365ce",
+          "name": "vehicle_illegal_parking_detector",
+          "path": "references/workflows/vehicle_illegal_parking_1310756365ce.json",
+          "script": "scripts/vehicle_illegal_parking_1310756365ce.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "vehicle_illegal_parking_96c9e72153f7",
+          "name": "vehicle_illegal_parking_image_baseline",
+          "path": "references/workflows/vehicle_illegal_parking_96c9e72153f7.json",
+          "script": "scripts/vehicle_illegal_parking_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "vehicle_illegal_parking_a7a05ae6f129",
+          "name": "vehicle_illegal_parking_detector",
+          "path": "references/workflows/vehicle_illegal_parking_a7a05ae6f129.json",
+          "script": "scripts/vehicle_illegal_parking_a7a05ae6f129.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "walking-a-dog-without-a-leash",
       "title": "遛狗未牵绳",
       "problem_class": "walking_a_dog_without_a_leash",
       "event_type": "walking_a_dog_without_a_leash",
-      "description": "检测输入视频或图像中是否发生“遛狗未牵绳”异常事件（相关显示名称：遛狗未牵绳）；调用异常检测工具时，必须使用精确类别 ID `walking_a_dog_without_a_leash`。",
+      "description": "检测输入视频或图像中是否发生“遛狗未牵绳”异常事件（相关显示名称：遛狗未牵绳）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `walking_a_dog_without_a_leash`。",
       "aliases": [
         "遛狗未牵绳"
       ],
       "display_names": {
         "rag": "遛狗未牵绳"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "walking_a_dog_without_a_leash"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `walking_a_dog_without_a_leash`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `walking_a_dog_without_a_leash`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "walking_a_dog_without_a_leash_7bf76f25c40f",
+          "name": "walking_a_dog_without_a_leash_detector",
+          "path": "references/workflows/walking_a_dog_without_a_leash_7bf76f25c40f.json",
+          "script": "scripts/walking_a_dog_without_a_leash_7bf76f25c40f.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "walking_a_dog_without_a_leash_96c9e72153f7",
+          "name": "walking_a_dog_without_a_leash_image_baseline",
+          "path": "references/workflows/walking_a_dog_without_a_leash_96c9e72153f7.json",
+          "script": "scripts/walking_a_dog_without_a_leash_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "without-wearing-a-helmet",
       "title": "未戴安全帽",
       "problem_class": "without_wearing_a_helmet",
       "event_type": "without_wearing_a_helmet",
-      "description": "检测输入视频或图像中是否发生“未戴安全帽”异常事件（相关显示名称：未戴安全帽）；调用异常检测工具时，必须使用精确类别 ID `without_wearing_a_helmet`。",
+      "description": "检测输入视频或图像中是否发生“未戴安全帽”异常事件（相关显示名称：未戴安全帽）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `without_wearing_a_helmet`。",
       "aliases": [
         "未戴安全帽"
       ],
       "display_names": {
         "rag": "未戴安全帽"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "without_wearing_a_helmet"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `without_wearing_a_helmet`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `without_wearing_a_helmet`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "without_wearing_a_helmet_96c9e72153f7",
+          "name": "without_wearing_a_helmet_detector",
+          "path": "references/workflows/without_wearing_a_helmet_96c9e72153f7.json",
+          "script": "scripts/without_wearing_a_helmet_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "without_wearing_a_helmet_fe2744c48473",
+          "name": "without_wearing_a_helmet_detector",
+          "path": "references/workflows/without_wearing_a_helmet_fe2744c48473.json",
+          "script": "scripts/without_wearing_a_helmet_fe2744c48473.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "without-wearing-a-mask",
       "title": "未戴口罩",
       "problem_class": "without_wearing_a_mask",
       "event_type": "without_wearing_a_mask",
-      "description": "检测输入视频或图像中是否发生“未戴口罩”异常事件（相关显示名称：未戴口罩）；调用异常检测工具时，必须使用精确类别 ID `without_wearing_a_mask`。",
+      "description": "检测输入视频或图像中是否发生“未戴口罩”异常事件（相关显示名称：未戴口罩）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `without_wearing_a_mask`。",
       "aliases": [
         "未戴口罩"
       ],
       "display_names": {
         "rag": "未戴口罩"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "without_wearing_a_mask"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `without_wearing_a_mask`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `without_wearing_a_mask`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 2,
+      "workflows": [
+        {
+          "workflow_id": "without_wearing_a_mask_69c595d96158",
+          "name": "without_wearing_a_mask",
+          "path": "references/workflows/without_wearing_a_mask_69c595d96158.json",
+          "script": "scripts/without_wearing_a_mask_69c595d96158.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "without_wearing_a_mask_96c9e72153f7",
+          "name": "without_wearing_a_mask_detector",
+          "path": "references/workflows/without_wearing_a_mask_96c9e72153f7.json",
+          "script": "scripts/without_wearing_a_mask_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "without-wearing-clothes",
       "title": "未穿防护服",
       "problem_class": "without_wearing_clothes",
       "event_type": "without_wearing_clothes",
-      "description": "检测输入视频或图像中是否发生“未穿防护服”异常事件（相关显示名称：未穿防护服）；调用异常检测工具时，必须使用精确类别 ID `without_wearing_clothes`。",
+      "description": "检测输入视频或图像中是否发生“未穿防护服”异常事件（相关显示名称：未穿防护服）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `without_wearing_clothes`。",
       "aliases": [
         "未穿防护服"
       ],
       "display_names": {
         "rag": "未穿防护服"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "without_wearing_clothes"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `without_wearing_clothes`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `without_wearing_clothes`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 4,
+      "workflows": [
+        {
+          "workflow_id": "without_wearing_clothes_198c1989b348",
+          "name": "without_wearing_clothes",
+          "path": "references/workflows/without_wearing_clothes_198c1989b348.json",
+          "script": "scripts/without_wearing_clothes_198c1989b348.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "without_wearing_clothes_74b0c3f20721",
+          "name": "without_wearing_clothes_detector",
+          "path": "references/workflows/without_wearing_clothes_74b0c3f20721.json",
+          "script": "scripts/without_wearing_clothes_74b0c3f20721.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "without_wearing_clothes_96c9e72153f7",
+          "name": "without_wearing_clothes_image_baseline",
+          "path": "references/workflows/without_wearing_clothes_96c9e72153f7.json",
+          "script": "scripts/without_wearing_clothes_96c9e72153f7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "without_wearing_clothes_d3df6fb17d3e",
+          "name": "without_wearing_clothes_detector",
+          "path": "references/workflows/without_wearing_clothes_d3df6fb17d3e.json",
+          "script": "scripts/without_wearing_clothes_d3df6fb17d3e.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     },
     {
       "name": "working-at-heights-without-a-safety-harness",
       "title": "高空作业未系安全带",
       "problem_class": "working_at_heights_without_a_safety_harness",
       "event_type": "working_at_heights_without_a_safety_harness",
-      "description": "检测输入视频或图像中是否发生“高空作业未系安全带”异常事件（相关显示名称：高空作业未系安全带）；调用异常检测工具时，必须使用精确类别 ID `working_at_heights_without_a_safety_harness`。",
+      "description": "检测输入视频或图像中是否发生“高空作业未系安全带”异常事件（相关显示名称：高空作业未系安全带）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `working_at_heights_without_a_safety_harness`。",
       "aliases": [
         "高空作业未系安全带"
       ],
       "display_names": {
         "rag": "高空作业未系安全带"
       },
-      "primary_tool": "embeddingTool",
+      "primary_tool": "modality_aware",
+      "video_primary_tool": "embeddingTool",
+      "image_primary_tool": "MLLM",
+      "exploration_media_type": "image",
+      "video_inference_strategy": "parallel_or",
       "answer_type": "bool",
       "required_slots": [
         "event_type"
       ],
       "tool_template": {
         "tool_name": "embeddingTool",
+        "media_type": "video",
         "args": {
           "file_path": "$media",
           "event_type": "working_at_heights_without_a_safety_harness"
         }
       },
       "evidence_requirements": [
-        "embeddingTool 必须使用精确 event_type `working_at_heights_without_a_safety_harness`。",
-        "工具调用必须成功返回明确的‘是’或‘否’，并包含判定阈值 threshold。",
-        "工具失败、event_type 不一致或缺少检测结果时不得接受答案。"
+        "视频 embeddingTool 必须使用精确 event_type `working_at_heights_without_a_safety_harness`。",
+        "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+        "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
-      "workflow_count": 0,
-      "workflows": []
+      "workflow_count": 3,
+      "workflows": [
+        {
+          "workflow_id": "working_at_heights_without_a_safety_harness_0f06bc037ef7",
+          "name": "working_at_heights_without_a_safety_harness_detector",
+          "path": "references/workflows/working_at_heights_without_a_safety_harness_0f06bc037ef7.json",
+          "script": "scripts/working_at_heights_without_a_safety_harness_0f06bc037ef7.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "working_at_heights_without_a_safety_harness_1c6421c5bcc9",
+          "name": "working_at_heights_without_a_safety_harness_detector",
+          "path": "references/workflows/working_at_heights_without_a_safety_harness_1c6421c5bcc9.json",
+          "script": "scripts/working_at_heights_without_a_safety_harness_1c6421c5bcc9.py",
+          "authorship": "generated"
+        },
+        {
+          "workflow_id": "working_at_heights_without_a_safety_harness_96c9e72153f7",
+          "name": "working_at_heights_without_a_safety_harness_image_baseline",
+          "path": "references/workflows/working_at_heights_without_a_safety_harness_96c9e72153f7.json",
+          "script": "scripts/working_at_heights_without_a_safety_harness_96c9e72153f7.py",
+          "authorship": "generated"
+        }
+      ],
+      "status": "active"
     }
   ]
 }

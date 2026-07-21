@@ -390,7 +390,12 @@ class WorkflowMutator:
             embedding_steps = [
                 step for step in evidence_steps if step.tool_name == "embeddingTool"
             ]
-            return embedding_steps[:1] or [WorkflowMutator._default_step(problem_class)]
+            if embedding_steps:
+                return embedding_steps[:1]
+            return (
+                evidence_steps[:4]
+                + [WorkflowMutator._default_step(problem_class)]
+            )
         # 3. 如果用到了 MLLM，提取最后一次 MLLM 调用作为“最终判决节点”
         final_step = (
             copy.deepcopy(reasoning_steps[-1])
@@ -468,6 +473,19 @@ class WorkflowMutator:
 
     @staticmethod
     def _default_step(problem_class: str) -> WorkflowStep:
+        return WorkflowStep(
+            tool_name="MLLM",
+            args={
+                "file": "$evidence_image",
+                "filename": "$filename",
+                "query": WORKFLOW_FINAL_ANSWER_PROMPT,
+                "tool": "qwen36Tool",
+            },
+            purpose=f"依据图像证据判断 {problem_class} 异常事件。",
+        )
+
+    @staticmethod
+    def _embedding_step(problem_class: str) -> WorkflowStep:
         return WorkflowStep(
             tool_name="embeddingTool",
             args={
@@ -552,10 +570,10 @@ class WorkflowMutator:
 
 
 def build_anomaly_baseline_workflow(event_type: str) -> WorkflowSpec:
-    """构造未命中已验证 Skill 时使用的确定性 embeddingTool 基线。"""
+    """构造冻结视频推理的原视频 embeddingTool 并行通道。"""
     if event_type not in ANOMALY_EVENT_TYPES:
         raise ValueError(f"不支持的异常事件类别：{event_type}")
-    step = WorkflowMutator._default_step(event_type)
+    step = WorkflowMutator._embedding_step(event_type)
     workflow_id = WorkflowMutator._workflow_id(event_type, [step])
     return WorkflowSpec(
         workflow_id=workflow_id,
@@ -564,9 +582,31 @@ def build_anomaly_baseline_workflow(event_type: str) -> WorkflowSpec:
             problem_class=event_type,
             required_slots=["event_type"],
             required_tools=["embeddingTool"],
-            description=f"使用 embeddingTool 检测 {event_type} 异常事件。",
-            exclusions="只适用于输入中已明确给出该 event_type 的视频或图像。",
+            description=f"使用原始视频 embeddingTool 检测 {event_type} 异常事件。",
+            exclusions="只适用于视频输入；图片和视频抽样帧禁止使用。",
             capability_boundary="必须取得 embeddingTool 的异常判断和判定阈值。",
+        ),
+        steps=[step],
+        status="provisional",
+        mutation_mode="extracted",
+    )
+
+
+def build_anomaly_image_baseline_workflow(event_type: str) -> WorkflowSpec:
+    """构造图片任务未命中已验证 Skill 时使用的单步 MLLM 基线。"""
+    if event_type not in ANOMALY_EVENT_TYPES:
+        raise ValueError(f"不支持的异常事件类别：{event_type}")
+    step = WorkflowMutator._default_step(event_type)
+    workflow_id = WorkflowMutator._workflow_id(event_type, [step])
+    return WorkflowSpec(
+        workflow_id=workflow_id,
+        name=f"{event_type}_image_baseline",
+        applicability=ApplicabilitySpec(
+            problem_class=event_type,
+            required_tools=["MLLM"],
+            description=f"使用单张图片或视频代表帧判断 {event_type} 异常事件。",
+            exclusions="不处理原始视频时序，只依据当前图片证据。",
+            capability_boundary="必须取得 MLLM 基于可见画面的明确判断。",
         ),
         steps=[step],
         status="provisional",

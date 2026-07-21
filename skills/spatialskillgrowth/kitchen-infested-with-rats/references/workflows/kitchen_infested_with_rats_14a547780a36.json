@@ -1,0 +1,106 @@
+{
+  "workflow_id": "kitchen_infested_with_rats_14a547780a36",
+  "name": "kitchen_infested_with_rats",
+  "applicability": {
+    "problem_class": "kitchen_infested_with_rats",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "MLLM"
+    ],
+    "description": "基于图像输入，利用开放词汇检测器（GroundingDINO）定位目标，并结合多模态大语言模型（MLLM）进行视觉证据推理，以判定厨房环境中是否存在老鼠异常事件。",
+    "exclusions": "非厨房场景（如卧室、办公室、户外等）；非老鼠类动物（如猫、狗、昆虫等其他害虫）；非图像类型的媒体输入；需要调用 embeddingTool 的场景；需要高精度物种分类或数量统计的场景",
+    "capability_boundary": "仅限厨房环境内的老鼠存在性二元判断（Yes/No）。依赖 GroundingDINO 检测（阈值0.3）和 MLLM 视觉推理确认。不涉及其他异常类别、复杂行为分析、非厨房场景或非图像媒体。禁止使用 embeddingTool。"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "使用低阈值检测 'rat', 'mouse', 'rodent' 等目标，以捕获潜在的小目标或模糊目标作为证据。",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 kitchen_infested_with_rats 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 kitchen_infested_with_rats 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "kitchen_infested_with_rats_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "通过开放词汇检测增强视觉证据的显式性与鲁棒性",
+    "preferred_atom_ids": [
+      "groundingdino:box_threshold:low",
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleHeadDetTool:target:head",
+      "paddlePedriderDetTool:target:traffic_subject"
+    ],
+    "tool_hints": {
+      "groundingdino": "使用低阈值检测 'rat', 'mouse', 'rodent' 等目标，以捕获潜在的小目标或模糊目标作为证据。",
+      "MLLM": "结合 groundingdino 的检测框与原始图像，明确判断是否存在老鼠及其活动迹象，避免仅凭直觉猜测。"
+    },
+    "diagnosis": "现有工作流直接依赖 MLLM 的全图理解，虽然准确率 100%，但缺乏中间的结构化视觉证据（如检测框）。引入 groundingdino 进行开放词汇检测（低阈值以保召回）可以为 MLLM 提供明确的“老鼠”视觉线索，增强推理的可解释性和对模糊/小目标的鲁棒性，同时不破坏已有的成功判断逻辑。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "groundingdino:box_threshold:low"
+    ]
+  },
+  "metrics": {
+    "trial_count": 14,
+    "correct_count": 8,
+    "evidence_accept_count": 8,
+    "tool_failure_count": 6,
+    "total_tool_calls": 22,
+    "total_latency_ms": 34729.60469126701,
+    "structural_coverage": 9.0
+  },
+  "source_task_ids": [
+    "kitchen_infested_with_rats__image_negative_09",
+    "kitchen_infested_with_rats__image_positive_00",
+    "kitchen_infested_with_rats__image_positive_01",
+    "kitchen_infested_with_rats__image_positive_02",
+    "kitchen_infested_with_rats__image_positive_03",
+    "kitchen_infested_with_rats__image_negative_06"
+  ]
+}

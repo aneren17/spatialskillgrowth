@@ -1,0 +1,136 @@
+{
+  "workflow_id": "instrument_abnormality_07de9c936d38",
+  "name": "instrument_abnormality_detector",
+  "applicability": {
+    "problem_class": "instrument_abnormality",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "groundingdino",
+      "unidepth",
+      "MLLM"
+    ],
+    "description": "检测输入图像中是否存在仪表异常事件。该工作流通过 OCR 读取仪表可见文字、使用 GroundingDINO 定位仪表组件并估计其深度，最终结合多模态大模型综合视觉证据判断是否发生仪表异常。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 非仪表类设备的异常检测; 需要重新分类或改写 event_type 的任务",
+    "capability_boundary": "{\"event_type\": \"instrument_abnormality\", \"media_type\": \"image\", \"required_evidence\": [\"OCR 提取的仪表文字信息\", \"GroundingDINO 检测到的仪表组件位置（阈值 0.3）\", \"UniDepth 估计的检测目标深度信息\"], \"output_format\": \"是/否\"}"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "instrument_abnormality",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "unidepth",
+      "args": {
+        "detections": "$step.groundingdino_0.detections_json",
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "unidepth",
+          "axis": "evidence_role",
+          "value": "metric_depth",
+          "kind": "fixed",
+          "description": "估计检测目标深度。",
+          "args": {}
+        }
+      ],
+      "purpose": "估计检测目标深度。",
+      "step_id": "unidepth_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 instrument_abnormality 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0",
+        "groundingdino_0",
+        "unidepth_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "instrument_abnormality_dedd1e22d850",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入深度感知以增强仪表异常的几何与空间状态判断",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth"
+    ],
+    "avoid_atom_ids": [
+      "paddleOcrTool:evidence_role:text_reading"
+    ],
+    "tool_hints": {
+      "unidepth": "生成深度图以辅助判断仪表指针是否偏离平面、表盘是否破损或存在非正常物理形变"
+    },
+    "diagnosis": "现有工作流已成功利用OCR提取文本证据，但在处理纯视觉几何异常（如指针弯曲、表盘凹陷、物理遮挡导致的深度异常）时缺乏结构化深度证据。引入 unidepth 可提供度量深度信息，帮助 MLLM 区分正常的二维视觉透视与真实的三维物理异常，从而在不依赖文字的情况下补充对机械结构异常的检测能力，提高鲁棒性。",
+    "selected_atom_ids": [
+      "groundingdino:box_threshold:low",
+      "unidepth:evidence_role:metric_depth"
+    ]
+  },
+  "metrics": {
+    "trial_count": 2,
+    "correct_count": 2,
+    "evidence_accept_count": 2,
+    "tool_failure_count": 0,
+    "total_tool_calls": 8,
+    "total_latency_ms": 2957.9546190798283,
+    "structural_coverage": 8.0
+  },
+  "source_task_ids": [
+    "instrument_abnormality__image_positive_03",
+    "instrument_abnormality__image_positive_00"
+  ]
+}

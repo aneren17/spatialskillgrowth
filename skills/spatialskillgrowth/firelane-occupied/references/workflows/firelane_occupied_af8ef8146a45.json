@@ -1,0 +1,155 @@
+{
+  "workflow_id": "firelane_occupied_af8ef8146a45",
+  "name": "firelane_occupied_detector",
+  "applicability": {
+    "problem_class": "firelane_occupied",
+    "required_slots": [],
+    "required_tools": [
+      "paddleOcrTool",
+      "paddlePedriderDetTool",
+      "yoloTool",
+      "MLLM"
+    ],
+    "description": "基于静态图像输入，利用OCR识别场景文字、检测交通参与者（行人/骑行者）及通用目标检测（YOLO）收集视觉证据，通过多模态大模型综合判断是否存在车辆或杂物违规占用消防通道的异常事件。",
+    "exclusions": "非图像类型的媒体输入；需要语义嵌入分析或向量检索的场景；非消防通道占用类的其他异常事件检测；缺乏可见文字、交通参与者或可检测物体，或因黑屏、极端模糊导致无法提取有效视觉证据的场景。",
+    "capability_boundary": "仅支持图像输入；必须使用paddleOcrTool、paddlePedriderDetTool和yoloTool（阈值0.5）提取证据，并由MLLM进行最终逻辑判断；禁止调用embeddingTool；固定事件类型为firelane_occupied；最终输出仅限'是'或'否'。"
+  },
+  "steps": [
+    {
+      "tool_name": "paddleOcrTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddleOcrTool",
+          "axis": "evidence_role",
+          "value": "text_reading",
+          "kind": "fixed",
+          "description": "读取可见文字。",
+          "args": {}
+        }
+      ],
+      "purpose": "读取可见文字。",
+      "step_id": "paddleocrtool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "paddlePedriderDetTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "tool": "paddlePedriderDetTool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "paddlePedriderDetTool",
+          "axis": "target",
+          "value": "traffic_subject",
+          "kind": "fixed",
+          "description": "检测交通参与者。",
+          "args": {}
+        }
+      ],
+      "purpose": "检测交通参与者。",
+      "step_id": "paddlepedriderdettool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.5
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "medium",
+          "kind": "numerical",
+          "description": "使用 0.5 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.5 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 firelane_occupied 分析局部区域，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析已定位的局部区域。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "local_regions",
+          "kind": "world_model",
+          "description": "分析已定位的局部区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 firelane_occupied 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "paddleocrtool_0",
+        "paddlepedriderdettool_0",
+        "yolotool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "firelane_occupied_9f5ed1e2bfbb",
+  "mutation_mode": "failure_repair",
+  "mutation_direction": {
+    "mode": "failure_repair",
+    "objective": "引入深度证据以区分前景目标与背景区域，纠正因缺乏空间上下文导致的误报",
+    "preferred_atom_ids": [
+      "unidepth:evidence_role:metric_depth",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:local_regions"
+    ],
+    "avoid_atom_ids": [],
+    "tool_hints": {
+      "unidepth": "生成深度图以量化检测目标与地面的距离，验证是否真正占据指定平面",
+      "MLLM": "结合深度信息判断检测到的目标是否位于目标区域内，而非背景或远处"
+    },
+    "diagnosis": "工作流仅依赖2D检测框的存在性进行判断，缺乏空间深度信息。在负样本中，检测到的目标可能位于背景、远处或非目标区域，但由于缺少深度证据，模型错误地将其解释为占用目标区域的异常行为，导致假阳性。",
+    "selected_atom_ids": [
+      "MLLM:scope:local_regions"
+    ]
+  },
+  "metrics": {
+    "trial_count": 12,
+    "correct_count": 9,
+    "evidence_accept_count": 10,
+    "tool_failure_count": 2,
+    "total_tool_calls": 46,
+    "total_latency_ms": 324898.5236957669,
+    "structural_coverage": 21.0
+  },
+  "source_task_ids": [
+    "firelane_occupied__image_negative_09",
+    "firelane_occupied__image_positive_00",
+    "firelane_occupied__image_positive_01",
+    "firelane_occupied__image_positive_02",
+    "firelane_occupied__image_positive_04",
+    "firelane_occupied__image_negative_05",
+    "firelane_occupied__image_negative_06",
+    "firelane_occupied__image_negative_07"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "workflow_id": "egress_blocked_96c9e72153f7",
+  "name": "egress_blocked_vision_detector",
+  "applicability": {
+    "problem_class": "egress_blocked",
+    "required_slots": [],
+    "required_tools": [
+      "MLLM"
+    ],
+    "description": "基于图像输入（包括视频的关键帧），利用多模态大语言模型（MLLM）检测安全出口是否被遮挡。通过视觉证据分析，判断具有安全出口标识或功能的通道区域是否被物体堵塞，从而确认 egress_blocked 异常。",
+    "exclusions": "禁止调用 embeddingTool 处理图像输入; 仅适用于图像媒体类型（含视频提取的单帧），不支持原始视频时序分析或纯文本输入; 不处理非安全出口区域的普通物体遮挡，仅针对具有安全出口标识或功能的通道区域; 不进行事件分类，仅验证已确定的 egress_blocked 类别。",
+    "capability_boundary": "必须使用 MLLM 工具基于可见画面进行最终判断; 依赖图像工具获取视觉证据，禁止使用嵌入模型; 需要安全出口标识或通道区域的视觉可见性以及遮挡物体对通行能力阻碍程度的证据; 输出为二元判断（是/否）。"
+  },
+  "steps": [
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请结合下方工具证据与输入图像回答问题，不要基于缺少证据的假设猜测。只输出最终答案。\n证据：\n$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [],
+      "purpose": "依据图像证据判断 egress_blocked 异常事件。",
+      "step_id": "",
+      "depends_on": []
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "",
+  "mutation_mode": "extracted",
+  "mutation_direction": {},
+  "metrics": {
+    "trial_count": 7,
+    "correct_count": 7,
+    "evidence_accept_count": 7,
+    "tool_failure_count": 0,
+    "total_tool_calls": 7,
+    "total_latency_ms": 13435.561505146325,
+    "structural_coverage": 2.0
+  },
+  "source_task_ids": [
+    "egress_blocked__image_negative_09",
+    "egress_blocked__image_positive_00",
+    "egress_blocked__image_negative_05",
+    "egress_blocked__image_negative_06",
+    "egress_blocked__image_negative_07"
+  ]
+}

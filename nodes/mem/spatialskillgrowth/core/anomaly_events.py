@@ -17,7 +17,7 @@ for event_type in ANOMALY_EVENT_TYPES:
         + label
         + "”异常事件（相关显示名称："
         + "、".join(aliases)
-        + "）；调用 embeddingTool 时必须使用精确类别 ID `"
+        + "）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `"
         + event_type
         + "`。"
     )
@@ -27,17 +27,24 @@ for event_type in ANOMALY_EVENT_TYPES:
         "description": description,
         "aliases": aliases,
         "display_names": dict(EVENT_TYPE_SOURCE_LABELS[event_type]),
-        "primary_tool": "embeddingTool",
+        "primary_tool": "modality_aware",
+        "video_primary_tool": "embeddingTool",
+        "image_primary_tool": "MLLM",
+        "exploration_media_type": "image",
+        "video_inference_strategy": "parallel_or",
         "answer_type": "bool",
         "required_slots": ["event_type"],
         "tool_template": {
             "tool_name": "embeddingTool",
+            "media_type": "video",
             "args": {"file_path": "$media", "event_type": event_type},
         },
         "evidence_requirements": [
-            "embeddingTool 必须使用精确 event_type `" + event_type + "`。",
-            "工具必须返回明确的异常判断和数值阈值 threshold。",
-            "工具失败、类别不一致或缺少检测结果时不得接受答案。",
+            "视频 embeddingTool 必须使用精确 event_type `" + event_type + "`。",
+            "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+            "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
+            "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+            "工具失败、类别不一致或缺少有效证据时不得接受答案。",
         ],
     }
 

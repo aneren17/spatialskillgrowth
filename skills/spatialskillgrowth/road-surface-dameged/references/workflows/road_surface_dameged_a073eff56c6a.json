@@ -1,0 +1,111 @@
+{
+  "workflow_id": "road_surface_dameged_a073eff56c6a",
+  "name": "road_surface_dameged_detector",
+  "applicability": {
+    "problem_class": "road_surface_dameged",
+    "required_slots": [],
+    "required_tools": [
+      "yoloTool",
+      "MLLM"
+    ],
+    "description": "检测输入图像中是否存在路面破损（road_surface_dameged）异常事件。该工作流首先使用 YOLO 工具以 0.3 的置信度阈值进行目标检测，随后结合多模态大语言模型（MLLM）依据视觉证据进行最终判定。",
+    "exclusions": "非图像类型的媒体输入; 需要调用 embeddingTool 的场景; 其他非路面破损类的异常事件检测",
+    "capability_boundary": "{\"supported_media\": [\"image\"], \"event_type\": \"road_surface_dameged\", \"detection_method\": \"yolo_tool_with_mllm_verification\", \"yolo_threshold\": 0.3}"
+  },
+  "steps": [
+    {
+      "tool_name": "yoloTool",
+      "args": {
+        "file": "$image",
+        "filename": "$filename",
+        "threshold": 0.3
+      },
+      "param_atoms": [
+        {
+          "tool_name": "yoloTool",
+          "axis": "threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 检测阈值。",
+      "step_id": "yolotool_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 road_surface_dameged 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。; 分析完整图像。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        },
+        {
+          "tool_name": "MLLM",
+          "axis": "scope",
+          "value": "whole_image",
+          "kind": "world_model",
+          "description": "分析完整图像。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 road_surface_dameged 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "yolotool_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "road_surface_dameged_96c9e72153f7",
+  "mutation_mode": "success_enhancement",
+  "mutation_direction": {
+    "mode": "success_enhancement",
+    "objective": "引入结构化视觉证据以增强路面破损检测的鲁棒性",
+    "preferred_atom_ids": [
+      "yoloTool:threshold:low",
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:whole_image"
+    ],
+    "avoid_atom_ids": [
+      "embeddingTool:event_type:runtime_event_type",
+      "paddleOcrTool:evidence_role:text_reading",
+      "paddleHeadDetTool:target:head"
+    ],
+    "tool_hints": {
+      "yoloTool": "使用低阈值检测潜在的路面异常区域（如裂缝、坑洼），即使置信度不高也保留作为候选证据。",
+      "MLLM": "结合YOLO检测出的局部异常区域与全图上下文，明确描述视觉线索（如纹理断裂、颜色差异）以支持最终判断。"
+    },
+    "diagnosis": "当前工作流仅依赖MLLM直接判断，缺乏中间结构化证据。引入低阈值YOLO检测可捕捉细微或低置信度的破损特征，补充MLLM可能忽略的局部细节。通过要求MLLM关注明确视觉线索并分析全图，可将检测框转化为可解释的证据，提高对复杂背景或轻微破损的鲁棒性，同时避免引入不相关的OCR或人头检测工具。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues",
+      "MLLM:scope:whole_image",
+      "yoloTool:threshold:low"
+    ]
+  },
+  "metrics": {
+    "trial_count": 5,
+    "correct_count": 3,
+    "evidence_accept_count": 3,
+    "tool_failure_count": 2,
+    "total_tool_calls": 8,
+    "total_latency_ms": 69725.14585312456,
+    "structural_coverage": 3.0
+  },
+  "source_task_ids": [
+    "road_surface_dameged__image_positive_01",
+    "road_surface_dameged__image_positive_02",
+    "road_surface_dameged__image_positive_03"
+  ]
+}

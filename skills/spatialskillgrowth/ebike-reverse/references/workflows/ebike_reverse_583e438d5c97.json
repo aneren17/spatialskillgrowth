@@ -1,0 +1,130 @@
+{
+  "workflow_id": "ebike_reverse_583e438d5c97",
+  "name": "ebike_reverse_detector",
+  "applicability": {
+    "problem_class": "ebike_reverse",
+    "required_slots": [],
+    "required_tools": [
+      "groundingdino",
+      "crop_detections",
+      "MLLM"
+    ],
+    "description": "基于图像输入，利用 GroundingDINO 进行开放词汇目标检测并裁剪区域，结合多模态大模型（MLLM）分析视觉证据（包括车辆朝向与道路行驶方向关系），以判定是否存在非机动车（如电动车、自行车）逆行异常事件。",
+    "exclusions": "非图像类型的媒体输入（如视频流、音频或纯文本描述）；需要调用 embeddingTool 进行特征嵌入的场景；其他类型的交通异常事件（如闯红灯、违停等）或机动车（汽车、卡车等）逆行检测；图像中未包含非机动车、无法识别车辆朝向、无明确道路方向标识或无法判断行驶方向的模糊场景。",
+    "capability_boundary": "{\"required_event_type\": \"ebike_reverse\", \"required_media_type\": \"image\", \"detection_threshold\": 0.3, \"evidence_source\": \"visual_crops_and_groundingdino_detections\", \"decision_model\": \"MLLM\", \"output_format\": \"binary_yes_no\", \"constraints\": [\"仅处理 image 媒体类型\", \"严格限定 event_type 为 ebike_reverse\", \"禁止使用 embeddingTool\", \"必须保留 groundingdino 的 0.3 检测阈值逻辑\", \"必须使用 MLLM 进行最终语义判断\"]}"
+  },
+  "steps": [
+    {
+      "tool_name": "groundingdino",
+      "args": {
+        "query": "ebike_reverse",
+        "file": "$image",
+        "filename": "$filename",
+        "box_threshold": 0.3,
+        "text_threshold": 0.25
+      },
+      "param_atoms": [
+        {
+          "tool_name": "groundingdino",
+          "axis": "box_threshold",
+          "value": "low",
+          "kind": "numerical",
+          "description": "使用 0.3 开放词汇检测阈值。",
+          "args": {}
+        }
+      ],
+      "purpose": "使用 0.3 开放词汇检测阈值。",
+      "step_id": "groundingdino_0",
+      "depends_on": []
+    },
+    {
+      "tool_name": "crop_detections",
+      "args": {
+        "file": "$image",
+        "detections": "$step.groundingdino_0.detections_json",
+        "folder": "spatialskillgrowth",
+        "score": "0.5",
+        "className": ""
+      },
+      "param_atoms": [
+        {
+          "tool_name": "crop_detections",
+          "axis": "operation",
+          "value": "insert_after_detection",
+          "kind": "structural",
+          "description": "裁剪已检测区域。",
+          "args": {}
+        }
+      ],
+      "purpose": "裁剪已检测区域。",
+      "step_id": "crop_detections_0",
+      "depends_on": [
+        "groundingdino_0"
+      ]
+    },
+    {
+      "tool_name": "MLLM",
+      "args": {
+        "file": "$evidence_image",
+        "filename": "$filename",
+        "query": "请针对 ebike_reverse 分析完整图像，并同时遵守以下推理和证据要求：给出明确视觉线索。。如已有工具证据，必须优先使用。只输出最终答案。证据：$evidence\n问题：$question",
+        "tool": "qwen36Tool"
+      },
+      "param_atoms": [
+        {
+          "tool_name": "MLLM",
+          "axis": "evidence_focus",
+          "value": "explicit_visual_cues",
+          "kind": "world_model",
+          "description": "给出明确视觉线索。",
+          "args": {}
+        }
+      ],
+      "purpose": "依据图像证据判断 ebike_reverse 异常事件。",
+      "step_id": "mllm_0",
+      "depends_on": [
+        "groundingdino_0",
+        "crop_detections_0"
+      ]
+    }
+  ],
+  "status": "active",
+  "derived_from_workflow_id": "ebike_reverse_dcef9e34261a",
+  "mutation_mode": "failure_repair",
+  "mutation_direction": {
+    "mode": "failure_repair",
+    "objective": "引入专用非机动车检测工具以提供明确的主体定位证据，并指导 MLLM 结合全局道路语境进行逆向逻辑校验，消除因检测器误报或裁剪导致的空间关系缺失引发的误判。",
+    "preferred_atom_ids": [
+      "paddlePedriderDetTool:target:traffic_subject",
+      "MLLM:scope:whole_image",
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ],
+    "avoid_atom_ids": [
+      "groundingdino:box_threshold:low",
+      "crop_detections:operation:insert_after_detection"
+    ],
+    "tool_hints": {
+      "paddlePedriderDetTool": "精确检测图像中的电动车、自行车等非机动车主体，提供高置信度的位置坐标，替代易产生语义混淆的开放词汇检测。",
+      "MLLM": "基于全图视角（whole_image）观察非机动车主体与道路标线、箭头或车流方向的相对关系，明确寻找‘逆行’的视觉线索（如车头朝向与车道方向相反），若缺乏明确逆行证据则判定为否。"
+    },
+    "diagnosis": "失败根因在于证据链的‘主体定位’与‘空间关系’环节断裂。1. 检测器误报/语义漂移：通用检测器使用特定行为描述作为查询词，在负样本中可能因视觉相似性产生低置信度但被保留的误检，导致后续流程基于错误的‘存在目标行为’假设进行。2. 空间上下文丢失：局部裁剪操作丢失了道路方向标识（如车道线、箭头）和全局车流语境，模型仅凭局部主体图像无法判断方向一致性，且提示词未强制要求寻找‘非目标行为’的反证，导致模型倾向于确认检测器的阳性结果。修复需引入更稳健的专用主体检测器确保定位准确，并让模型在全图范围内验证方向一致性。",
+    "selected_atom_ids": [
+      "MLLM:evidence_focus:explicit_visual_cues"
+    ]
+  },
+  "metrics": {
+    "trial_count": 11,
+    "correct_count": 6,
+    "evidence_accept_count": 8,
+    "tool_failure_count": 3,
+    "total_tool_calls": 30,
+    "total_latency_ms": 45830.74622321874,
+    "structural_coverage": 18.0
+  },
+  "source_task_ids": [
+    "ebike_reverse__image_negative_09",
+    "ebike_reverse__image_positive_00",
+    "ebike_reverse__image_positive_04",
+    "ebike_reverse__image_positive_03"
+  ]
+}
