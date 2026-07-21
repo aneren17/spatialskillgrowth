@@ -55,6 +55,9 @@ from nodes.mem.spatialskillgrowth.storage.growth_store import (
 )
 
 
+DEFAULT_INFERENCE_WORKFLOW_TOP_K = 2
+
+
 PROBLEM_CLASS_LOCKS: Dict[str, threading.RLock] = {}
 PROBLEM_CLASS_LOCK_GUARD = threading.Lock()
 
@@ -856,10 +859,17 @@ class ExperimentFactory:
             media_preprocessor=self.media_preprocessor,
         )
 
-    def build_inference(self) -> InferencePipeline:
+    def build_inference(
+        self,
+        workflow_top_k: int = DEFAULT_INFERENCE_WORKFLOW_TOP_K,
+        all_workflows: bool = False,
+    ) -> InferencePipeline:
+        workflow_top_k = max(1, int(workflow_top_k))
         self.coordinator.use_react = self.config.use_react
+        self.coordinator.max_workflow_attempts = workflow_top_k
         self.retriever.include_provisional = False
-        self.retriever.return_all_candidates = True
+        self.retriever.top_k = workflow_top_k
+        self.retriever.return_all_candidates = bool(all_workflows)
         return InferencePipeline(
             self.config,
             self.paths,

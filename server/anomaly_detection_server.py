@@ -39,6 +39,9 @@ from nodes.mem.spatialskillgrowth.core.experiment_config import (
     build_experiment_config,
 )
 from nodes.mem.spatialskillgrowth.pipeline.orchestrator import ExperimentFactory
+from nodes.mem.spatialskillgrowth.pipeline.orchestrator import (
+    DEFAULT_INFERENCE_WORKFLOW_TOP_K,
+)
 from nodes.mem.spatialskillgrowth.storage.growth_store import WorkflowRepository
 
 
@@ -57,6 +60,18 @@ API_SOURCE_RESULT_ROOT = os.getenv(
 API_MAX_REACT_STEPS = int(
     os.getenv("SPATIAL_SKILL_GROWTH_API_MAX_REACT_STEPS", "8")
 )
+API_WORKFLOW_TOP_K = int(
+    os.getenv(
+        "SPATIAL_SKILL_GROWTH_API_WORKFLOW_TOP_K",
+        str(DEFAULT_INFERENCE_WORKFLOW_TOP_K),
+    )
+)
+API_ALL_WORKFLOWS = os.getenv(
+    "SPATIAL_SKILL_GROWTH_API_ALL_WORKFLOWS",
+    "0",
+).strip().lower() in {"1", "true", "yes", "on"}
+if API_WORKFLOW_TOP_K <= 0:
+    raise ValueError("SPATIAL_SKILL_GROWTH_API_WORKFLOW_TOP_K 必须大于 0。")
 API_MAX_UPLOAD_BYTES = int(
     os.getenv("SPATIAL_SKILL_GROWTH_API_MAX_UPLOAD_BYTES", str(256 * 1024 * 1024))
 )
@@ -197,7 +212,10 @@ def _build_agent():
         llm,
         source_repository=repository,
         max_react_steps=API_MAX_REACT_STEPS,
-    ).build_inference()
+    ).build_inference(
+        workflow_top_k=API_WORKFLOW_TOP_K,
+        all_workflows=API_ALL_WORKFLOWS,
+    )
     return SpatialSkillGrowthAnomalyDetectionAgent(pipeline)
 
 

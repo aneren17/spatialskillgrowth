@@ -69,7 +69,7 @@ class WorkflowRetriever:
             return candidates, RetrievalDecision(
                 strategy="all_structurally_eligible",
                 ranked_workflow_ids=ranked_ids,
-                reason="冻结推理返回当前类别全部结构契约合格工作流。",
+                reason="已开启全工作流模式，返回当前类别全部结构契约合格工作流。",
             )
 
         skill_guidance = self.repository.skill_guidance(
@@ -133,13 +133,27 @@ class WorkflowRetriever:
                 candidates,
                 "SKILL.md 语义排序没有返回合法工作流 ID，已退回历史指标排序。",
             )
+        expected_count = min(result_limit, len(candidates))
+        filled_from_history = False
+        for workflow in candidates:
+            if len(ranked_ids) >= expected_count:
+                break
+            if workflow.workflow_id in ranked_ids:
+                continue
+            ranked_ids.append(workflow.workflow_id)
+            filled_from_history = True
         ranked = []
         for workflow_id in ranked_ids:
             ranked.append(by_id[workflow_id])
+        reason = str(parsed.get("reason") or "")
+        if filled_from_history:
+            reason = (
+                reason + " 模型返回数量不足，剩余名额按历史指标补齐。"
+            ).strip()
         return ranked, RetrievalDecision(
             strategy="skill_guided_multimodal",
             ranked_workflow_ids=ranked_ids,
-            reason=str(parsed.get("reason") or ""),
+            reason=reason,
             raw_response=parsed,
         )
 

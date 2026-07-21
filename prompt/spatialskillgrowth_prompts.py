@@ -36,12 +36,13 @@ SKILL_GUIDED_WORKFLOW_RETRIEVAL_PROMPT = """请从同一异常事件类别的候
 详细适用范围、工具链、运行时槽位和历史指标。
 
 不要仅根据工作流名称、ID、工具数量或文字重叠选择。历史准确率、证据通过率和调用成本只用于
-适用性相近时的排序。如果没有候选满足说明书和当前证据条件，返回 reject_all。
+适用性相近时的排序。如果没有候选满足说明书和当前证据条件，返回 reject_all。否则，只要合法候选数
+不少于 {top_k}，`ranked_workflow_ids` 必须按适合度返回 {top_k} 个不同 ID。
 
 只返回 JSON：
 {{
   "action": "select|reject_all",
-  "ranked_workflow_ids": ["最多 {top_k} 个精确工作流 ID"],
+  "ranked_workflow_ids": ["按适合度排序的精确工作流 ID"],
   "reason": "简短中文理由"
 }}
 

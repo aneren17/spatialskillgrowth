@@ -701,7 +701,7 @@ def test_top_k_retriever_reads_skill_markdown():
         "SKILL_GUIDANCE_SENTINEL：当前画面应选择 skill_selected。",
     )
     llm = SkillSelectionLLM("skill_selected")
-    retriever = build_retriever(repository, llm, top_k=1)
+    retriever = build_retriever(repository, llm, top_k=2)
 
     ranked, decision = retriever.retrieve(
         "banner",
@@ -713,14 +713,41 @@ def test_top_k_retriever_reads_skill_markdown():
     )
 
     assert [workflow.workflow_id for workflow in ranked] == [
-        "skill_selected"
+        "skill_selected",
+        "history_first",
     ]
     assert decision.strategy == "skill_guided_multimodal"
+    assert "剩余名额按历史指标补齐" in decision.reason
     prompt = llm.messages[0].content[0]["text"]
     assert "同类别 SKILL.md" in prompt
     assert "SKILL_GUIDANCE_SENTINEL" in prompt
     assert "history_first" in prompt
     assert "skill_selected" in prompt
+
+
+def test_inference_defaults_to_top_two_and_supports_all_workflows():
+    metadata = class_metadata_for_anomaly()
+    config = build_experiment_config()
+    with tempfile.TemporaryDirectory() as root:
+        paths = ExperimentPaths(
+            "inference_retrieval_mode_test",
+            root,
+            problem_classes=["banner"],
+            class_metadata=metadata,
+        )
+        paths.ensure(config, "infer")
+        factory = ExperimentFactory(config, paths, DisabledLLM())
+
+        top_k_pipeline = factory.build_inference()
+        assert top_k_pipeline.retriever.top_k == 2
+        assert not top_k_pipeline.retriever.return_all_candidates
+
+        all_pipeline = factory.build_inference(
+            workflow_top_k=5,
+            all_workflows=True,
+        )
+        assert all_pipeline.retriever.top_k == 5
+        assert all_pipeline.retriever.return_all_candidates
 
 
 def test_repository_updates_workflow_manual_section():
@@ -871,7 +898,7 @@ def test_video_inference_parallel_or_without_llm():
             paths,
             DisabledLLM(),
             runtime=runtime,
-        ).build_inference()
+        ).build_inference(all_workflows=True)
         task = build_anomaly_task(str(BANNER_VIDEO), "banner", groundtruth="是")
         result = pipeline.ask(task, "online")
         assert result["answer"] == "是"
@@ -1007,6 +1034,7 @@ def main():
         test_param_space_has_no_omni_slots,
         test_param_space_prioritizes_workflow_diversity,
         test_top_k_retriever_reads_skill_markdown,
+        test_inference_defaults_to_top_two_and_supports_all_workflows,
         test_repository_updates_workflow_manual_section,
         test_single_success_promotes_provisional_workflow,
         test_video_inference_parallel_or_without_llm,

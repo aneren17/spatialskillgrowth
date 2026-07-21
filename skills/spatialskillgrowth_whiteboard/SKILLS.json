@@ -5,7 +5,7 @@
       "title": "违规横幅检测",
       "problem_class": "banner",
       "event_type": "banner",
-      "description": "检测输入视频或图像中是否发生“违规横幅检测”异常事件（相关显示名称：违规横幅检测、横幅异常）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `banner`。",
+      "description": "检测输入视频或图像中是否发生“违规横幅检测”异常事件（相关显示名称：违规横幅检测、横幅异常）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `banner`。",
       "aliases": [
         "违规横幅检测",
         "横幅异常"
@@ -37,7 +37,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -48,7 +48,7 @@
       "title": "广告牌倒塌",
       "problem_class": "billboard_fell",
       "event_type": "billboard_fell",
-      "description": "检测输入视频或图像中是否发生“广告牌倒塌”异常事件（相关显示名称：广告牌倒塌）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `billboard_fell`。",
+      "description": "检测输入视频或图像中是否发生“广告牌倒塌”异常事件（相关显示名称：广告牌倒塌）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `billboard_fell`。",
       "aliases": [
         "广告牌倒塌"
       ],
@@ -77,7 +77,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -88,7 +88,7 @@
       "title": "闯收费站",
       "problem_class": "breaking_through_toll_booths",
       "event_type": "breaking_through_toll_booths",
-      "description": "检测输入视频或图像中是否发生“闯收费站”异常事件（相关显示名称：闯收费站）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `breaking_through_toll_booths`。",
+      "description": "检测输入视频或图像中是否发生“闯收费站”异常事件（相关显示名称：闯收费站）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `breaking_through_toll_booths`。",
       "aliases": [
         "闯收费站"
       ],
@@ -117,7 +117,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -128,7 +128,7 @@
       "title": "建筑坍塌",
       "problem_class": "building_collapse",
       "event_type": "building_collapse",
-      "description": "检测输入视频或图像中是否发生“建筑坍塌”异常事件（相关显示名称：建筑坍塌、建筑倒塌）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `building_collapse`。",
+      "description": "检测输入视频或图像中是否发生“建筑坍塌”异常事件（相关显示名称：建筑坍塌、建筑倒塌）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `building_collapse`。",
       "aliases": [
         "建筑坍塌",
         "建筑倒塌"
@@ -160,7 +160,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -171,7 +171,7 @@
       "title": "公交站台破坏",
       "problem_class": "bus_shelter_was_vandalized",
       "event_type": "bus_shelter_was_vandalized",
-      "description": "检测输入视频或图像中是否发生“公交站台破坏”异常事件（相关显示名称：公交站台破坏、公交候车亭损坏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `bus_shelter_was_vandalized`。",
+      "description": "检测输入视频或图像中是否发生“公交站台破坏”异常事件（相关显示名称：公交站台破坏、公交候车亭损坏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `bus_shelter_was_vandalized`。",
       "aliases": [
         "公交站台破坏",
         "公交候车亭损坏"
@@ -202,7 +202,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -213,7 +213,7 @@
       "title": "充电器未归位",
       "problem_class": "charger",
       "event_type": "charger",
-      "description": "检测输入视频或图像中是否发生“充电器未归位”异常事件（相关显示名称：充电器未归位）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `charger`。",
+      "description": "检测输入视频或图像中是否发生“充电器未归位”异常事件（相关显示名称：充电器未归位）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `charger`。",
       "aliases": [
         "充电器未归位"
       ],
@@ -242,7 +242,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -253,7 +253,7 @@
       "title": "攀爬脱网",
       "problem_class": "climbing_disconnection",
       "event_type": "climbing_disconnection",
-      "description": "检测输入视频或图像中是否发生“攀爬脱网”异常事件（相关显示名称：攀爬脱网、攀爬脱离）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `climbing_disconnection`。",
+      "description": "检测输入视频或图像中是否发生“攀爬脱网”异常事件（相关显示名称：攀爬脱网、攀爬脱离）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `climbing_disconnection`。",
       "aliases": [
         "攀爬脱网",
         "攀爬脱离"
@@ -284,7 +284,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -295,7 +295,7 @@
       "title": "冷焰火检测",
       "problem_class": "cold_flame",
       "event_type": "cold_flame",
-      "description": "检测输入视频或图像中是否发生“冷焰火检测”异常事件（相关显示名称：冷焰火检测、冷焰）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `cold_flame`。",
+      "description": "检测输入视频或图像中是否发生“冷焰火检测”异常事件（相关显示名称：冷焰火检测、冷焰）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `cold_flame`。",
       "aliases": [
         "冷焰火检测",
         "冷焰"
@@ -326,7 +326,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -337,7 +337,7 @@
       "title": "集装箱掉落",
       "problem_class": "container_dropped",
       "event_type": "container_dropped",
-      "description": "检测输入视频或图像中是否发生“集装箱掉落”异常事件（相关显示名称：集装箱掉落、集装箱坠落）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `container_dropped`。",
+      "description": "检测输入视频或图像中是否发生“集装箱掉落”异常事件（相关显示名称：集装箱掉落、集装箱坠落）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `container_dropped`。",
       "aliases": [
         "集装箱掉落",
         "集装箱坠落"
@@ -368,7 +368,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -379,7 +379,7 @@
       "title": "翻越护栏",
       "problem_class": "cross_barrier",
       "event_type": "cross_barrier",
-      "description": "检测输入视频或图像中是否发生“翻越护栏”异常事件（相关显示名称：翻越护栏、跨越护栏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `cross_barrier`。",
+      "description": "检测输入视频或图像中是否发生“翻越护栏”异常事件（相关显示名称：翻越护栏、跨越护栏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `cross_barrier`。",
       "aliases": [
         "翻越护栏",
         "跨越护栏"
@@ -410,7 +410,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -421,7 +421,7 @@
       "title": "门窗破损",
       "problem_class": "doors_and_windows_are_damaged",
       "event_type": "doors_and_windows_are_damaged",
-      "description": "检测输入视频或图像中是否发生“门窗破损”异常事件（相关显示名称：门窗破损、门窗损坏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `doors_and_windows_are_damaged`。",
+      "description": "检测输入视频或图像中是否发生“门窗破损”异常事件（相关显示名称：门窗破损、门窗损坏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `doors_and_windows_are_damaged`。",
       "aliases": [
         "门窗破损",
         "门窗损坏"
@@ -452,7 +452,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -463,7 +463,7 @@
       "title": "非机动车逆行",
       "problem_class": "ebike_reverse",
       "event_type": "ebike_reverse",
-      "description": "检测输入视频或图像中是否发生“非机动车逆行”异常事件（相关显示名称：非机动车逆行、电动车逆行）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `ebike_reverse`。",
+      "description": "检测输入视频或图像中是否发生“非机动车逆行”异常事件（相关显示名称：非机动车逆行、电动车逆行）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `ebike_reverse`。",
       "aliases": [
         "非机动车逆行",
         "电动车逆行"
@@ -494,7 +494,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -505,7 +505,7 @@
       "title": "安全出口遮挡",
       "problem_class": "egress_blocked",
       "event_type": "egress_blocked",
-      "description": "检测输入视频或图像中是否发生“安全出口遮挡”异常事件（相关显示名称：安全出口遮挡、出口堵塞）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `egress_blocked`。",
+      "description": "检测输入视频或图像中是否发生“安全出口遮挡”异常事件（相关显示名称：安全出口遮挡、出口堵塞）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `egress_blocked`。",
       "aliases": [
         "安全出口遮挡",
         "出口堵塞"
@@ -536,7 +536,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -547,7 +547,7 @@
       "title": "占用应急车道",
       "problem_class": "emergency_lane_occupancy",
       "event_type": "emergency_lane_occupancy",
-      "description": "检测输入视频或图像中是否发生“占用应急车道”异常事件（相关显示名称：占用应急车道、应急车道占用）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `emergency_lane_occupancy`。",
+      "description": "检测输入视频或图像中是否发生“占用应急车道”异常事件（相关显示名称：占用应急车道、应急车道占用）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `emergency_lane_occupancy`。",
       "aliases": [
         "占用应急车道",
         "应急车道占用"
@@ -579,7 +579,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -590,7 +590,7 @@
       "title": "设备生锈",
       "problem_class": "equipment_rust",
       "event_type": "equipment_rust",
-      "description": "检测输入视频或图像中是否发生“设备生锈”异常事件（相关显示名称：设备生锈）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `equipment_rust`。",
+      "description": "检测输入视频或图像中是否发生“设备生锈”异常事件（相关显示名称：设备生锈）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `equipment_rust`。",
       "aliases": [
         "设备生锈"
       ],
@@ -620,7 +620,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -631,7 +631,7 @@
       "title": "爆炸检测",
       "problem_class": "explosion",
       "event_type": "explosion",
-      "description": "检测输入视频或图像中是否发生“爆炸检测”异常事件（相关显示名称：爆炸检测、爆炸）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `explosion`。",
+      "description": "检测输入视频或图像中是否发生“爆炸检测”异常事件（相关显示名称：爆炸检测、爆炸）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `explosion`。",
       "aliases": [
         "爆炸检测",
         "爆炸"
@@ -663,7 +663,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -674,7 +674,7 @@
       "title": "人员摔倒",
       "problem_class": "fall",
       "event_type": "fall",
-      "description": "检测输入视频或图像中是否发生“人员摔倒”异常事件（相关显示名称：人员摔倒、跌倒）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fall`。",
+      "description": "检测输入视频或图像中是否发生“人员摔倒”异常事件（相关显示名称：人员摔倒、跌倒）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `fall`。",
       "aliases": [
         "人员摔倒",
         "跌倒"
@@ -706,7 +706,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -717,7 +717,7 @@
       "title": "打架斗殴",
       "problem_class": "fight",
       "event_type": "fight",
-      "description": "检测输入视频或图像中是否发生“打架斗殴”异常事件（相关显示名称：打架斗殴、打架）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fight`。",
+      "description": "检测输入视频或图像中是否发生“打架斗殴”异常事件（相关显示名称：打架斗殴、打架）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `fight`。",
       "aliases": [
         "打架斗殴",
         "打架"
@@ -749,7 +749,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -760,7 +760,7 @@
       "title": "起火",
       "problem_class": "fire",
       "event_type": "fire",
-      "description": "检测输入视频或图像中是否发生“起火”异常事件（相关显示名称：起火）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fire`。",
+      "description": "检测输入视频或图像中是否发生“起火”异常事件（相关显示名称：起火）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `fire`。",
       "aliases": [
         "起火"
       ],
@@ -789,7 +789,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -800,7 +800,7 @@
       "title": "消防门未关闭",
       "problem_class": "fire_door_unclosed",
       "event_type": "fire_door_unclosed",
-      "description": "检测输入视频或图像中是否发生“消防门未关闭”异常事件（相关显示名称：消防门未关闭）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fire_door_unclosed`。",
+      "description": "检测输入视频或图像中是否发生“消防门未关闭”异常事件（相关显示名称：消防门未关闭）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `fire_door_unclosed`。",
       "aliases": [
         "消防门未关闭"
       ],
@@ -831,7 +831,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -842,7 +842,7 @@
       "title": "消防栓泄漏",
       "problem_class": "fire_hydrant_leakage",
       "event_type": "fire_hydrant_leakage",
-      "description": "检测输入视频或图像中是否发生“消防栓泄漏”异常事件（相关显示名称：消防栓泄漏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `fire_hydrant_leakage`。",
+      "description": "检测输入视频或图像中是否发生“消防栓泄漏”异常事件（相关显示名称：消防栓泄漏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `fire_hydrant_leakage`。",
       "aliases": [
         "消防栓泄漏"
       ],
@@ -871,7 +871,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -882,7 +882,7 @@
       "title": "占用消防通道",
       "problem_class": "firelane_occupied",
       "event_type": "firelane_occupied",
-      "description": "检测输入视频或图像中是否发生“占用消防通道”异常事件（相关显示名称：占用消防通道、消防通道占用）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `firelane_occupied`。",
+      "description": "检测输入视频或图像中是否发生“占用消防通道”异常事件（相关显示名称：占用消防通道、消防通道占用）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `firelane_occupied`。",
       "aliases": [
         "占用消防通道",
         "消防通道占用"
@@ -913,7 +913,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -924,7 +924,7 @@
       "title": "旗帜检测",
       "problem_class": "flag",
       "event_type": "flag",
-      "description": "检测输入视频或图像中是否发生“旗帜检测”异常事件（相关显示名称：旗帜检测、旗帜异常）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `flag`。",
+      "description": "检测输入视频或图像中是否发生“旗帜检测”异常事件（相关显示名称：旗帜检测、旗帜异常）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `flag`。",
       "aliases": [
         "旗帜检测",
         "旗帜异常"
@@ -955,7 +955,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -966,7 +966,7 @@
       "title": "输电线路异物",
       "problem_class": "foreign_objects_on_transmission_lines",
       "event_type": "foreign_objects_on_transmission_lines",
-      "description": "检测输入视频或图像中是否发生“输电线路异物”异常事件（相关显示名称：输电线路异物）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `foreign_objects_on_transmission_lines`。",
+      "description": "检测输入视频或图像中是否发生“输电线路异物”异常事件（相关显示名称：输电线路异物）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `foreign_objects_on_transmission_lines`。",
       "aliases": [
         "输电线路异物"
       ],
@@ -995,7 +995,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1006,7 +1006,7 @@
       "title": "森林火灾",
       "problem_class": "forest_fire",
       "event_type": "forest_fire",
-      "description": "检测输入视频或图像中是否发生“森林火灾”异常事件（相关显示名称：森林火灾）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `forest_fire`。",
+      "description": "检测输入视频或图像中是否发生“森林火灾”异常事件（相关显示名称：森林火灾）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `forest_fire`。",
       "aliases": [
         "森林火灾"
       ],
@@ -1036,7 +1036,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1047,7 +1047,7 @@
       "title": "垃圾桶倾倒",
       "problem_class": "garbage_bin_dumping",
       "event_type": "garbage_bin_dumping",
-      "description": "检测输入视频或图像中是否发生“垃圾桶倾倒”异常事件（相关显示名称：垃圾桶倾倒）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `garbage_bin_dumping`。",
+      "description": "检测输入视频或图像中是否发生“垃圾桶倾倒”异常事件（相关显示名称：垃圾桶倾倒）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `garbage_bin_dumping`。",
       "aliases": [
         "垃圾桶倾倒"
       ],
@@ -1077,7 +1077,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1088,7 +1088,7 @@
       "title": "加油站抽烟",
       "problem_class": "gas_station_smoking",
       "event_type": "gas_station_smoking",
-      "description": "检测输入视频或图像中是否发生“加油站抽烟”异常事件（相关显示名称：加油站抽烟、加油站吸烟）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `gas_station_smoking`。",
+      "description": "检测输入视频或图像中是否发生“加油站抽烟”异常事件（相关显示名称：加油站抽烟、加油站吸烟）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `gas_station_smoking`。",
       "aliases": [
         "加油站抽烟",
         "加油站吸烟"
@@ -1119,7 +1119,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1130,7 +1130,7 @@
       "title": "护栏损坏",
       "problem_class": "guardrail_damaged",
       "event_type": "guardrail_damaged",
-      "description": "检测输入视频或图像中是否发生“护栏损坏”异常事件（相关显示名称：护栏损坏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `guardrail_damaged`。",
+      "description": "检测输入视频或图像中是否发生“护栏损坏”异常事件（相关显示名称：护栏损坏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `guardrail_damaged`。",
       "aliases": [
         "护栏损坏"
       ],
@@ -1160,7 +1160,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1171,7 +1171,7 @@
       "title": "仪表异常",
       "problem_class": "instrument_abnormality",
       "event_type": "instrument_abnormality",
-      "description": "检测输入视频或图像中是否发生“仪表异常”异常事件（相关显示名称：仪表异常）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `instrument_abnormality`。",
+      "description": "检测输入视频或图像中是否发生“仪表异常”异常事件（相关显示名称：仪表异常）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `instrument_abnormality`。",
       "aliases": [
         "仪表异常"
       ],
@@ -1201,7 +1201,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1212,7 +1212,7 @@
       "title": "是否操作仪器",
       "problem_class": "instrument_operation",
       "event_type": "instrument_operation",
-      "description": "检测输入视频或图像中是否发生“是否操作仪器”异常事件（相关显示名称：是否操作仪器）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `instrument_operation`。",
+      "description": "检测输入视频或图像中是否发生“是否操作仪器”异常事件（相关显示名称：是否操作仪器）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `instrument_operation`。",
       "aliases": [
         "是否操作仪器"
       ],
@@ -1241,7 +1241,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1252,7 +1252,7 @@
       "title": "厨房出现老鼠",
       "problem_class": "kitchen_infested_with_rats",
       "event_type": "kitchen_infested_with_rats",
-      "description": "检测输入视频或图像中是否发生“厨房出现老鼠”异常事件（相关显示名称：厨房出现老鼠）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `kitchen_infested_with_rats`。",
+      "description": "检测输入视频或图像中是否发生“厨房出现老鼠”异常事件（相关显示名称：厨房出现老鼠）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `kitchen_infested_with_rats`。",
       "aliases": [
         "厨房出现老鼠"
       ],
@@ -1281,7 +1281,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1292,7 +1292,7 @@
       "title": "车牌不规范",
       "problem_class": "license_plate_is_not_standard",
       "event_type": "license_plate_is_not_standard",
-      "description": "检测输入视频或图像中是否发生“车牌不规范”异常事件（相关显示名称：车牌不规范）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `license_plate_is_not_standard`。",
+      "description": "检测输入视频或图像中是否发生“车牌不规范”异常事件（相关显示名称：车牌不规范）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `license_plate_is_not_standard`。",
       "aliases": [
         "车牌不规范"
       ],
@@ -1321,7 +1321,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1332,7 +1332,7 @@
       "title": "随地乱扔垃圾",
       "problem_class": "litter_randomly",
       "event_type": "litter_randomly",
-      "description": "检测输入视频或图像中是否发生“随地乱扔垃圾”异常事件（相关显示名称：随地乱扔垃圾）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `litter_randomly`。",
+      "description": "检测输入视频或图像中是否发生“随地乱扔垃圾”异常事件（相关显示名称：随地乱扔垃圾）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `litter_randomly`。",
       "aliases": [
         "随地乱扔垃圾"
       ],
@@ -1361,7 +1361,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1372,7 +1372,7 @@
       "title": "井盖丢失或井盖没盖好",
       "problem_class": "lost_manhole_cover",
       "event_type": "lost_manhole_cover",
-      "description": "检测输入视频或图像中是否发生“井盖丢失或井盖没盖好”异常事件（相关显示名称：井盖丢失或井盖没盖好）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `lost_manhole_cover`。",
+      "description": "检测输入视频或图像中是否发生“井盖丢失或井盖没盖好”异常事件（相关显示名称：井盖丢失或井盖没盖好）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `lost_manhole_cover`。",
       "aliases": [
         "井盖丢失或井盖没盖好"
       ],
@@ -1401,7 +1401,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1412,7 +1412,7 @@
       "title": "车牌遮挡",
       "problem_class": "occluded_license_plate",
       "event_type": "occluded_license_plate",
-      "description": "检测输入视频或图像中是否发生“车牌遮挡”异常事件（相关显示名称：车牌遮挡）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `occluded_license_plate`。",
+      "description": "检测输入视频或图像中是否发生“车牌遮挡”异常事件（相关显示名称：车牌遮挡）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `occluded_license_plate`。",
       "aliases": [
         "车牌遮挡"
       ],
@@ -1441,7 +1441,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1452,7 +1452,7 @@
       "title": "行人排队聚集",
       "problem_class": "pedestrian_queue",
       "event_type": "pedestrian_queue",
-      "description": "检测输入视频或图像中是否发生“行人排队聚集”异常事件（相关显示名称：行人排队聚集、行人排队）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `pedestrian_queue`。",
+      "description": "检测输入视频或图像中是否发生“行人排队聚集”异常事件（相关显示名称：行人排队聚集、行人排队）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `pedestrian_queue`。",
       "aliases": [
         "行人排队聚集",
         "行人排队"
@@ -1483,7 +1483,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1494,7 +1494,7 @@
       "title": "管道泄漏",
       "problem_class": "pipeline_leak",
       "event_type": "pipeline_leak",
-      "description": "检测输入视频或图像中是否发生“管道泄漏”异常事件（相关显示名称：管道泄漏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `pipeline_leak`。",
+      "description": "检测输入视频或图像中是否发生“管道泄漏”异常事件（相关显示名称：管道泄漏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `pipeline_leak`。",
       "aliases": [
         "管道泄漏"
       ],
@@ -1524,7 +1524,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1535,7 +1535,7 @@
       "title": "越过站台黄线",
       "problem_class": "platform_yellowline",
       "event_type": "platform_yellowline",
-      "description": "检测输入视频或图像中是否发生“越过站台黄线”异常事件（相关显示名称：越过站台黄线、站台黄线）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `platform_yellowline`。",
+      "description": "检测输入视频或图像中是否发生“越过站台黄线”异常事件（相关显示名称：越过站台黄线、站台黄线）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `platform_yellowline`。",
       "aliases": [
         "越过站台黄线",
         "站台黄线"
@@ -1566,7 +1566,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1577,7 +1577,7 @@
       "title": "路面破损",
       "problem_class": "road_surface_dameged",
       "event_type": "road_surface_dameged",
-      "description": "检测输入视频或图像中是否发生“路面破损”异常事件（相关显示名称：路面破损、路面损坏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `road_surface_dameged`。",
+      "description": "检测输入视频或图像中是否发生“路面破损”异常事件（相关显示名称：路面破损、路面损坏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `road_surface_dameged`。",
       "aliases": [
         "路面破损",
         "路面损坏"
@@ -1608,7 +1608,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1619,7 +1619,7 @@
       "title": "占道经营",
       "problem_class": "roadside_booths",
       "event_type": "roadside_booths",
-      "description": "检测输入视频或图像中是否发生“占道经营”异常事件（相关显示名称：占道经营）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `roadside_booths`。",
+      "description": "检测输入视频或图像中是否发生“占道经营”异常事件（相关显示名称：占道经营）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `roadside_booths`。",
       "aliases": [
         "占道经营"
       ],
@@ -1648,7 +1648,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1659,7 +1659,7 @@
       "title": "闯红灯",
       "problem_class": "run_the_red_light",
       "event_type": "run_the_red_light",
-      "description": "检测输入视频或图像中是否发生“闯红灯”异常事件（相关显示名称：闯红灯）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `run_the_red_light`。",
+      "description": "检测输入视频或图像中是否发生“闯红灯”异常事件（相关显示名称：闯红灯）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `run_the_red_light`。",
       "aliases": [
         "闯红灯"
       ],
@@ -1689,7 +1689,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1700,7 +1700,7 @@
       "title": "屏蔽门夹人",
       "problem_class": "screen_doors_clamp_passengers",
       "event_type": "screen_doors_clamp_passengers",
-      "description": "检测输入视频或图像中是否发生“屏蔽门夹人”异常事件（相关显示名称：屏蔽门夹人）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `screen_doors_clamp_passengers`。",
+      "description": "检测输入视频或图像中是否发生“屏蔽门夹人”异常事件（相关显示名称：屏蔽门夹人）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `screen_doors_clamp_passengers`。",
       "aliases": [
         "屏蔽门夹人"
       ],
@@ -1730,7 +1730,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1741,7 +1741,7 @@
       "title": "座椅损坏",
       "problem_class": "seat_damaged",
       "event_type": "seat_damaged",
-      "description": "检测输入视频或图像中是否发生“座椅损坏”异常事件（相关显示名称：座椅损坏、座位损坏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `seat_damaged`。",
+      "description": "检测输入视频或图像中是否发生“座椅损坏”异常事件（相关显示名称：座椅损坏、座位损坏）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `seat_damaged`。",
       "aliases": [
         "座椅损坏",
         "座位损坏"
@@ -1772,7 +1772,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1783,7 +1783,7 @@
       "title": "积水检测",
       "problem_class": "standing_water",
       "event_type": "standing_water",
-      "description": "检测输入视频或图像中是否发生“积水检测”异常事件（相关显示名称：积水检测、积水）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `standing_water`。",
+      "description": "检测输入视频或图像中是否发生“积水检测”异常事件（相关显示名称：积水检测、积水）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `standing_water`。",
       "aliases": [
         "积水检测",
         "积水"
@@ -1814,7 +1814,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1825,7 +1825,7 @@
       "title": "罐体落地",
       "problem_class": "tank_body_landing",
       "event_type": "tank_body_landing",
-      "description": "检测输入视频或图像中是否发生“罐体落地”异常事件（相关显示名称：罐体落地、罐体着陆）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tank_body_landing`。",
+      "description": "检测输入视频或图像中是否发生“罐体落地”异常事件（相关显示名称：罐体落地、罐体着陆）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `tank_body_landing`。",
       "aliases": [
         "罐体落地",
         "罐体着陆"
@@ -1856,7 +1856,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1867,7 +1867,7 @@
       "title": "轨道异物",
       "problem_class": "track_obstacle",
       "event_type": "track_obstacle",
-      "description": "检测输入视频或图像中是否发生“轨道异物”异常事件（相关显示名称：轨道异物、轨道障碍物）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `track_obstacle`。",
+      "description": "检测输入视频或图像中是否发生“轨道异物”异常事件（相关显示名称：轨道异物、轨道障碍物）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `track_obstacle`。",
       "aliases": [
         "轨道异物",
         "轨道障碍物"
@@ -1898,7 +1898,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1909,7 +1909,7 @@
       "title": "交通事故",
       "problem_class": "traffic_accident",
       "event_type": "traffic_accident",
-      "description": "检测输入视频或图像中是否发生“交通事故”异常事件（相关显示名称：交通事故）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `traffic_accident`。",
+      "description": "检测输入视频或图像中是否发生“交通事故”异常事件（相关显示名称：交通事故）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `traffic_accident`。",
       "aliases": [
         "交通事故"
       ],
@@ -1940,7 +1940,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1951,7 +1951,7 @@
       "title": "树木倒伏",
       "problem_class": "tree_fallen",
       "event_type": "tree_fallen",
-      "description": "检测输入视频或图像中是否发生“树木倒伏”异常事件（相关显示名称：树木倒伏、树木倒塌）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tree_fallen`。",
+      "description": "检测输入视频或图像中是否发生“树木倒伏”异常事件（相关显示名称：树木倒伏、树木倒塌）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `tree_fallen`。",
       "aliases": [
         "树木倒伏",
         "树木倒塌"
@@ -1982,7 +1982,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -1993,7 +1993,7 @@
       "title": "试管掉落破碎",
       "problem_class": "tube_falls_and_breaks",
       "event_type": "tube_falls_and_breaks",
-      "description": "检测输入视频或图像中是否发生“试管掉落破碎”异常事件（相关显示名称：试管掉落破碎、管道坠落破裂）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tube_falls_and_breaks`。",
+      "description": "检测输入视频或图像中是否发生“试管掉落破碎”异常事件（相关显示名称：试管掉落破碎、管道坠落破裂）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `tube_falls_and_breaks`。",
       "aliases": [
         "试管掉落破碎",
         "管道坠落破裂"
@@ -2024,7 +2024,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -2035,7 +2035,7 @@
       "title": "车辆违停",
       "problem_class": "vehicle_illegal_parking",
       "event_type": "vehicle_illegal_parking",
-      "description": "检测输入视频或图像中是否发生“车辆违停”异常事件（相关显示名称：车辆违停）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `vehicle_illegal_parking`。",
+      "description": "检测输入视频或图像中是否发生“车辆违停”异常事件（相关显示名称：车辆违停）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `vehicle_illegal_parking`。",
       "aliases": [
         "车辆违停"
       ],
@@ -2064,7 +2064,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -2075,7 +2075,7 @@
       "title": "遛狗未牵绳",
       "problem_class": "walking_a_dog_without_a_leash",
       "event_type": "walking_a_dog_without_a_leash",
-      "description": "检测输入视频或图像中是否发生“遛狗未牵绳”异常事件（相关显示名称：遛狗未牵绳）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `walking_a_dog_without_a_leash`。",
+      "description": "检测输入视频或图像中是否发生“遛狗未牵绳”异常事件（相关显示名称：遛狗未牵绳）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `walking_a_dog_without_a_leash`。",
       "aliases": [
         "遛狗未牵绳"
       ],
@@ -2104,7 +2104,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -2115,7 +2115,7 @@
       "title": "未戴安全帽",
       "problem_class": "without_wearing_a_helmet",
       "event_type": "without_wearing_a_helmet",
-      "description": "检测输入视频或图像中是否发生“未戴安全帽”异常事件（相关显示名称：未戴安全帽）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `without_wearing_a_helmet`。",
+      "description": "检测输入视频或图像中是否发生“未戴安全帽”异常事件（相关显示名称：未戴安全帽）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `without_wearing_a_helmet`。",
       "aliases": [
         "未戴安全帽"
       ],
@@ -2144,7 +2144,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -2155,7 +2155,7 @@
       "title": "未戴口罩",
       "problem_class": "without_wearing_a_mask",
       "event_type": "without_wearing_a_mask",
-      "description": "检测输入视频或图像中是否发生“未戴口罩”异常事件（相关显示名称：未戴口罩）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `without_wearing_a_mask`。",
+      "description": "检测输入视频或图像中是否发生“未戴口罩”异常事件（相关显示名称：未戴口罩）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `without_wearing_a_mask`。",
       "aliases": [
         "未戴口罩"
       ],
@@ -2184,7 +2184,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -2195,7 +2195,7 @@
       "title": "未穿防护服",
       "problem_class": "without_wearing_clothes",
       "event_type": "without_wearing_clothes",
-      "description": "检测输入视频或图像中是否发生“未穿防护服”异常事件（相关显示名称：未穿防护服）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `without_wearing_clothes`。",
+      "description": "检测输入视频或图像中是否发生“未穿防护服”异常事件（相关显示名称：未穿防护服）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `without_wearing_clothes`。",
       "aliases": [
         "未穿防护服"
       ],
@@ -2224,7 +2224,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,
@@ -2235,7 +2235,7 @@
       "title": "高空作业未系安全带",
       "problem_class": "working_at_heights_without_a_safety_harness",
       "event_type": "working_at_heights_without_a_safety_harness",
-      "description": "检测输入视频或图像中是否发生“高空作业未系安全带”异常事件（相关显示名称：高空作业未系安全带）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `working_at_heights_without_a_safety_harness`。",
+      "description": "检测输入视频或图像中是否发生“高空作业未系安全带”异常事件（相关显示名称：高空作业未系安全带）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与 Top-K 图片工作流并取 OR；event_type 为 `working_at_heights_without_a_safety_harness`。",
       "aliases": [
         "高空作业未系安全带"
       ],
@@ -2264,7 +2264,7 @@
         "图片 embeddingTool 必须传入图片路径和精确 event_type。",
         "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
         "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
-        "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
+        "视频推理并行执行 embedding 和 Top-K 检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
         "工具失败、类别不一致或缺少有效证据时不得接受答案。"
       ],
       "workflow_count": 0,

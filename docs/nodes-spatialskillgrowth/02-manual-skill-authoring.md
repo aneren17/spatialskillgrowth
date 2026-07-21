@@ -317,7 +317,8 @@ python -m scripts.deploy_spatialskillgrowth_skill \
 - 部署后直接进入 active，不经过 provisional 晋升；
 - 没有真实 trial 时，历史排序使用 0.85 的人工准确率先验和 1.0 的证据率先验；
 - 一旦产生至少一次真实 trial，立即改用实际 accuracy/evidence rate；
-- 冻结视频推理仍执行全部结构合格 Workflow，质量先验只影响候选顺序，不会排除其他路线。
+- 默认冻结推理会结合 `SKILL.md` 和当前抽样帧选择 Top-K（默认 2 条）；人工质量先验用于历史回退和
+  适用性相近时的排序。只有显式开启全工作流模式时，才执行全部结构合格 Workflow。
 
 同 ID JSON 或目标脚本已存在且内容不同时，部署默认拒绝覆盖。确认要用人工版本替换时使用：
 

@@ -68,10 +68,11 @@ agents → pipeline → skills / runtime / growth / storage → core
 ```text
 原始视频 + event_type
   → 默认 1 fps 抽帧，最多 12 帧
-  → 取该 event_type 的全部结构合格 active Workflow
+  → 过滤该 event_type 的结构合格 active Workflow
+  → 根据 SKILL.md 和当前抽样帧选择 Top-K（默认 K=2）
   → 并行：
        A. 原始视频 → embeddingTool
-       B. 抽样帧 → 所有图片 Workflow
+       B. 抽样帧 → 选中的 Top-K 图片 Workflow
   → 每个通道先做证据验收
   → 确定性 OR：任一有效结果为“是”则最终为“是”；全部有效结果为“否”才返回“否”
 ```
@@ -80,6 +81,8 @@ agents → pipeline → skills / runtime / growth / storage → core
 
 - 使用 `$media` 的原视频 embedding 是框架固定加入的独立工作流，不进入 Skill 检索；
 - 可检索 Workflow 中的 embedding 步骤使用 `$image`，与其他图片工具一样只理解抽样帧，不理解连续时序。
+- `SKILL.md` 的工作流选择说明、适用范围和排除条件参与 Top-K 语义排序；模型排序失败时按历史指标回退。
+- 显式开启全工作流模式时跳过上述语义排序，执行全部结构合格 Workflow。
 
 ## 5. 一次工具链如何传数据
 

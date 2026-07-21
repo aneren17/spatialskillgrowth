@@ -23,6 +23,9 @@ from nodes.mem.spatialskillgrowth.core.experiment_config import ExperimentPaths
 from nodes.mem.spatialskillgrowth.core.experiment_config import build_experiment_config
 from nodes.mem.spatialskillgrowth.pipeline.orchestrator import ExperimentFactory
 from nodes.mem.spatialskillgrowth.pipeline.orchestrator import (
+    DEFAULT_INFERENCE_WORKFLOW_TOP_K,
+)
+from nodes.mem.spatialskillgrowth.pipeline.orchestrator import (
     write_evaluation_summary,
 )
 from nodes.mem.spatialskillgrowth.storage.growth_store import WorkflowRepository
@@ -70,12 +73,25 @@ def build_parser():
     parser.add_argument("--base-url", default=SPATIAL_SKILL_GROWTH_BASE_URL)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--max-react-steps", type=int, default=8)
+    parser.add_argument(
+        "--workflow-top-k",
+        type=int,
+        default=DEFAULT_INFERENCE_WORKFLOW_TOP_K,
+        help="根据 SKILL.md 选择并执行的工作流数量，默认 2。",
+    )
+    parser.add_argument(
+        "--all-workflows",
+        action="store_true",
+        help="跳过 SKILL.md Top-K 选择，执行全部结构合格工作流。",
+    )
     parser.add_argument("--resume", action="store_true")
     return parser
 
 
 def main():
     args = build_parser().parse_args()
+    if args.workflow_top_k <= 0:
+        raise ValueError("--workflow-top-k 必须大于 0。")
     tasks = _load_tasks(args)
     event_types = _event_types(tasks)
     metadata = class_metadata_for_anomaly()
@@ -114,7 +130,10 @@ def main():
         llm,
         source_repository=repository,
         max_react_steps=args.max_react_steps,
-    ).build_inference()
+    ).build_inference(
+        workflow_top_k=args.workflow_top_k,
+        all_workflows=args.all_workflows,
+    )
     agent = SpatialSkillGrowthAnomalyDetectionAgent(pipeline)
 
     for task in tqdm(tasks, desc="异常检测推理"):

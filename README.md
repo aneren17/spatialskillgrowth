@@ -3,7 +3,8 @@
 本项目只解决一个问题：给定一个短视频或图片，以及调用方已经确定的异常事件类别，判断该异常是否发生。
 
 框架保留原来的核心思路：探索阶段只用少量有标签图片执行 ReAct、提取/修复工作流并形成 Skill；视频
-推理阶段冻结探索结果，并行执行原视频 embedding 与全部检索图片工作流，再用确定性 OR 规则汇总。
+推理阶段冻结探索结果，默认根据 `SKILL.md` 和当前抽样帧选择最合适的 2 条图片工作流，与原视频
+embedding 并行执行，再用确定性 OR 规则汇总。
 
 ## 输入和输出
 
@@ -79,10 +80,11 @@ nodes/mem/spatialskillgrowth/
 
 探索阶段只加载图片，工具计划不再排除 `embeddingTool`。它与其他图片工具一样可用于提取、变异和验证
 图片工作流，但初始图片基线仍是单步 MLLM。工作流生命周期仍只依据统一的
-trial、correct、evidence 和成本指标。冻结视频推理会先检索同类全部结构合格工作流，然后并行执行：
+trial、correct、evidence 和成本指标。冻结视频推理会先过滤同类结构合格工作流，再根据 `SKILL.md`
+和当前抽样帧选择 Top-K，默认 K=2，然后并行执行：
 
 1. 原视频 `embeddingTool`；
-2. 抽样帧上的全部检索工作流。
+2. 抽样帧上的 Top-K 图片工作流。
 
 汇总不调用 LLM，而是使用确定性 OR：任一证据验收通过的通道判断为“是”，最终结果即为“是”；
 所有有效通道均为“否”时才返回“否”。检索图片工作流中的 embedding 步骤使用 `$image`，不会取代或重复外层的
@@ -161,9 +163,9 @@ python -m agents.spatialskillgrowth.exploration_agent \
   → 生命周期与去重
 ```
 
-类别由输入确定，所以规划器不会再调用 LLM 做分类或槽位抽取。探索 Retriever 可依据同类
-`SKILL.md` 和图片证据选择 Top-K，失败时按历史指标排序；冻结推理不调用该语义淘汰逻辑，直接返回
-同类全部结构合格工作流。
+类别由输入确定，所以规划器不会再调用 LLM 做分类或槽位抽取。探索和默认冻结推理的 Retriever
+都依据同类 `SKILL.md` 与当前图片或视频抽样帧选择 Top-K，失败时按历史指标排序。只有显式开启
+全工作流模式时，冻结推理才跳过语义选择并返回同类全部结构合格工作流。
 
 ## 冻结推理
 
@@ -173,6 +175,7 @@ python -m agents.spatialskillgrowth.exploration_agent \
 python -m agents.spatialskillgrowth.anomaly_detection_agent \
   --input-file test/banner.mp4 \
   --event-type banner \
+  --workflow-top-k 2 \
   --run-id banner_infer_01 \
   --source-run-id banner_explore_10
 ```
@@ -188,7 +191,8 @@ python -m agents.spatialskillgrowth.anomaly_detection_agent \
 ```
 
 如果不提供 `--source-run-id`，推理使用 `skills/spatialskillgrowth/` 中的人工 Skill。视频输入仍会额外并行
-执行确定性 embedding 通道，并与全部结构合格的图片工作流取 OR。
+执行确定性 embedding 通道，并与选中的 Top-K 图片工作流取 OR。`--workflow-top-k` 调整 K；如需恢复
+全部结构合格工作流并行，传入 `--all-workflows`，此时不再使用 `SKILL.md` 做语义淘汰。
 
 ## FastAPI 接口
 

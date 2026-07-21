@@ -30,6 +30,29 @@ python server/test.py test/banner.mp4 banner --port 18062
 两个脚本都使用 `0.0.0.0` 监听，并固定使用一个 Uvicorn worker。Agent 在各自进程收到第一次请求时
 延迟初始化。
 
+默认根据同类别 `SKILL.md` 和当前抽样帧选择最合适的 2 条图片工作流。可在启动脚本前通过环境变量
+调整：
+
+| 环境变量 | 默认值 | 作用 |
+|---|---:|---|
+| `SPATIAL_SKILL_GROWTH_API_WORKFLOW_TOP_K` | `2` | 语义选择并行执行的图片工作流数量，必须大于 0。 |
+| `SPATIAL_SKILL_GROWTH_API_ALL_WORKFLOWS` | `0` | 设为 `1` 时跳过 Top-K 语义选择，执行全部结构合格图片工作流。 |
+
+例如将 18061 实例切换为全并行：
+
+```bash
+SPATIAL_SKILL_GROWTH_API_ALL_WORKFLOWS=1 ./server/start_61.sh
+```
+
+环境变量在 Agent 初始化时读取，修改后必须重启对应服务进程。
+
+服务 run 会保留创建时的 Skill 快照。修改 `skills/spatialskillgrowth/` 后，应使用新 run ID 启动，
+否则仍会读取旧快照：
+
+```bash
+SPATIAL_SKILL_GROWTH_API_RUN_ID=api_server_61_topk_v1 ./server/start_61.sh
+```
+
 ## 2. 检测接口
 
 ```text
@@ -92,8 +115,9 @@ HTTP 状态码：`200`
 | `is_anomaly` | 整数 | `1` 表示检测到异常，`0` 表示未检测到异常。 |
 | `threshold` | 浮点数 | embedding 返回的判定阈值；其他图片工作流覆盖为异常时返回 `1.0`。 |
 
-视频推理会并行执行原视频 embedding 工作流和检索到的图片工作流，并用确定性 OR 汇总：任一有效
-工作流判断异常，最终 `is_anomaly` 即为 `1`。
+视频推理会并行执行原视频 embedding 工作流和默认由 `SKILL.md` 选出的 Top-K 图片工作流，并用
+确定性 OR 汇总：任一有效工作流判断异常，最终 `is_anomaly` 即为 `1`。全工作流模式只改变图片
+工作流候选数量，不改变原视频 embedding 通道和 OR 规则。
 
 ## 4. 错误输出
 
