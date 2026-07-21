@@ -20,6 +20,13 @@
 ./server/start_62.sh
 ```
 
+启动后可用项目内的测试脚本调用：
+
+```bash
+python server/test.py test/banner.mp4 banner --port 18061
+python server/test.py test/banner.mp4 banner --port 18062
+```
+
 两个脚本都使用 `0.0.0.0` 监听，并固定使用一个 Uvicorn worker。Agent 在各自进程收到第一次请求时
 延迟初始化。
 

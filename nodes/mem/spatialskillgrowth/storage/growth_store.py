@@ -40,6 +40,14 @@ from nodes.mem.spatialskillgrowth.storage.conversation_trace import (
 
 RUN_STORAGE_LOCKS = {}
 RUN_STORAGE_LOCKS_GUARD = threading.Lock()
+REQUIRED_STATE_TABLES = {
+    "atom_coverage",
+    "mutation_directions",
+    "retrievals",
+    "tasks",
+    "trials",
+    "workflow_events",
+}
 
 
 def run_storage_lock(path):
@@ -67,6 +75,7 @@ class ExperimentStore:
         connection = sqlite3.connect(str(self.db_path), timeout=30)
         connection.row_factory = sqlite3.Row
         try:
+            self._ensure_schema(connection)
             yield connection
             connection.commit()
         except Exception:
@@ -82,9 +91,21 @@ class ExperimentStore:
         trials表：记录每一道题工人可能尝试了多次（比如用了旧方法、用了变异方法）。
         workflow_events表：记录某个 SOP（工作流）的晋升/降级大事件。
         """
-        with self._lock, self._connect() as connection:
-            connection.executescript(
-                """
+        with self._lock, self._connect():
+            pass
+
+    @staticmethod
+    def _ensure_schema(connection: sqlite3.Connection) -> None:
+        existing_tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        if REQUIRED_STATE_TABLES.issubset(existing_tables):
+            return
+        connection.executescript(
+            """
                 PRAGMA journal_mode=WAL;
                 CREATE TABLE IF NOT EXISTS tasks (
                     task_id TEXT PRIMARY KEY,
@@ -137,8 +158,8 @@ class ExperimentStore:
                     success_count INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY(problem_class, atom_id)
                 );
-                """
-            )
+            """
+        )
 
     def begin_task(
         self,
@@ -386,6 +407,7 @@ class ExperimentStore:
                 ),
             )
         path = self.paths.results_root / "errors.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock, path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(summary, ensure_ascii=False) + "\n")
         return summary
@@ -397,6 +419,7 @@ class ExperimentStore:
 
     def _append_result(self, summary: Dict) -> None:
         path = self.paths.results_root / "per_task.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock:
             with path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(summary, ensure_ascii=False) + "\n")

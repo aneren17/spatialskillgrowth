@@ -278,6 +278,45 @@ def test_run_workspace_uses_editable_skills_only():
         assert not list(paths.provisional_skill_root.glob("*/scripts/*.py"))
 
 
+def test_store_repairs_empty_database():
+    metadata = class_metadata_for_anomaly()
+    config = build_experiment_config()
+    with tempfile.TemporaryDirectory() as root:
+        paths = ExperimentPaths(
+            "empty_database_test",
+            root,
+            problem_classes=["banner"],
+            class_metadata=metadata,
+        )
+        paths.ensure(config, "infer")
+        store = ExperimentStore(paths)
+        store.db_path.unlink()
+        store.db_path.touch()
+        shutil.rmtree(paths.results_root)
+
+        store.begin_task(
+            "task_1",
+            "infer",
+            "online",
+            "banner",
+            "question",
+            "",
+        )
+
+        assert not store.is_complete("task_1")
+        assert store.db_path.stat().st_size > 0
+        store.fail_task(
+            "task_1",
+            "infer",
+            "online",
+            "banner",
+            "question",
+            "",
+            "expected test failure",
+        )
+        assert (paths.results_root / "errors.jsonl").is_file()
+
+
 def test_skill_markdowns_are_compact():
     forbidden_headings = (
         "## 用途",
@@ -959,6 +998,7 @@ def main():
         test_planner_has_no_llm_classification_or_omni_slots,
         test_image_skill_is_eligible_for_video_frame_inference,
         test_run_workspace_uses_editable_skills_only,
+        test_store_repairs_empty_database,
         test_skill_markdowns_are_compact,
         test_embedding_parallel_channel_is_not_retrievable_skill,
         test_evidence_validator_rejects_missing_threshold,
