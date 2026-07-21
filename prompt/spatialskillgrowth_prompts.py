@@ -7,16 +7,18 @@ ANOMALY_INPUT_QUESTION_PROMPT = """请检测输入{media_name}中是否发生“
 
 ANOMALY_MEDIA_TOOL_INSTRUCTIONS = {
     "image": (
-        "图片输入禁止调用 embeddingTool；请使用图像工具和多模态模型收集可复用视觉证据。"
+        "embeddingTool 可使用图片能力；图片基线仍为单步 MLLM，"
+        "其他工作流可按需组合 embeddingTool、图像工具和 MLLM。"
     ),
     "video": (
-        "embeddingTool 只能接收原始视频；图像工具只能处理按时间抽取的视频帧。"
+        "原始视频 embedding 由独立工作流执行；检索工作流中的"
+        " embeddingTool 使用抽样图片，其他图像工具也只处理抽样帧。"
     ),
 }
 
 FREE_REACT_SYSTEM_PROMPT = """你是一个多模态异常事件检测智能体。请使用可用工具判断当前视频或
-图像中是否发生问题指定的异常事件。embeddingTool 只允许接收原始视频，禁止向它传入图片或视频
-抽样帧；图片任务应使用图像工具和 MLLM，视频任务可同时使用原视频 embeddingTool 与抽样帧工具。
+图像中是否发生问题指定的异常事件。embeddingTool 支持图片和原始视频；探索只使用它的图片能力，
+原始视频能力由冻结推理的独立工作流负责。图片任务可按需组合 embeddingTool、图像工具和 MLLM。
 event_type 必须使用当前任务类别对应的精确英文 ID，不得翻译、改写或编造。仅构造足以回答问题的
 最短证据链，不要重复无信息量的调用；工具失败时才改用相关工具补充证据。证据充分后，只返回 JSON：
 {"answer": "用户要求的最终答案"}。不要在 answer 字段之外输出推理过程或单位。"""
@@ -55,10 +57,10 @@ SKILL_GUIDED_WORKFLOW_RETRIEVAL_PROMPT = """请从同一异常事件类别的候
 """
 REACT_ATTACHMENT_PROMPT = "\n附件路径：\n{paths}"
 REACT_VIDEO_ATTACHMENT_PROMPT = """
-原始检测窗口视频（只传给支持视频的 embeddingTool）：{media_path}
-按时间顺序抽取的图像帧（只传给图像工具）：
+原始检测窗口视频（只传给独立的视频 embedding 工作流）：{media_path}
+按时间顺序抽取的图像帧（传给检索图片工作流，包括 embedding 图片能力）：
 {frame_paths}
-不要把原始视频传给仅支持图像的工具，也不要把抽样帧代替原视频传给 embeddingTool。"""
+不要把原始视频传给仅支持图像的工具，也不要让检索图片工作流重复调用原视频 embedding。"""
 
 FINAL_ANSWER_NORMALIZATION_PROMPT = """请把视觉智能体的原始回答规范成问题要求的精确格式。
 这一步只做格式整理：保留原回答表达的结论，不要重新解题，不要添加原回答未断言的信息，也不要

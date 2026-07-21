@@ -1,5 +1,7 @@
 """使用指定异常类别的 benchmark 样本直接测试异常检测接口。"""
 # python -m scripts.test_embedding_benchmark fall --all-videos
+# python -m scripts.test_embedding_benchmark fall --all-images
+# python -m scripts.test_embedding_benchmark fall --task-index 9 --media-type image
 import argparse
 import json
 import os
@@ -23,7 +25,7 @@ DEFAULT_TIMEOUT_SECONDS = 600
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="使用 embedding 接口测试指定类别的一条或全部视频。"
+        description="使用 embedding 接口测试指定类别的一条或全部媒体文件。"
     )
     parser.add_argument(
         "event_type",
@@ -46,6 +48,17 @@ def build_parser():
         "--all-videos",
         action="store_true",
         help="测试指定类别 benchmark 中的全部视频，忽略 --task-index。",
+    )
+    parser.add_argument(
+        "--all-images",
+        action="store_true",
+        help="测试指定类别 benchmark 中的全部图片，忽略 --task-index。",
+    )
+    parser.add_argument(
+        "--media-type",
+        choices=["image", "video"],
+        default="video",
+        help="单条测试时 (--task-index) 指定的媒体类型 (默认: video)。",
     )
     parser.add_argument(
         "--api-url",
@@ -90,14 +103,15 @@ def load_benchmark_tasks(dataset_root, event_type):
     return tasks
 
 
-def load_benchmark_task(dataset_root, event_type, task_index):
+def load_benchmark_task(dataset_root, event_type, task_index, media_type):
     tasks = [
         task
         for task in load_benchmark_tasks(dataset_root, event_type)
-        if task.media_type == "video"
+        if task.media_type == media_type
     ]
+    media_name = "图片" if media_type == "image" else "视频"
     if not tasks:
-        raise ValueError("该类别 benchmark 中没有视频任务：" + event_type)
+        raise ValueError("该类别 benchmark 中没有" + media_name + "任务：" + event_type)
     if task_index < 0 or task_index >= len(tasks):
         raise IndexError(
             "task-index 超出范围："
@@ -139,20 +153,8 @@ def groundtruth_is_anomaly(groundtruth):
     raise ValueError("无法识别 benchmark answer：" + str(groundtruth))
 
 
-# 旧实现通过 ToolRuntime 调用 embeddingTool：
-#
-# result = runtime.execute(
-#     "embeddingTool",
-#     {
-#         "file_path": task.media_path,
-#         "event_type": task.event_type,
-#     },
-# )
-#
-# 当前实现直接发送 multipart/form-data，以便只验证原始 HTTP 接口。
 def execute_task(api_url, timeout_seconds, task):
     with requests.Session() as session:
-        # 检测服务是内网地址，直接测试时不继承宿主机的 HTTP 代理。
         session.trust_env = False
         with open(task.media_path, "rb") as handle:
             response = session.post(
@@ -188,9 +190,10 @@ def execute_task(api_url, timeout_seconds, task):
     return response, response_json, valid, prediction, threshold, correct
 
 
-def test_all_videos(api_url, timeout_seconds, tasks, event_type):
-    media_tasks = [task for task in tasks if task.media_type == "video"]
-    media_name = "视频"
+def test_all_media(api_url, timeout_seconds, tasks, event_type, media_type):
+    media_tasks = [task for task in tasks if task.media_type == media_type]
+    media_name = "图片" if media_type == "image" else "视频"
+
     if not media_tasks:
         raise ValueError(
             "该类别 benchmark 中没有" + media_name + "任务：" + event_type
@@ -272,19 +275,34 @@ def main():
     if arguments.timeout <= 0:
         raise ValueError("timeout 必须大于 0。")
 
-    if arguments.all_videos:
+    # 1. 如果指定了 --all-images
+    if arguments.all_images:
         tasks = load_benchmark_tasks(dataset_root, event_type)
-        return test_all_videos(
+        return test_all_media(
             api_url,
             arguments.timeout,
             tasks,
             event_type,
+            "image"
         )
 
+    # 2. 如果指定了 --all-videos
+    if arguments.all_videos:
+        tasks = load_benchmark_tasks(dataset_root, event_type)
+        return test_all_media(
+            api_url,
+            arguments.timeout,
+            tasks,
+            event_type,
+            "video"
+        )
+
+    # 3. 单任务测试 (使用 --media-type 区分是找图片的第 N 个，还是视频的第 N 个)
     task, task_count = load_benchmark_task(
         dataset_root,
         event_type,
         arguments.task_index,
+        arguments.media_type
     )
 
     print("准备调用异常检测接口：")

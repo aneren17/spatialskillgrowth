@@ -28,9 +28,8 @@ WHITEBOARD_README = """# SpatialSkillGrowth 标准模板
 本目录由 `python -m scripts.build_spatialskillgrowth_whiteboard --force` 自动重建，只用于定义 55 个异常
 事件类别的标准 Skill 结构、元数据和空工作流目录。请勿在这里编写或保存人工脚本。
 
-所有类别都遵守同一媒体边界：探索只处理图片且禁止调用 `embeddingTool`；Skill 工作流使用 MLLM
-或图像工具。冻结视频推理将原视频 embedding 与检索到的图片工作流并行执行，再用确定性 OR 规则
-合并有效判断。
+所有类别都遵守同一媒体边界：探索只处理图片，`embeddingTool` 可按图片工具参与，图片基线仍为单步
+MLLM。冻结视频推理将独立的原视频 embedding 工作流与检索到的图片工作流并行执行，再用确定性 OR 规则合并。
 
 人工维护位置是 `skills/spatialskillgrowth/`。实习生应在那里修改 `SKILL.md` 和 `scripts/*.py`，再运行
 项目提供的确定性 mock 验证器。验证器不会修改 whiteboard 或生成 `references/workflows/*.json`。
@@ -121,11 +120,12 @@ def _skill_markdown(problem_class: str, metadata: Dict[str, Any]) -> str:
         "## Skill 作用\n\n"
         f"{description}\n\n"
         "## 工作流选择\n\n"
-        "- 探索阶段只处理图片，所有 Skill 工作流禁止调用 `embeddingTool`。\n"
-        "- 图片及视频抽样帧使用同一套 MLLM 或图像工具工作流形成明确的“是/否”判断。\n"
+        "- 探索阶段只处理图片；`embeddingTool` 可按图片工具参与，但图片基线仍为单步 MLLM。\n"
+        "- 图片及视频抽样帧使用同一套图片工作流，可组合 embeddingTool、MLLM 或其他图像工具。\n"
         "- 冻结视频推理并行执行原视频 `embeddingTool` 和所有检索工作流。\n"
         "- 汇总使用确定性 OR：任一有效通道判断为“是”，最终结果即为“是”。\n"
         "- 工作流生命周期只累计图片探索的总指标，不维护跨媒体资格和分媒体指标。\n"
+        "- 已有工作流的‘不选择/执行边界’如写明不用 embedding，只约束该工作流的既有工具图，不是框架全局禁令。\n"
         "- 先检查候选工作流的适用范围、排除条件和能力边界。\n"
         "- 再结合当前输入图像或视频抽样帧，判断其工具链是否适合当前输入。\n"
         "- 历史准确率、证据通过率和调用成本只用于适用性相近时的排序。\n"

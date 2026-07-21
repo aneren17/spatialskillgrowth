@@ -51,15 +51,17 @@ agents → pipeline → skills / runtime / growth / storage → core
 
 ```text
 图片 + event_type + 标签
-  → 生成确定性工具计划（排除 embeddingTool）
+  → 生成确定性工具计划（embeddingTool 使用图片能力）
   → 检索同 event_type 的已有 Workflow
-  → 执行图片 Workflow，必要时使用 ReAct
+  → 执行图片 Workflow；无工作流通过时使用单步 MLLM 图片基线
+  → 基线仍不通过时才使用 ReAct
   → 用标签和证据验收结果
   → 产生/修改 Workflow，累计指标并进入 active/provisional/archive
 ```
 
-探索只接受图片。`embeddingTool` 对图片的输出不可用，因此探索和 Skill 工作流都
-不得调用它。
+探索只接受图片。`embeddingTool` 不再被排除，可以像其他图片工具一样进入 ReAct、工作流提取和变异；
+但框架的图片基线仍保持为单步 MLLM。
+旧 Workflow 的适用范围如果写有“禁止 embedding”，它只表示该条旧工具图本身没有 embedding 步骤，不再是框架全局约束。
 
 ## 4. 视频推理怎么跑
 
@@ -76,8 +78,8 @@ agents → pipeline → skills / runtime / growth / storage → core
 
 这里有两个边界：
 
-- embedding 是框架在视频推理外层固定加入的通道，不是可检索 Skill；
-- 图片 Workflow 对视频的理解只来自最多 12 张抽样帧，它本身不理解连续时序。
+- 使用 `$media` 的原视频 embedding 是框架固定加入的独立工作流，不进入 Skill 检索；
+- 可检索 Workflow 中的 embedding 步骤使用 `$image`，与其他图片工具一样只理解抽样帧，不理解连续时序。
 
 ## 5. 一次工具链如何传数据
 

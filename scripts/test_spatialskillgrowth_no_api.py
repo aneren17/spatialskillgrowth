@@ -50,7 +50,6 @@ from nodes.mem.spatialskillgrowth.storage.growth_store import ExperimentStore
 from nodes.mem.spatialskillgrowth.storage.growth_store import WorkflowRepository
 from scripts.run_banner_demo_exploration import run_demo
 from server import anomaly_detection_server
-from tools.basicTools.embeddingTool import embeddingTool
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -187,11 +186,11 @@ def test_input_is_one_media_and_one_event_type():
         assert task.media_path
         assert task.media_type == "image"
         assert "event_type 为 `banner`" in task.question
-        assert "图片输入禁止调用 embeddingTool" in task.question
+        assert "embeddingTool 可使用图片能力" in task.question
     direct = build_anomaly_task(str(BANNER_VIDEO), "banner")
     assert direct.media_type == "video"
     assert direct.media_path == str(BANNER_VIDEO.resolve())
-    assert "embeddingTool 只能接收原始视频" in direct.question
+    assert "原始视频 embedding 由独立工作流执行" in direct.question
 
 
 def test_media_preprocessor_keeps_video_and_samples_frames():
@@ -218,8 +217,8 @@ def test_planner_has_no_llm_classification_or_omni_slots():
         "event_type": "banner",
         "media_type": "image",
     }
-    assert "embeddingTool" not in plan["selected_tools"]
-    assert "embeddingTool" in plan["excluded_tools"]
+    assert "embeddingTool" in plan["selected_tools"]
+    assert "embeddingTool" not in plan["excluded_tools"]
     assert "paddleHeadDetTool" in plan["selected_tools"]
     video_plan = TaskPlanner().plan(
         "banner",
@@ -325,11 +324,29 @@ def test_embedding_parallel_channel_is_not_retrievable_skill():
     assert anomaly["event_type"] == "banner"
     assert anomaly["is_anomaly"] is True
     assert anomaly["threshold"] == 0.66
-    rejected = embeddingTool.invoke({
-        "file_path": str(BANNER_IMAGE),
-        "event_type": "banner",
-    })
-    assert rejected == "Error: embeddingTool only supports original video files."
+
+    image_workflow = WorkflowSpec(
+        workflow_id="banner_image_embedding",
+        name="banner_image_embedding",
+        applicability=ApplicabilitySpec(
+            problem_class="banner",
+            required_slots=["event_type"],
+            required_tools=["embeddingTool"],
+        ),
+        steps=[WorkflowStep(
+            tool_name="embeddingTool",
+            args={
+                "file_path": "$image",
+                "event_type": "$slot.event_type",
+            },
+        )],
+    )
+    assert workflow_structurally_eligible(
+        image_workflow,
+        {"event_type": "banner", "media_type": "image"},
+        ["embeddingTool"],
+        "image",
+    )
 
 
 def test_evidence_validator_rejects_missing_threshold():
@@ -353,6 +370,15 @@ def test_evidence_validator_rejects_missing_threshold():
         "video",
     )
     assert decision.accepted
+    image_decision = validator.validate(
+        "banner",
+        "question",
+        "是",
+        valid_result,
+        [str(BANNER_IMAGE)],
+        "image",
+    )
+    assert image_decision.accepted
     invalid_result = dict(valid_result)
     invalid_tool_result = dict(tool_result)
     invalid_tool_result["data"] = dict(tool_result["data"])

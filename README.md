@@ -42,9 +42,9 @@
 }
 ```
 
-`embeddingTool` 只用于原始视频，图片输入和视频抽样帧不会调用它。视频 embedding 结果必须包含匹配
-的 `event_type`、明确判断和数值 `threshold`；图片/抽样帧工作流则必须有成功的图像工具或 MLLM
-证据以及明确的“是/否”结论。
+`embeddingTool` 同时支持图片和原始视频。探索只使用它的图片能力，且冷启动图片基线仍是
+单步 MLLM；原始视频能力仍作为冻结视频推理中的独立 embedding 工作流。embedding 成功结果必须包含
+匹配的 `event_type`、明确判断和数值 `threshold`。
 
 ## 当前架构
 
@@ -77,21 +77,23 @@ nodes/mem/spatialskillgrowth/
 2. 按默认 1 fps 抽取最多 12 帧，提供给图片探索积累的帧级 Skill；
 3. 抽帧结果按源文件大小、修改时间和采样参数缓存。
 
-探索阶段只加载图片，工具计划直接排除 `embeddingTool`；工作流生命周期仍只依据统一的
+探索阶段只加载图片，工具计划不再排除 `embeddingTool`。它与其他图片工具一样可用于提取、变异和验证
+图片工作流，但初始图片基线仍是单步 MLLM。工作流生命周期仍只依据统一的
 trial、correct、evidence 和成本指标。冻结视频推理会先检索同类全部结构合格工作流，然后并行执行：
 
 1. 原视频 `embeddingTool`；
 2. 抽样帧上的全部检索工作流。
 
 汇总不调用 LLM，而是使用确定性 OR：任一证据验收通过的通道判断为“是”，最终结果即为“是”；
-所有有效通道均为“否”时才返回“否”。工作流内仍禁止调用 embedding，避免把图片或抽样帧传给视频接口。
+所有有效通道均为“否”时才返回“否”。检索图片工作流中的 embedding 步骤使用 `$image`，不会取代或重复外层的
+原视频 embedding 工作流。
 
 检测窗口由上游传入。框架不再实现流式窗口增长/缩短状态机，收到多长视频就把它视为本次检测窗口。
 
 ## 探索
 
-旧运行中已经包含图片调用 embedding 或跨媒体生命周期字段的轨迹，不能通过 `--resume` 修复。切换到
-本版本后应使用新的 `--run-id` 重新进行纯图片探索。
+旧运行的工具计划和轨迹仍会记录 embedding 被排除，`--resume` 不会重算这些已完成任务。要让 embedding 参与图片探索，
+应使用新的 `--run-id`。
 
 对 `benchmark/anomaly/skill_datasets/` 下的全部 55 个类别运行探索：
 
@@ -190,15 +192,21 @@ python -m agents.spatialskillgrowth.anomaly_detection_agent \
 
 ## FastAPI 接口
 
-安装依赖并启动单进程服务：
+安装依赖：
 
 ```bash
 pip install -r requirements.txt
-uvicorn server.anomaly_detection_server:app \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --workers 1
 ```
+
+服务使用两个独立 Shell 脚本启动：
+
+```bash
+./server/start_61.sh  # HTTP 18061 -> MLLM 8861/v1
+./server/start_62.sh  # HTTP 18062 -> MLLM 8862/v1
+```
+
+两个进程使用不同的 `SPATIAL_SKILL_GROWTH_API_RUN_ID`，可同时运行。完整端口、输入、输出和错误说明见
+[server/API.md](server/API.md)。
 
 服务只暴露一个业务接口：
 
@@ -213,7 +221,7 @@ event_type=<固定异常类别>
 调用示例：
 
 ```bash
-curl -X POST http://127.0.0.1:8000/detect \
+curl -X POST http://127.0.0.1:18061/detect \
   -F "file=@test/banner.mp4" \
   -F "event_type=banner"
 ```

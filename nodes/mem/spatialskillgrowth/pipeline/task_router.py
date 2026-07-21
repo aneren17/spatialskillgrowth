@@ -31,18 +31,19 @@ class TaskPlanner:
         excluded_tools = []
         tool_decisions = []
         for tool_name in registry:
-            if tool_name == "embeddingTool" and media_type != "video":
-                excluded_tools.append(tool_name)
-                decision = "exclude"
-                reason = "embeddingTool 只支持原始视频，图片任务禁止调用。"
-            elif tool_name in CLOSED_SET_DETECTION_TOOLS:
+            if tool_name in CLOSED_SET_DETECTION_TOOLS:
                 excluded_tools.append(tool_name)
                 decision = "exclude"
                 reason = "该闭集检测器未针对当前异常类别显式启用。"
             else:
                 selected_tools.append(tool_name)
                 decision = "keep"
-                reason = "该工具可参与异常证据收集。"
+                reason = (
+                    "embeddingTool 在图片探索中使用图片能力；"
+                    "视频能力由冻结推理的独立工作流使用。"
+                    if tool_name == "embeddingTool"
+                    else "该工具可参与异常证据收集。"
+                )
             tool_decisions.append({
                 "tool_name": tool_name,
                 "decision": decision,

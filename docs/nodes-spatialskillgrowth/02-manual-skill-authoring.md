@@ -1,7 +1,7 @@
 # 手工编写 SpatialSkillGrowth Skill
 
-本文的目标是手工写出一条可校验、可被推理检索的图片 Workflow。手工 Skill 不调用
-`embeddingTool`；视频推理的 embedding 由框架在 Workflow 外部并行执行。
+本文的目标是手工写出一条可校验、可被推理检索的图片 Workflow。手工 Skill 可以像使用其他图片工具一样
+调用 `embeddingTool`，但必须传入 `$image` / `runtime.image_path()`。原视频 embedding 仍由框架的独立工作流并行执行。
 
 ## 1. 先看完成后的目录
 
@@ -371,7 +371,7 @@ run 内 `skills/active/`。已存在的 run 加 `--resume` 不会刷新这份副
 [ ] name 与 Skill 目录名一致
 [ ] 脚本文件名 = WORKFLOW_ID + ".py"
 [ ] PROBLEM_CLASS 是精确 event_type
-[ ] 不声明、不调用 embeddingTool
+[ ] 如调用 embeddingTool，图片 Workflow 使用 `$image` / `runtime.image_path()`，不使用 `$media`
 [ ] declared/required/steps/call 工具集合一致
 [ ] contract/call step_id 集合一致
 [ ] depends_on 只指向前面已定义 step

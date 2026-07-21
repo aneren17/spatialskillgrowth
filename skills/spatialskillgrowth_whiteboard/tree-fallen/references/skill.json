@@ -3,7 +3,7 @@
   "title": "树木倒伏",
   "problem_class": "tree_fallen",
   "event_type": "tree_fallen",
-  "description": "检测输入视频或图像中是否发生“树木倒伏”异常事件（相关显示名称：树木倒伏、树木倒塌）；探索只使用图片工具；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tree_fallen`。",
+  "description": "检测输入视频或图像中是否发生“树木倒伏”异常事件（相关显示名称：树木倒伏、树木倒塌）；探索只使用图片输入，embedding 可按图片工具参与；图片基线仍为 MLLM；视频推理并行调用原视频 embedding 与图片工作流并取 OR；event_type 为 `tree_fallen`。",
   "aliases": [
     "树木倒伏",
     "树木倒塌"
@@ -31,7 +31,8 @@
   },
   "evidence_requirements": [
     "视频 embeddingTool 必须使用精确 event_type `tree_fallen`。",
-    "图片禁止调用 embeddingTool，必须取得成功的图像工具或 MLLM 证据。",
+    "图片 embeddingTool 必须传入图片路径和精确 event_type。",
+    "图片基线仍为单步 MLLM；其他图片工作流可按需组合 embeddingTool、图像工具或 MLLM。",
     "视频 embedding 必须返回明确判断和数值阈值；帧工作流必须返回明确判断。",
     "视频推理并行执行 embedding 和检索工作流；任一有效结果为‘是’时最终结果为‘是’。",
     "工具失败、类别不一致或缺少有效证据时不得接受答案。"

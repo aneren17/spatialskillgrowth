@@ -7,7 +7,7 @@ from nodes.mem.spatialskillgrowth.runtime.tool_runtime import (
 
 
 class AnomalyEvidenceValidator:
-    """分别校验视频 embedding 结论和图片/抽样帧视觉证据。"""
+    """校验 embedding 结论和其他图片/抽样帧视觉证据。"""
 
     def validate(
         self,
@@ -26,9 +26,12 @@ class AnomalyEvidenceValidator:
         elif normalized_answer in {"否", "no", "false"}:
             answer_decision = "否"
 
-        used_tools = set(result.get("used_tools") or [])
-        embedding_called = "embeddingTool" in used_tools
         observations = result.get("observations") or result.get("evidence") or []
+        embedding_succeeded = any(
+            str(item.get("tool") or "") == "embeddingTool"
+            and bool((item.get("result") or {}).get("ok"))
+            for item in observations
+        )
         successful_visual_tools = {
             str(item.get("tool") or "")
             for item in observations
@@ -49,9 +52,9 @@ class AnomalyEvidenceValidator:
                 bool(answer_decision) and answer_decision == anomaly["decision"]
             ),
         }
-        if embedding_called:
+        if embedding_succeeded:
             checks.update({
-                "embedding_video_only": media_type == "video",
+                "embedding_supported_media": media_type in {"image", "video"},
                 "threshold_numeric": threshold_is_number,
             })
         else:
@@ -64,8 +67,8 @@ class AnomalyEvidenceValidator:
                 failed_checks.append(name)
         accepted = not failed_checks
         if accepted:
-            if embedding_called:
-                reason = "视频 embeddingTool 判断、event_type 和阈值验证均通过。"
+            if embedding_succeeded:
+                reason = "embeddingTool 判断、event_type 和阈值验证均通过。"
             else:
                 reason = "图片或视频抽样帧的视觉证据和最终判断验证均通过。"
         else:

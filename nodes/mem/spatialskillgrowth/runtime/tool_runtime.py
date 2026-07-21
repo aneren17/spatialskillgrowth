@@ -572,7 +572,19 @@ def extract_anomaly_result(
     result: Dict[str, Any],
     default_event_type: str = "",
 ) -> Dict[str, Any]:
-    """优先读取视频 embedding 判断，否则从视觉工作流最终答案提取判断。"""
+    """优先使用工作流最终答案，并保留 embedding 的事件类别和阈值。"""
+    raw_answer = str(
+        result.get("final_answer")
+        or result.get("answer")
+        or ""
+    ).strip()
+    normalized_answer = raw_answer.lower()
+    final_is_anomaly = None
+    if normalized_answer in {"是", "yes", "true"}:
+        final_is_anomaly = True
+    elif normalized_answer in {"否", "no", "false"}:
+        final_is_anomaly = False
+
     observations = result.get("observations") or result.get("evidence") or []
     for item in reversed(observations):
         if str(item.get("tool") or "") != "embeddingTool":
@@ -581,29 +593,31 @@ def extract_anomaly_result(
         if not tool_result.get("ok"):
             continue
         data = tool_result.get("data") or {}
+        is_anomaly = (
+            final_is_anomaly
+            if final_is_anomaly is not None
+            else data.get("is_anomaly")
+        )
         return {
             "event_type": str(
                 data.get("event_type") or default_event_type
             ),
-            "is_anomaly": data.get("is_anomaly"),
-            "decision": str(data.get("decision") or ""),
+            "is_anomaly": is_anomaly,
+            "decision": (
+                "是" if is_anomaly is True
+                else "否" if is_anomaly is False
+                else ""
+            ),
             "threshold": data.get("threshold"),
         }
-    raw_answer = str(
-        result.get("final_answer")
-        or result.get("answer")
-        or ""
-    ).strip()
-    normalized_answer = raw_answer.lower()
-    is_anomaly = None
-    if normalized_answer in {"是", "yes", "true"}:
-        is_anomaly = True
-    elif normalized_answer in {"否", "no", "false"}:
-        is_anomaly = False
     return {
         "event_type": str(default_event_type or result.get("event_type") or ""),
-        "is_anomaly": is_anomaly,
-        "decision": "是" if is_anomaly is True else "否" if is_anomaly is False else "",
+        "is_anomaly": final_is_anomaly,
+        "decision": (
+            "是" if final_is_anomaly is True
+            else "否" if final_is_anomaly is False
+            else ""
+        ),
         "threshold": None,
     }
 

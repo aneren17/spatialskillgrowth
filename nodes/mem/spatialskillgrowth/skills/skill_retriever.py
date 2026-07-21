@@ -173,7 +173,13 @@ def workflow_structurally_eligible(
     graph_tools = set()
     for step in workflow.steps:
         graph_tools.add(step.tool_name)
-    if "embeddingTool" in required_tools or "embeddingTool" in graph_tools:
+    video_embedding_steps = [
+        step
+        for step in workflow.steps
+        if step.tool_name == "embeddingTool"
+        and str(step.args.get("file_path") or "") == "$media"
+    ]
+    if video_embedding_steps:
         return False
     if not required_tools.issubset(allowed_tools):
         return False

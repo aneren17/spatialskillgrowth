@@ -253,7 +253,7 @@ class WorkflowMutator:
             return [WorkflowStep(
                 tool_name="embeddingTool",
                 args={
-                    "file_path": "$media",
+                    "file_path": "$image",
                     "event_type": "$slot.event_type",
                 },
                 param_atoms=[atom],
@@ -361,9 +361,7 @@ class WorkflowMutator:
         normalized = copy.deepcopy(args)
         for key in list(normalized):
             if key in {"file", "file_path", "image", "image_path"}:
-                normalized[key] = (
-                    "$media" if tool_name == "embeddingTool" else "$image"
-                )
+                normalized[key] = "$image"
             elif key == "filename":
                 normalized[key] = "$filename"
             elif key == "query" and tool_name == "MLLM":

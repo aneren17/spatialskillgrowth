@@ -446,8 +446,12 @@ class CandidateExecutionCoordinator:
         candidates = [("embedding_baseline", embedding)]
         seen = {embedding.workflow_id}
         for workflow in workflows:
-            graph_tools = {step.tool_name for step in workflow.steps}
-            if "embeddingTool" in graph_tools:
+            contains_video_embedding = any(
+                step.tool_name == "embeddingTool"
+                and str(step.args.get("file_path") or "") == "$media"
+                for step in workflow.steps
+            )
+            if contains_video_embedding:
                 continue
             if workflow.workflow_id in seen:
                 continue

@@ -1,4 +1,9 @@
-"""校验并部署人工编写的 SpatialSkillGrowth Python Skill。"""
+"""校验并部署人工编写的 SpatialSkillGrowth Python Skill。
+python -m scripts.deploy_spatialskillgrowth_skill \
+    --skill-dir skills/spatialskillgrowth/banner \
+    --script skills/spatialskillgrowth/banner/scripts/banner-crop-example.py
+
+"""
 
 from __future__ import annotations
 

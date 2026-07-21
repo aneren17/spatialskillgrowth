@@ -154,10 +154,11 @@ JSON 文本。
 
 ## 4. 视频抽样帧的自动 fan-out
 
-下列六个单图工具收到 `runtime.image_path()` 时，如果任务有多张视频抽样帧，Runtime 会自动在全部帧上
+下列七个单图工具收到当前抽样图片路径时，如果任务有多张视频抽样帧，Runtime 会自动在全部帧上
 并行执行：
 
 ```text
+embeddingTool
 groundingdino
 yoloTool
 paddleHeadDetTool
@@ -166,7 +167,8 @@ paddleOcrTool
 sam3
 ```
 
-Runtime 从成功结果中选择一帧，排序依据依次是：检测框数量、最高置信度、是否有结果图、文本长度、较早帧。
+Runtime 从成功结果中选择一帧，排序依据依次是：embedding 是否判断异常、检测框数量、最高置信度、是否有结果图、
+文本长度、较早帧。对非 embedding 工具，第一项始终为假，不改变原排序。
 选中后 `runtime.image_path()` 会切换到该帧。因此下面的 crop 会使用与检测框对应的同一张帧(这里的逻辑我还没改好，理论上要选最优的一个bbox框，这还有问题)：
 
 ```python
@@ -196,7 +198,7 @@ crop = runtime.call(
 
 | 工具注册名 | 主要输入 | 统一输出 | 主要用途 |
 |---|---|---|---|
-| `embeddingTool` | 原始视频、精确 `event_type` | `decision/is_anomaly/threshold` | 视频异常通道 |
+| `embeddingTool` | 图片或原始视频、精确 `event_type` | `decision/is_anomaly/threshold` | 图片证据或独立视频异常通道 |
 | `MLLM` | 一张图、问题 | `content` | 视觉理解和最终“是/否” |
 | `yoloTool` | 图片、阈值 | `detections` | COCO 80 类目标检测 |
 | `paddleHeadDetTool` | 图片 | `detections` | 人头检测 |
@@ -217,19 +219,20 @@ crop = runtime.call(
 embedding = runtime.call(
     "embeddingTool",
     {
-        "file_path": runtime.media_path(),
+        "file_path": runtime.image_path(),
         "event_type": event_type,
     },
     step_id="embedding",
 )
 ```
 
-- 只接受本地原始视频，支持的扩展名包括 mp4、avi、mov、mkv、webm 等；
+- 接受本地图片或原始视频；
 - `event_type` 必须是 `tools/basicTools/embeddingTool.py` 中注册的精确英文 ID；
 - 成功后可读取 `decision`、`is_anomaly`、`threshold`；
-- 图片和抽样帧会被拒绝。
+- 探索只使用图片能力，Workflow 参数应声明 `file_path: "$image"`；
+- 原始视频能力由框架独立建立的 embedding 基线工作流使用，其参数是 `file_path: "$media"`。
 
-人工图片 Workflow 不应声明它。视频推理会在 Workflow 外部固定创建该通道。
+图片 embedding 对多个视频抽样帧会按帧并行调用；确定性选择时优先保留判断为“是”的成功帧，再按通用帧证据规则打破平局。
 
 ### 6.2 `MLLM`
 
@@ -542,6 +545,6 @@ return runtime.finish(review)
 | crop 报需要非空检测框 | 传了检测器文本或检测为空 | 先 `require(detect)`，再取 `detections` |
 | MLLM 只看了一张 crop | `evidence_image()` 和 `data.image` 本来就取第一张 | 先筛框，或声明多个固定 MLLM step |
 | 视频工具只处理了中间帧 | 手工传了非抽样帧路径，未触发 fan-out | 图片工具使用 `runtime.image_path()` |
-| embedding 被跳过 | 输入不是原始视频 | Skill 不调用它；交给视频推理外层通道 |
+| embedding 调用了错误媒体 | 图片 Workflow 使用了 `$media` | 图片能力传 `runtime.image_path()` / `$image`；只有独立视频基线使用 `$media` |
 | `depends_on` 后仍执行了失败步骤 | 它只描述依赖，不控制 Python | 使用 `runtime.require` 或显式 `if` |
 | `finish` 返回图片地址/检测 JSON | 传入的不是最终判断 | 让 MLLM 形成“是/否”，再 finish |

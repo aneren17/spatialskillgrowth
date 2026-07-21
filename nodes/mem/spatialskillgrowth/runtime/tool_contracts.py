@@ -8,7 +8,8 @@ from typing import Dict, Iterable, Set
 TOOL_CONTRACTS: Dict[str, Dict[str, object]] = {
     "embeddingTool": {
         "output": "anomaly_decision",
-        "requires": {"video", "event_type"},
+        "requires": {"media", "event_type"},
+        "accepted_media_types": {"image", "video"},
         "output_fields": {
             "event_type": "string",
             "is_anomaly": "boolean",
@@ -87,6 +88,7 @@ DEPENDENT_TOOLS = {
     if set(contract.get("requires") or ()).intersection(PRODUCED_RESOURCE_TYPES)
 }
 FRAME_INDEPENDENT_IMAGE_TOOLS = {
+    "embeddingTool",
     "groundingdino",
     "paddleHeadDetTool",
     "paddleOcrTool",
@@ -110,6 +112,9 @@ def contract_signature(tool_name: str) -> Dict[str, object]:
     return {
         "outputs": sorted(output_types(tool_name)),
         "requires": sorted(str(item) for item in contract.get("requires") or ()),
+        "accepted_media_types": sorted(
+            str(item) for item in contract.get("accepted_media_types") or ()
+        ),
         "bbox_format": str(contract.get("bbox_format") or ""),
         "output_fields": dict(contract.get("output_fields") or {}),
     }
